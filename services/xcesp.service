@@ -9,6 +9,10 @@ Type=simple
 User=xcesp
 Group=xcesp
 
+# Sync /var/xcesp/mainsw → active locations before starting the stack.
+# The '+' prefix runs this script as root regardless of User= below.
+ExecStartPre=+/usr/bin/xcesp-activate
+
 # xcespwdog supervises xcespserver and xcespproc; all paths are absolute
 ExecStart=/usr/bin/xcespwdog --config /var/xcesp/cfg/xcespwdog.ini
 

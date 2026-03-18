@@ -1,0 +1,88 @@
+#!/bin/bash
+# xcesp-activate — sync /var/xcesp/mainsw to active locations
+#
+# Called by systemd ExecStartPre=+ (runs as root) before starting xcespwdog.
+# If /var/xcesp/mainsw exists and contains a VERSION file, its contents are
+# synced to the active locations (/usr/bin, /var/xcesp/schema, /var/xcesp/rules)
+# and xcesppy in the venv is updated.  Configuration files are never touched.
+#
+# Also callable manually:  sudo xcesp-activate
+
+set -euo pipefail
+
+XCESP_BASE=/var/xcesp
+MAINSW=$XCESP_BASE/mainsw
+BINDIR=/usr/bin
+XCESP_USER=xcesp
+XCESP_GROUP=xcesp
+
+log() { echo "xcesp-activate: $*" >&2; }
+
+# Nothing to do if mainsw does not exist
+if [ ! -d "$MAINSW" ]; then
+    log "$MAINSW not found — skipping activation"
+    exit 0
+fi
+
+if [ ! -f "$MAINSW/VERSION" ]; then
+    log "$MAINSW/VERSION missing — skipping activation"
+    exit 0
+fi
+
+log "activating $(head -1 "$MAINSW/VERSION")"
+
+# ---------------------------------------------------------------------------
+# Binaries
+# ---------------------------------------------------------------------------
+if [ -d "$MAINSW/bin" ]; then
+    for bin in xcespserver xcespcli xcespproc xcespwdog; do
+        src="$MAINSW/bin/$bin"
+        [ -f "$src" ] || continue
+        install -o root -g root -m 0755 "$src" "$BINDIR/$bin"
+        log "  installed $BINDIR/$bin"
+    done
+    # Re-apply capabilities after binary replacement
+    if command -v setcap > /dev/null 2>&1 && [ -f "$BINDIR/xcespproc" ]; then
+        setcap cap_net_admin,cap_sys_admin=ep "$BINDIR/xcespproc"
+        log "  setcap applied to $BINDIR/xcespproc"
+    else
+        log "  WARNING: setcap not available — xcespproc may lack required capabilities"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Schema
+# ---------------------------------------------------------------------------
+if [ -d "$MAINSW/schema" ]; then
+    mkdir -p "$XCESP_BASE/schema"
+    cp -rT "$MAINSW/schema" "$XCESP_BASE/schema"
+    chown -R "$XCESP_USER:$XCESP_GROUP" "$XCESP_BASE/schema"
+    find "$XCESP_BASE/schema" -type d -exec chmod 0755 {} \;
+    find "$XCESP_BASE/schema" -type f -exec chmod 0644 {} \;
+    log "  schema synced"
+fi
+
+# ---------------------------------------------------------------------------
+# Python rules
+# ---------------------------------------------------------------------------
+if [ -d "$MAINSW/rules" ]; then
+    mkdir -p "$XCESP_BASE/rules"
+    cp -rT "$MAINSW/rules" "$XCESP_BASE/rules"
+    chown -R "$XCESP_USER:$XCESP_GROUP" "$XCESP_BASE/rules"
+    find "$XCESP_BASE/rules" -type d  -exec chmod 0755 {} \;
+    find "$XCESP_BASE/rules" -type f -name "*.py" -exec chmod 0755 {} \;
+    log "  rules synced"
+fi
+
+# ---------------------------------------------------------------------------
+# xcesppy in venv (fast reinstall — pure Python, no external deps)
+# ---------------------------------------------------------------------------
+VENV=$XCESP_BASE/venv
+if [ -d "$MAINSW/python" ] && [ -d "$VENV" ]; then
+    "$VENV/bin/pip" install --quiet "$MAINSW/python" 2>/dev/null && \
+        log "  xcesppy updated in venv" || \
+        log "  WARNING: xcesppy venv update failed (non-fatal)"
+fi
+
+log "activation complete"
+exit 0

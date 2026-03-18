@@ -72,6 +72,7 @@ check-bins:
 	done
 
 $(TARBALL): check-bins install.sh services/xcesp.service \
+            scripts/xcesp-activate scripts/xcesp-swap.sh \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
             cfg/xcespserver.conf python/pyproject.toml
 	@echo "Building package $(TARBALL) ..."
@@ -124,6 +125,12 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp python/pyproject.toml $(PKG_NAME)/python/
 	cp -r $(XCESPPY_SRC)/. $(PKG_NAME)/python/xcesppy/
 	find $(PKG_NAME)/python -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+
+	# --- Management scripts ---
+	mkdir -p $(PKG_NAME)/scripts
+	cp scripts/xcesp-activate $(PKG_NAME)/scripts/
+	cp scripts/xcesp-swap.sh  $(PKG_NAME)/scripts/
+	chmod +x $(PKG_NAME)/scripts/xcesp-activate $(PKG_NAME)/scripts/xcesp-swap.sh
 
 	# --- Systemd service ---
 	mkdir -p $(PKG_NAME)/services
