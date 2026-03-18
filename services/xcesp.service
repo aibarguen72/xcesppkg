@@ -1,0 +1,37 @@
+[Unit]
+Description=XCESP Control Plane
+Documentation=file:///var/xcesp/cfg/xcespwdog.ini
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=xcesp
+Group=xcesp
+
+# xcespwdog supervises xcespserver and xcespproc; all paths are absolute
+ExecStart=/usr/bin/xcespwdog --config /var/xcesp/cfg/xcespwdog.ini
+
+# Give supervised processes time to shut down gracefully before SIGKILL
+TimeoutStopSec=30
+
+# Restart policy: wdog crash → wait 5 s → restart the whole stack
+Restart=on-failure
+RestartSec=5s
+
+# Runtime directory: systemd creates /run/xcesp and removes it on stop
+# This is where xcespserver writes its UDS socket (ctrl.sock)
+RuntimeDirectory=xcesp
+RuntimeDirectoryMode=0750
+
+# Working directory (xcespwdog.ini references absolute paths only)
+WorkingDirectory=/var/xcesp
+
+# Logging goes to journald via stdout/stderr (no separate log file needed
+# for xcespwdog itself; xcespserver and xcespproc write to /var/xcesp/log/)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=xcespwdog
+
+[Install]
+WantedBy=multi-user.target

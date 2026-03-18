@@ -1,0 +1,12 @@
+# Changelog - xcesppkg
+
+## 0.0.1
+
+- Initial release: tarball-based installer for XCESP
+- Bundles xcespserver, xcespcli, xcespproc, xcespwdog binaries
+- Bundles schema, Python rules (worker + config-to-objects + status-to-global),
+  and xcesppy Python client library
+- install.sh: creates xcesp system user/group, installs binaries to /usr/bin,
+  sets cap_net_admin,cap_sys_admin=ep on xcespproc, installs config templates
+  to /var/xcesp/cfg (non-destructive — existing files are not overwritten),
+  creates Python venv at /var/xcesp/venv, installs systemd service xcesp.service
