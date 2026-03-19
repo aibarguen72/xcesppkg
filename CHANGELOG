@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.4
+
+- Bundles xcespcli 0.0.18 with fix for `show running` / `show candidate`
+  displaying `shutdown false` instead of `no shutdown` at root navigation level
+
 ## 0.0.3
 
 - Bundles xcespcli 0.0.17 with `TerminalParams` CLI flags:
