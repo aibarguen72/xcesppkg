@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.3
+
+- Bundles xcespcli 0.0.17 with `TerminalParams` CLI flags:
+  `-v`/`--verbose <0-5>`, `-l`/`--lines <N>`, `-t`/`--timeout <N>`,
+  `--no-create`/`--create`; all map directly to `CliSession::terminalParams()`
+  at startup
+
 ## 0.0.2
 
 - Bundles xcespschema 0.0.4, xcespserver 0.0.11, xcespcli 0.0.16 with fixes for:
