@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.0.2
+
+- Bundles xcespschema 0.0.4, xcespserver 0.0.11, xcespcli 0.0.16 with fixes for:
+  - Commit rejection when config contains address sub-nodes (xcespserver 0.0.11)
+  - `show candidate` displaying `shutdown false` instead of `no shutdown` (xcespcli 0.0.16)
+  - `?`/TAB completion and navigation now restricted to valid node types at each
+    path depth (root: domain, router only) (xcespcli 0.0.16 + xcespschema 0.0.4)
+  - After `discard`, navigation path auto-reset to root if it no longer exists (xcespcli 0.0.16)
+  - `TerminalParams` structure added to xcespcli (xcespcli 0.0.16)
+
 ## 0.0.1
 
 - Initial release: tarball-based installer for XCESP
