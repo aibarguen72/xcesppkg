@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.5
+
+- Bundles xcespcli 0.0.19: `--no-create` is now the default (require `'!'` to
+  create nodes); `--create` flag enables auto-creation without `'!'`
+
 ## 0.0.4
 
 - Bundles xcespcli 0.0.18 with fix for `show running` / `show candidate`
