@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.7
+
+- Bundles xcespserver 0.0.12: startup config loading now uses schema-based
+  disambiguation, fixing `shutdown` (single-token bool) being misclassified
+  as a child block opener — xcespserver no longer fails to start when the
+  config contains bare bool attributes like `shutdown`
+
 ## 0.0.6
 
 - Bundles xcespcli 0.0.20: `config !` temporarily enables auto-create for
