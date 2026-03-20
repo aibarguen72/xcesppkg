@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.6
+
+- Bundles xcespcli 0.0.20: `config !` temporarily enables auto-create for
+  the config session; `end` restores prior behaviour
+
 ## 0.0.5
 
 - Bundles xcespcli 0.0.19: `--no-create` is now the default (require `'!'` to
