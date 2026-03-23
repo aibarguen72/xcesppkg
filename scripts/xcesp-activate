@@ -32,6 +32,13 @@ fi
 log "activating $(head -1 "$MAINSW/VERSION")"
 
 # ---------------------------------------------------------------------------
+# Runtime directory
+# ---------------------------------------------------------------------------
+# /run is tmpfs — cleared on reboot. systemd RuntimeDirectory= handles this
+# for service starts, but manual invocations need this fallback.
+install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 /run/xcesp
+
+# ---------------------------------------------------------------------------
 # Binaries
 # ---------------------------------------------------------------------------
 if [ -d "$MAINSW/bin" ]; then

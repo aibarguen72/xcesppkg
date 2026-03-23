@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.9
+
+- `xcesp-activate`: create `/run/xcesp` with correct ownership/permissions on
+  every invocation — `/run` is tmpfs and is cleared on reboot; `RuntimeDirectory=`
+  in the systemd unit covers the managed-service path, but manual invocations
+  (direct `sudo xcesp-activate`, xcesptest `start.sh`) had no fallback, causing
+  xcespserver to fail binding its UDS control socket `/run/xcesp/ctrl.sock`
+
 ## 0.0.8
 
 - Bundles xcespserver 0.0.13, xcespcli 0.0.21, xcespwdog 0.0.6
