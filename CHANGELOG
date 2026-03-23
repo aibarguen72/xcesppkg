@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.13
+
+- `cfg/xcespwdog.ini`: enable `[process.3]` — xcespproc instance 2
+  (affinity 2); was commented out, causing affinity-2 objects (e.g.
+  `router ra`) to fall back to xcespproc-1 instead of running on their
+  own dedicated process instance
+
 ## 0.0.12
 
 - Bundles xcespserver 0.0.14: hook validation now also runs on startup
