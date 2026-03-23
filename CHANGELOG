@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.0.8
+
+- Bundles xcespserver 0.0.13, xcespcli 0.0.21, xcespwdog 0.0.6
+- xcespschema 0.0.5: case-insensitive keywords, `_boolean` built-in type,
+  `attr name` reserved, schema cross-reference validation (`validateRefs()`)
+- xcespconfig 0.0.6: child-ref constraint validation in `validate()`,
+  Python hook validation (`validateHooks()`), skip auto-injected `name`
+  in validation, IOS bool uses `isUseNoType()` (not `isBoolType()`)
+- xcespserver 0.0.13: schema validation now fatal (rejects config on error),
+  Python hook validation added to `applyNewConfig()`
+- xcespcli 0.0.21: commit pre-validates before sending to server, case-insensitive
+  command dispatch, enum canonicalization, IOS bool display fix
+
 ## 0.0.7
 
 - Bundles xcespserver 0.0.12: startup config loading now uses schema-based
