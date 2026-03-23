@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.14
+
+- Bundles xcesp-on-rtr 0.0.6: `IpCmd::exec(cmd, output)` overload captures
+  stderr; `RtrRouterPObj` now logs the exact `ip netns add` failure message
+  at WARNING level when namespace creation or re-creation fails
+
 ## 0.0.13
 
 - `cfg/xcespwdog.ini`: enable `[process.3]` — xcespproc instance 2
