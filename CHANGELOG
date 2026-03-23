@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.12
+
+- Bundles xcespserver 0.0.14: hook validation now also runs on startup
+  config (non-fatal — logs WARNING); invalid configs that pre-date hooks
+  are now surfaced at server startup rather than silently persisting
+
 ## 0.0.11
 
 - Bundles xcesp-on-rtr 0.0.5: `router.validate.py` affinity conflict check
