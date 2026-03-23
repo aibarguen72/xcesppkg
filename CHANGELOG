@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.11
+
+- Bundles xcesp-on-rtr 0.0.5: `router.validate.py` affinity conflict check
+- makefile: flatten `*.validate.py` hooks from plugin schema dirs
+  (`on-rtr/`, `on-pw/`, `on-xc/`) to top-level `schema/` so xcespserver
+  can find them via its single schemaDir
+
 ## 0.0.10
 
 - Bundles xcespproc 0.0.21: `--whole-archive` fix — `RtrRouter`, `RtrVrf`,

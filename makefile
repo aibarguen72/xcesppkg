@@ -101,6 +101,9 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp -r $(SCHEMA_ONRTR)/. $(PKG_NAME)/schema/on-rtr/
 	cp -r $(SCHEMA_ONPW)/.  $(PKG_NAME)/schema/on-pw/
 	cp -r $(SCHEMA_ONXC)/.  $(PKG_NAME)/schema/on-xc/
+	# Flatten validate hooks from plugin schemas to top-level schema dir
+	find $(SCHEMA_ONRTR) $(SCHEMA_ONPW) $(SCHEMA_ONXC) -maxdepth 1 \
+	    -name "*.validate.py" -exec cp {} $(PKG_NAME)/schema/ \; 2>/dev/null || true
 
 	# --- Python rules ---
 	mkdir -p $(PKG_NAME)/rules/config-to-objects $(PKG_NAME)/rules/status-to-global
