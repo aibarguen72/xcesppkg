@@ -37,6 +37,9 @@ log "activating $(head -1 "$MAINSW/VERSION")"
 # /run is tmpfs — cleared on reboot. systemd RuntimeDirectory= handles this
 # for service starts, but manual invocations need this fallback.
 install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 /run/xcesp
+# /run/netns must be owned by xcesp so xcespproc can create namespace bind-files
+# without needing to call mount --make-shared (which requires root even with caps)
+install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0755 /run/netns
 
 # ---------------------------------------------------------------------------
 # Binaries

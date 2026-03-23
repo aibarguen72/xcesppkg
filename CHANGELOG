@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.0.15
+
+- Bundles xcesp-on-rtr 0.0.7: `IpCmd::createNetns()` creates network
+  namespaces via `fork()+unshare(CLONE_NEWNET)+mount(MS_BIND)`, bypassing
+  `ip netns add`'s `mount --make-shared /run/netns` step that fails for
+  non-root processes even with `CAP_SYS_ADMIN`
+- `xcesp-activate`: pre-creates `/run/netns` owned by xcesp so xcespproc
+  can write namespace bind-files without root privileges
+
 ## 0.0.14
 
 - Bundles xcesp-on-rtr 0.0.6: `IpCmd::exec(cmd, output)` overload captures
