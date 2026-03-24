@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.20
+
+- Bundles xcespcli 0.0.22: `CandidateConfig::createNode()` is now idempotent
+  — navigating to an existing node in `conf !` mode no longer prints a
+  spurious error
+
 ## 0.0.19
 
 - Bundles xcespserver 0.0.16: attr-level diff in `ProcClient::deployObjects()`
