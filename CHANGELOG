@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.21
+
+- Bundles xcespserver 0.0.17: `ProcClient::handleAck()` fix — `ACK CMD=RESET`
+  no longer clears `pendingAttrs_`; fixes attr-level diff regression where all
+  objects were redeployed on every config commit instead of only changed ones
+
 ## 0.0.20
 
 - Bundles xcespcli 0.0.22: `CandidateConfig::createNode()` is now idempotent
