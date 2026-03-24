@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.18
+
+- Bundles xcesp-on-rtr 0.0.9: `IpCmd::exec()` and `IpCmd::run()` use
+  `fork()+exec()` with ambient `CAP_NET_ADMIN`+`CAP_SYS_ADMIN` instead of
+  `popen()`/`system()` — fixes VRF and interface creation failing with
+  `RTNETLINK answers: Operation not permitted` because file capabilities on
+  xcespproc were dropped when exec'ing the unprivileged `ip(8)` binary
+
 ## 0.0.17
 
 - Bundles xcespserver 0.0.15: `ProcClient::deployObjects()` fixes dual-proc
