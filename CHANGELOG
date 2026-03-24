@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.19
+
+- Bundles xcespserver 0.0.16: attr-level diff in `ProcClient::deployObjects()`
+  — on config commit only objects with changed INI attributes are redeployed;
+  unchanged objects are silently skipped
+
 ## 0.0.18
 
 - Bundles xcesp-on-rtr 0.0.9: `IpCmd::exec()` and `IpCmd::run()` use
