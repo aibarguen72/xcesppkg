@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.17
+
+- Bundles xcespserver 0.0.15: `ProcClient::deployObjects()` fixes dual-proc
+  deployment race (pending objects now cancelled before ACK can promote them);
+  `XCespServer` honours `LOG_CONSOLE_LEVEL` INI key to suppress DEBUG noise
+
 ## 0.0.16
 
 - Bundles xcesp-on-rtr 0.0.8: `RtrVrfPObj::applyConfig()` uses
