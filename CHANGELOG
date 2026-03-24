@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.23
+
+- Bundles xcespcli 0.0.23 and xcespconfig 0.0.7: `delete <type> <instance> [!]`
+  node deletion in config mode — removes a named child node and all its
+  descendants from the candidate config; `!` suffix required unless in
+  create mode; attribute deletion unchanged
+
 ## 0.0.22
 
 - Bundles xcespproc 0.0.21 rebuilt against xcesp-on-rtr 0.0.10:
