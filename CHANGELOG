@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.24
+
+- Bundles xcespproc 0.0.22 and xcesp-on-rtr 0.0.11:
+  unique object names (`router_`, `vrf_`, etc. prefixes) fix spurious
+  double-REMOVE on commits; `RtrVrfPObj::remove()` and
+  `RtrRouterPObj::remove()` tear down Linux VRF devices and network
+  namespaces when config nodes are deleted
+
 ## 0.0.23
 
 - Bundles xcespcli 0.0.23 and xcespconfig 0.0.7: `delete <type> <instance> [!]`
