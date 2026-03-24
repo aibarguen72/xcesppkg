@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.16
+
+- Bundles xcesp-on-rtr 0.0.8: `RtrVrfPObj::applyConfig()` uses
+  `IpCmd::exec(cmd, errOut)` to log VRF creation failures at WARNING;
+  `monitorVrf()` re-creates missing VRF devices (matching router namespace
+  re-creation pattern)
+
 ## 0.0.15
 
 - Bundles xcesp-on-rtr 0.0.7: `IpCmd::createNetns()` creates network
