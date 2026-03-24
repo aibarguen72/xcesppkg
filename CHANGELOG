@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.26
+
+- Bundles xcespserver 0.0.19: `ProcClient::handleAck()` fix — `ACK CMD=RESET` no
+  longer clears `deployedAttrs_`; fixes double-RESET startup race where both procs
+  connecting simultaneously caused a full redeploy on every subsequent commit and
+  "registerLink: role already taken" errors in xcespproc-1
+
 ## 0.0.25
 
 - Bundles xcespserver 0.0.18, xcespproc 0.0.23, xcesp-on-rtr 0.0.12:
