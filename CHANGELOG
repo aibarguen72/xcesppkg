@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.25
+
+- Bundles xcespserver 0.0.18, xcespproc 0.0.23, xcesp-on-rtr 0.0.12:
+  objectsForProc() no longer routes explicitly-affinitied objects to the
+  first connected proc when the target proc is absent (fixes spurious
+  redeployments on xcespproc-2); xcespproc and xcesp-on-rtr makefile fixes
+  ensure plugin library updates trigger automatic relinks
+
 ## 0.0.24
 
 - Bundles xcespproc 0.0.22 and xcesp-on-rtr 0.0.11:
