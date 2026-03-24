@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.22
+
+- Bundles xcespproc 0.0.21 rebuilt against xcesp-on-rtr 0.0.10:
+  `RtrVrfPObj` now deletes the Linux VRF device on shutdown and handles
+  table-id changes by deleting and re-creating the device with the correct
+  table number
+
 ## 0.0.21
 
 - Bundles xcespserver 0.0.17: `ProcClient::handleAck()` fix — `ACK CMD=RESET`
