@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.30
+
+- Bundles xcesp-on-rtr 0.0.15, xcespproc 0.0.26:
+  IPv6 address deletion from interfaces now works correctly (fix in
+  `IpCmd::parseAddrList()`); `address` and `static-route` instance names
+  are now validated as valid IP addresses/prefixes with mandatory mask at commit time
+
 ## 0.0.29
 
 - Bundles xcesp-on-rtr 0.0.14, xcespproc 0.0.25:
