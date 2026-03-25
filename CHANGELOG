@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.27
+
+- Bundles xcespcli 0.0.24: case-insensitive CLI keywords with case-preserving
+  entity identifiers — instance names such as `RouterA` are accepted and stored
+  with their original capitalisation; node-type and instance-name matching in
+  navigation and TAB completion are now fully case-insensitive while returning
+  the canonical stored form
+
 ## 0.0.26
 
 - Bundles xcespserver 0.0.19: `ProcClient::handleAck()` fix — `ACK CMD=RESET` no
