@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.31
+
+- Bundles xcespserver 0.0.19, xcespcli 0.0.24, xcespproc 0.0.27, xcespwdog 0.0.6
+  with xcesp-on-rtr 0.0.16: rlink veth pair interface type, syncAddresses()
+  failure logging for IPv6 deletion diagnosis, device attr optional for rlink
+
 ## 0.0.30
 
 - Bundles xcesp-on-rtr 0.0.15, xcespproc 0.0.26:
