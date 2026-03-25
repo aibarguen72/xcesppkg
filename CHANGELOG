@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.29
+
+- Bundles xcesp-on-rtr 0.0.14, xcespproc 0.0.25:
+  new `forwarding` boolean attribute on `router` nodes controls
+  `net.ipv4.ip_forward` in the router's Linux network namespace;
+  CLI form `[no] forwarding`, default enabled
+
 ## 0.0.28
 
 - Bundles xcesp-on-rtr 0.0.13, xcespproc 0.0.24:
