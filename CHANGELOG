@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.28
+
+- Bundles xcesp-on-rtr 0.0.13, xcespproc 0.0.24:
+  `static-route` no longer exposes a redundant `network` CLI attribute —
+  the CIDR prefix is the instance identifier and is now implicit; IPv6
+  address deletion from interfaces now works correctly (fix in
+  `IpCmd::parseAddrList()`)
+
 ## 0.0.27
 
 - Bundles xcespcli 0.0.24: case-insensitive CLI keywords with case-preserving
