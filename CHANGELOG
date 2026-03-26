@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.43
+
+- Bundles xcespmap 0.0.6 with xcesp-on-rtr 0.0.27: cross-namespace VLANs now
+  use the XCESP interface **instance name** (e.g. `eth1`) in the `interface`
+  attr instead of the Linux device name — consistent with same-namespace VLANs;
+  xcespmap resolves the instance name to the device name at commit time via the
+  new `NEEDS_FULL_CONFIG` mechanism; xcespproc relinked against xcesp-on-rtr 0.0.27
+
 ## 0.0.42
 
 - Bundles xcespproc 0.0.32 with xcesp-on-rtr 0.0.26: xcespproc relinked
