@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.0.38
+
+- Bundles xcesp-on-rtr 0.0.23: cross-namespace VLAN via macvlan — new
+  `parent-router` attr on vlan nodes; when set, a VLAN subinterface is
+  created in the named parent router's namespace, a `macvlan mode bridge`
+  device is built on top, moved into the target router namespace, and
+  configured there; `router.validate.py` check 9 validates the parent-router
+  reference at commit time
+
 ## 0.0.37
 
 - Bundles xcespcli 0.0.26 with xcesp-on-rtr 0.0.22: interface type attr is
