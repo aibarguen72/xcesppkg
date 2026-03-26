@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.41
+
+- Bundles xcesp-on-rtr 0.0.26: commit-time validation now detects when the
+  wrong name (XCESP instance name instead of Linux device name) is used for
+  the `interface` attr in cross-namespace VLANs; error lists known device
+  names with their instance names as a hint
+
 ## 0.0.40
 
 - Bundles xcesp-on-rtr 0.0.25: fix NameError crash in router.validate.py at
