@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.42
+
+- Bundles xcespproc 0.0.32 with xcesp-on-rtr 0.0.26: xcespproc relinked
+  to include cross-namespace VLAN macvlan support — previous releases had a
+  stale xcespproc binary that silently ignored the PARENT_NS INI key
+
 ## 0.0.41
 
 - Bundles xcesp-on-rtr 0.0.26: commit-time validation now detects when the
