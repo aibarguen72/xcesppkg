@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.39
+
+- Bundles xcesp-on-rtr 0.0.24: fix spurious "device attribute is required"
+  validation error when committing a cross-namespace VLAN (interface attr
+  inside vlan node was misread as an interface node declaration)
+
 ## 0.0.38
 
 - Bundles xcesp-on-rtr 0.0.23: cross-namespace VLAN via macvlan — new
