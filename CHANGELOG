@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.35
+
+- Bundles xcespproc 0.0.30 with xcesp-on-rtr 0.0.20: VLAN shutdown brings
+  link down (device stays), VLAN delete removes device, startup syncs IPs
+
 ## 0.0.34
 
 - Bundles xcespproc 0.0.29 with xcesp-on-rtr 0.0.19: physical interfaces
