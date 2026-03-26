@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.40
+
+- Bundles xcesp-on-rtr 0.0.25: fix NameError crash in router.validate.py at
+  startup and false "device attribute is required" error on cross-namespace
+  VLAN commit
+
 ## 0.0.39
 
 - Bundles xcesp-on-rtr 0.0.24: fix spurious "device attribute is required"
