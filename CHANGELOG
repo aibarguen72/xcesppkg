@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.32
+
+- Bundles xcesp-on-rtr 0.0.17: VLAN commit-time validation (interface
+  reference and loopback-type checks); vlan.py PARENT_DEVICE fallback fix
+
 ## 0.0.31
 
 - Bundles xcespserver 0.0.19, xcespcli 0.0.24, xcespproc 0.0.27, xcespwdog 0.0.6
