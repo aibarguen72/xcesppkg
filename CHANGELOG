@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.36
+
+- Bundles xcespproc 0.0.31 with xcesp-on-rtr 0.0.21: shutdown default=true
+  for interface/vlan; router namespace deleted on shutdown; rlink shutdown
+  keeps device (link down)
+
 ## 0.0.35
 
 - Bundles xcespproc 0.0.30 with xcesp-on-rtr 0.0.20: VLAN shutdown brings
