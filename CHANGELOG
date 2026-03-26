@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.33
+
+- Bundles xcespcli 0.0.25, xcespproc 0.0.28 with xcesp-on-rtr 0.0.18:
+  interface IP cleanup on config deletion; CLI immediate attribute
+  name validation
+
 ## 0.0.32
 
 - Bundles xcesp-on-rtr 0.0.17: VLAN commit-time validation (interface
