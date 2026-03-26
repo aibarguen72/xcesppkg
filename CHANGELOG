@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.37
+
+- Bundles xcespcli 0.0.26 with xcesp-on-rtr 0.0.22: interface type attr is
+  now an enum (device|loopback|rlink) with TAB/? value completion in CLI
+
 ## 0.0.36
 
 - Bundles xcespproc 0.0.31 with xcesp-on-rtr 0.0.21: shutdown default=true
