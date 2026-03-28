@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.45
+
+- Bundles xcespserver 0.0.20, xcespcli 0.0.27, xcespproc 0.0.33, xcespwdog 0.0.6
+  with non-blocking xcespproc write path in xcespserver (EPOLLOUT write queue fixes
+  TCP listener stall after large CLI_CONFIG_PUT)
+
 ## 0.0.44
 
 - Bundles xcespserver 0.0.19, xcespcli 0.0.27, xcespproc 0.0.33, xcespwdog 0.0.6
