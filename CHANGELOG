@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.44
+
+- Bundles xcespserver 0.0.19, xcespcli 0.0.27, xcespproc 0.0.33, xcespwdog 0.0.6
+  with xcesp-on-rtr 0.0.28: `RtrStaticRoutePObj::remove()` deletes kernel route
+  on config removal; `router.validate.py` fix for false "device attribute required"
+  validation errors in VLAN address-only merge deltas
+
 ## 0.0.43
 
 - Bundles xcespmap 0.0.6 with xcesp-on-rtr 0.0.27: cross-namespace VLANs now
