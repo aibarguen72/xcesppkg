@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.0.46
+
+- Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.34, xcespwdog 0.0.7,
+  xcespmap 0.0.7
+  - xcespserver: system-mac license auth, docker detection/gating, xcespwdog gen
+    config writer, role-based object filtering, server status expansion
+  - xcespcli: `show server` command with full capability display
+  - xcespproc: `--role` argument, PROC_ROLE in HELLO/HEARTBEAT, SERVER_CAP handler
+  - xcespwdog: PROC_CONFIG_FILE support for generated process list
+  - xcespmap: PROCESS_ROLE injection and role-adjusted AFFINITY for router/domain nodes
+
 ## 0.0.45
 
 - Bundles xcespserver 0.0.20, xcespcli 0.0.27, xcespproc 0.0.33, xcespwdog 0.0.6
