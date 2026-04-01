@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.49
+
+- Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.36, xcespwdog 0.0.7,
+  xcesp-on-rtr 0.0.32 with GRE interface type (`type gre`, `gre` child block,
+  `ip tunnel add/del mode gre`, P-P and mGRE support) and static route egress-device
+  (`egress <dev>` alternative to `next-hop`, maps to `ip route add … dev <iface>`);
+  xcesptest 0.0.30 adds GRE interface and egress static route to test config
+
 ## 0.0.48
 
 - Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.35, xcespwdog 0.0.7,
