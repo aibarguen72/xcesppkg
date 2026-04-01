@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.48
+
+- Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.35, xcespwdog 0.0.7,
+  xcesp-on-rtr 0.0.31 with default-namespace FRR start/stop fix and sudo-based
+  frrinit.sh invocation; xcesptest 0.0.29 activate.sh with sudoers rule
+
 ## 0.0.47
 
 - Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.35, xcespwdog 0.0.7,
