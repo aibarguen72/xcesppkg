@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.50
+
+- Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.37, xcespwdog 0.0.7
+  with stale status path retirement in xcespserver (ProcClient ownedStatusPaths_)
+  and static route IDLE-retry fix + validator fix for synthetic interface types in
+  xcesp-on-rtr 0.0.33; schema fixes in xcesp-on-pw 0.0.2 and xcesp-on-xc 0.0.2
+
 ## 0.0.49
 
 - Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.36, xcespwdog 0.0.7,
