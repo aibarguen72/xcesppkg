@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.47
+
+- Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.35, xcespwdog 0.0.7,
+  xcesp-on-rtr 0.0.29 with dynamic-routing / RtrFrr support and ProcObject::onServerCap()
+
 ## 0.0.46
 
 - Bundles xcespserver 0.0.21, xcespcli 0.0.28, xcespproc 0.0.34, xcespwdog 0.0.7,
