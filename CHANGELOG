@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.52
+
+- Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.38, xcespwdog 0.0.7
+  with mGRE + NHRP support in xcesp-on-rtr 0.0.34: VtyshCmd and FrrFragment helpers,
+  RtrNhrpConfig struct, gre schema nhrp child node (nhrp-map / nhrp-nhs), fragment
+  aggregation and vtysh push in RtrFrrPObj
+
 ## 0.0.51
 
 - Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.37, xcespwdog 0.0.7
