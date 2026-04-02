@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.53
+
+- Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.38, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.35: nhrp_state live re-check in buildStatusJson promotes
+  "pending" to "configured" once FRR becomes reachable without requiring a full
+  applyConfig cycle
+
 ## 0.0.52
 
 - Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.38, xcespwdog 0.0.7
