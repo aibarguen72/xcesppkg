@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.51
+
+- Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.37, xcespwdog 0.0.7
+  (no binary changes); xcesptest 0.0.32 removes stale router default block from
+  cfg/xcespserver.conf (xcespqa now manages this file at test-run time)
+
 ## 0.0.50
 
 - Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.37, xcespwdog 0.0.7
