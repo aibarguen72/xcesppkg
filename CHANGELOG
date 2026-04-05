@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.54
+
+- Bundles xcespserver 0.0.23, xcespcli 0.0.29, xcespproc 0.0.39, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.36: non-blocking FRR startup (double-fork), runtime debug
+  flags (0x1/0x2/0x4), procMutex_ deadlock fix on RESET/DEPLOY cycles, graceful
+  SIGTERM shutdown with object teardown in reverse order, singleton path fix in CLI,
+  xcespwdog WDOG_INTERVAL_TIMER doubled to 2× heartbeat interval
+
 ## 0.0.53
 
 - Bundles xcespserver 0.0.22, xcespcli 0.0.28, xcespproc 0.0.38, xcespwdog 0.0.7
