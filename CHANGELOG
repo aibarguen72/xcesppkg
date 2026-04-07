@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.55
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.40, xcespwdog 0.0.7
+  with FRR config push pipeline fixes: vtysh path autodetection, sudo-n for VTY
+  socket access, NHRP fragment race condition fix, SELinux-safe fragment dir
+  creation, and removal of unsupported tunnel commands from FRR config fragments
+
 ## 0.0.54
 
 - Bundles xcespserver 0.0.23, xcespcli 0.0.29, xcespproc 0.0.39, xcespwdog 0.0.7
