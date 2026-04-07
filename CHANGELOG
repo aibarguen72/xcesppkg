@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.56
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.41, xcespwdog 0.0.7
+  with mGRE tunnel device naming fix: xcespproc now uses `ip link add type gre`
+  (rtnl_newlink API) instead of `ip tunnel add mode gre` so the kernel device
+  name matches the configured interface name (previously produced "gre0")
+
 ## 0.0.55
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.40, xcespwdog 0.0.7
