@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.57
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.41, xcespwdog 0.0.7
+  with xcesptest 0.0.40: router RA base config added to xcespserver.conf,
+  cap_sys_module added to xcespproc activation capabilities
+
 ## 0.0.56
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.41, xcespwdog 0.0.7
