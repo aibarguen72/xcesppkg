@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.63
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.46, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.46: extended neighbor/group params + additional global BGP params
+
 ## 0.0.62
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.45, xcespwdog 0.0.7
