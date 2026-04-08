@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.60
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.43, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.43: BGP per-instance parameter support (17 boolean flags,
+  6 integer attrs, maximum-paths, distance-bgp, dampening across all 4 BGP
+  instance types)
+
 ## 0.0.59
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.42, xcespwdog 0.0.7
