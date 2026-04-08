@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.58
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.41, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.40: BGP instance support (four types: main, kernel VRF,
+  bgp-vrf, bgp-view) and MPLS forwarding (per-router platform_labels and
+  per-interface input sysctl)
+
 ## 0.0.57
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.41, xcespwdog 0.0.7
