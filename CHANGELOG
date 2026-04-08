@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.59
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.42, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.42: fix BGP oper-status path reporting (bgp_node/bgp_name
+  fields in status JSON), fix FRR push retry on failed vtysh call
+
 ## 0.0.58
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.41, xcespwdog 0.0.7
