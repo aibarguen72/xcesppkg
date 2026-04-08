@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.61
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.44, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.44: BGP neighbor, peer-group, and listen range support
+
 ## 0.0.60
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.43, xcespwdog 0.0.7
