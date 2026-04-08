@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.62
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.45, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.45: BGP neighbor/group parameters (shutdown,
+  auto-shutdown, 22 boolean flags including compound-name mappings)
+
 ## 0.0.61
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.44, xcespwdog 0.0.7
