@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.64
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.47, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.47: AS-PATH-ACL, community-lists, prefix-lists
+  (new RtrAclPObj with root-level FRR fragment commands)
+
 ## 0.0.63
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.46, xcespwdog 0.0.7
