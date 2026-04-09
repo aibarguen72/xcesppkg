@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.69
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.52, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.52: BGP address-family with neighbor activate
+
 ## 0.0.68
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.51, xcespwdog 0.0.7
