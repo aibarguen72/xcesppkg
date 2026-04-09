@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.67
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.50, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.50: BGP networks, aggregate-address, update-delay
+
 ## 0.0.66
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.49, xcespwdog 0.0.7
