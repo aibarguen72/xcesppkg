@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.65
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.48, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.48: standard and extended access-lists with
+  CIDR→wildcard mask conversion
+
 ## 0.0.64
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.47, xcespwdog 0.0.7
