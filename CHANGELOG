@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.73
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.55, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.55: BGP AF SAFI-restricted additional params
+  (dampening/retain/max-paths/aggregate/distance) and validator Check 17
+
 ## 0.0.72
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.54, xcespwdog 0.0.7
