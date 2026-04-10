@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.72
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.54, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.54: BGP address-family unicast VPN parameters
+  (export/import/rd/rt/label/sid/redistribute) and validator Check 16
+
 ## 0.0.71
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.53, xcespwdog 0.0.7
