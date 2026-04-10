@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.70
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.52, xcespwdog 0.0.7
+  with xcespcli commit-pending flag, prompt `*` indicator, and exit confirmation
+  when uncommitted changes are present
+
 ## 0.0.69
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.29, xcespproc 0.0.52, xcespwdog 0.0.7
