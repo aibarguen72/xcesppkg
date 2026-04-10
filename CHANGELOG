@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.74
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.56, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.56: BGP AF neighbor parameters (~35 attrs + dampening
+  + advertise-map children + validator Check 18)
+
 ## 0.0.73
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.55, xcespwdog 0.0.7
