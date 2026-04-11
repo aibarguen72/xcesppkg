@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.75
+
+- Bundles xcespserver 0.0.24, xcespcli 0.0.31, xcespproc 0.0.57, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.57: schema multi=false fix for singleton children
+  (gre, nhrp, auto-shutdown, dampening, bgp-params); xcespcli completion
+  hints for address-family/redistribute instance names
+
 ## 0.0.74
 
 - Bundles xcespserver 0.0.24, xcespcli 0.0.30, xcespproc 0.0.56, xcespwdog 0.0.7
