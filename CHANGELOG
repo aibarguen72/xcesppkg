@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.78
+
+- Bundles xcespserver 0.0.26, xcespcli 0.0.32, xcespproc 0.0.59, xcespwdog 0.0.7
+  with on-demand show-query relay (interfaces, routes, BGP summary, NHRP cache)
+  and formatted table output in CLI
+
 ## 0.0.77
 
 - Bundles xcespserver 0.0.25, xcespcli 0.0.31, xcespproc 0.0.58, xcespwdog 0.0.7
