@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.77
+
+- Bundles xcespserver 0.0.25, xcespcli 0.0.31, xcespproc 0.0.58, xcespwdog 0.0.7
+  with BGP VPN route installation fix: lo up + router-id, FRR AF indentation,
+  fragment ordering, vpnRepush, NHRP error suppression, MPLS sysctl dedup
+
 ## 0.0.76
 
 - Bundles xcespserver 0.0.25, xcespcli 0.0.31, xcespproc 0.0.57, xcespwdog 0.0.7
