@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.81
+
+- Bundles xcespserver 0.0.26, xcespcli 0.0.38, xcespproc 0.0.62, xcespwdog 0.0.7
+  with BGP peer-group remote-as/remote-as-auto support (group.schema + vrf.py)
+
 ## 0.0.80
 
 - Bundles xcespserver 0.0.26, xcespcli 0.0.38, xcespproc 0.0.62, xcespwdog 0.0.7
