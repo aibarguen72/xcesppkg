@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.80
+
+- Bundles xcespserver 0.0.26, xcespcli 0.0.38, xcespproc 0.0.62, xcespwdog 0.0.7
+  with `show bgp <afi-safi>` table/neighbor/filter view; BGP peer-group completion
+  for neighbor.group, listen.group, af-neighbor.peer-group and af-neighbor instance slot;
+  abbreviated token support (pmatch) for show bgp completions
+
 ## 0.0.79
 
 - Bundles xcespserver 0.0.26, xcespcli 0.0.33, xcespproc 0.0.60, xcespwdog 0.0.7
