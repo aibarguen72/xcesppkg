@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.79
+
+- Bundles xcespserver 0.0.26, xcespcli 0.0.33, xcespproc 0.0.60, xcespwdog 0.0.7
+  with `show devices` command, rewritten `show interfaces` (configured cross-reference
+  with VRF filter), `?`/TAB completion for all show subcommands and router/vrf params
+
 ## 0.0.78
 
 - Bundles xcespserver 0.0.26, xcespcli 0.0.32, xcespproc 0.0.59, xcespwdog 0.0.7
