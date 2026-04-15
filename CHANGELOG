@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.90
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.45, xcespproc 0.0.68, xcespwdog 0.0.7
+  with cross-NS VLAN remove fix (macvlan + VLAN sub-interface both deleted on
+  config removal), `show/clear mac-table` QA fixes, and BGP neighbor shutdown
+  check improvements
+
 ## 0.0.89
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.45, xcespproc 0.0.66, xcespwdog 0.0.7
