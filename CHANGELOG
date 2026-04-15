@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.87
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.43, xcespproc 0.0.65, xcespwdog 0.0.7
+  with ARP table Device/Interface column: shows Linux device name and, when
+  a configured interface maps to it under a different name, "device / ifaceName"
+
 ## 0.0.86
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.42, xcespproc 0.0.64, xcespwdog 0.0.7
