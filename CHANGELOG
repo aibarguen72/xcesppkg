@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.89
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.45, xcespproc 0.0.66, xcespwdog 0.0.7
+  with VLAN→interface migration (`interface type=vlan`), Linux bridge support
+  (`interface type=bridge`), and `show/clear mac-table` commands
+
 ## 0.0.88
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.44, xcespproc 0.0.65, xcespwdog 0.0.7
