@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.88
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.44, xcespproc 0.0.65, xcespwdog 0.0.7
+  with new `config-check` config-mode command
+
 ## 0.0.87
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.43, xcespproc 0.0.65, xcespwdog 0.0.7
