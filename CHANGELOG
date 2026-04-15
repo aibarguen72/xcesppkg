@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.84
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.40, xcespproc 0.0.64, xcespwdog 0.0.7
+  with ACTION command infrastructure and `clear bgp` implementation: full pipeline
+  CLI_ACTION_EXEC → xcespserver → xcespproc → xcesp-on-rtr ActionExec → FRR vtysh;
+  `clear bgp [peer IP | as ASN | peer-group NAME] [router/vrf/bgp-vrf/bgp-view]`
+
 ## 0.0.83
 
 - Bundles xcespserver 0.0.26, xcespcli 0.0.39, xcespproc 0.0.63, xcespwdog 0.0.7
