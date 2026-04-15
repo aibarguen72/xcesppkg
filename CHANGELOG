@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.86
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.42, xcespproc 0.0.64, xcespwdog 0.0.7
+  with ARP show fixes: vrf default filter, GRE/tunnel lladdr entries skipped;
+  xcespcli makefile default-goal fix
+
 ## 0.0.85
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.41, xcespproc 0.0.64, xcespwdog 0.0.7
