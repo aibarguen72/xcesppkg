@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.83
+
+- Bundles xcespserver 0.0.26, xcespcli 0.0.39, xcespproc 0.0.63, xcespwdog 0.0.7
+  with BGP bgp-vrf/bgp-view show command support: show commands infer VRF/VIEW
+  from session path (bgp-vrf → vrf param, bgp-view → view param); explicit
+  bgp-vrf/bgp-view modifier keywords in show command; VIEW param plumbed through
+  xcespcli→xcespproc→ShowQueryExec; FRR uses `show bgp view X` vs `show bgp vrf X`
+
 ## 0.0.82
 
 - Bundles xcespserver 0.0.26, xcespcli 0.0.38, xcespproc 0.0.62, xcespwdog 0.0.7
