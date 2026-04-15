@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.85
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.41, xcespproc 0.0.64, xcespwdog 0.0.7
+  with ARP support: `show arp [router/vrf]`, `clear arp [router/vrf]`,
+  `arp-table-size` VRF attr (applies sysctl gc_thresh); xcesp-on-rtr 0.0.68
+
 ## 0.0.84
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.40, xcespproc 0.0.64, xcespwdog 0.0.7
