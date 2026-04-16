@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.92
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.70, xcespwdog 0.0.7
+  with VRRP validator fixes (address prefix check, dynamic-routing detection)
+  and clearMacTable per-port FDB flush
+
 ## 0.0.91
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.69, xcespwdog 0.0.7
