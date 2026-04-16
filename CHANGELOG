@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.94
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.72, xcespwdog 0.0.7
+  with fix for `show vrrp` on named-namespace routers (vtysh socket path),
+  removal of unnecessary `ip netns exec` from vtysh commands, and post-start
+  monitorFrr near-immediate re-check ensuring VRRP fragments pushed to FRR
+
 ## 0.0.93
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.71, xcespwdog 0.0.7
