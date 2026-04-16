@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.93
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.71, xcespwdog 0.0.7
+  with vrrpd daemon activation (dynamic-routing vrrp true now enables vrrpd
+  in the per-router FRR instance)
+
 ## 0.0.92
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.70, xcespwdog 0.0.7
