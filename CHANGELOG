@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.95
+
+- Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.73, xcespwdog 0.0.7
+  with SNAT/DNAT NAT objects (1:1, PAT, port redirect modes), ingress/egress
+  interface matching on NAT rules, force-symmetry per-interface symmetric routing
+  via CONNMARK + policy routing tables
+
 ## 0.0.94
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.72, xcespwdog 0.0.7
