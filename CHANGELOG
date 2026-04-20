@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.96
+
+- Bundles xcespserver 0.0.28, xcespcli 0.0.47, xcespproc 0.0.74, xcespwdog 0.0.7
+  with strongswan/IPsec detection (ipsec wrapper or charon+swanctl), ipsec config
+  feature flag (bit 2), swan status nodes in server status, and strongswan display
+  in `show server` detected software table
+
 ## 0.0.95
 
 - Bundles xcespserver 0.0.27, xcespcli 0.0.46, xcespproc 0.0.73, xcespwdog 0.0.7
