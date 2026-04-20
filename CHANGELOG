@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.97
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.74, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.79: fix namespace existence check (file-based, not
+  substring match); fix VRF static route install and existence check; fix show
+  routes router name resolution; translate redistribute static→kernel for FRR;
+  add Strongswan IPsec lifecycle management (RtrStrongswanPObj)
+
 ## 0.0.96
 
 - Bundles xcespserver 0.0.28, xcespcli 0.0.47, xcespproc 0.0.74, xcespwdog 0.0.7
