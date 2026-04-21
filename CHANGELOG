@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.100
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.76, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.82: fix multi-namespace charon startup — add per-namespace
+  strongswan.conf with unique VICI socket path to prevent conflicts; add 4 missing
+  IPsec schema node types (algorithm, match, esp-proposals, ah-proposals) needed for
+  proposals/children config parsing; xcesptest routing count bumped to 3 for IPsec tests
+
 ## 0.0.99
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.75, xcespwdog 0.0.7
