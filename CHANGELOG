@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.102
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.78, xcespwdog 0.0.7
+  with charon launch via direct C++ syscalls (launchCharonInNs), monitor loop
+  shutdown fix, and integrated swanctl.conf rendering in router.py
+
 ## 0.0.101
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.77, xcespwdog 0.0.7
