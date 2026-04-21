@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.0.99
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.75, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.81: fix IPsec enum schema types — move from unsupported
+  inline `enum values=...` in attr lines to named type definitions in
+  `_types.schema`; fix `charon_running()` in xcespqa to use inode comparison
+  instead of `ip netns exec`; fix `activate.sh` to grant `/etc/swanctl` write
+  access to running user; fix `algorithm`/`match` child node `!` closers in
+  xcespqa ch02 config strings
+
 ## 0.0.98
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.75, xcespwdog 0.0.7
