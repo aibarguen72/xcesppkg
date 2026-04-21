@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.101
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.77, xcespwdog 0.0.7
+  with charon PID file conflict fix via mount namespace isolation and correct
+  swanctl VICI socket redirect per namespace
+
 ## 0.0.100
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.76, xcespwdog 0.0.7
