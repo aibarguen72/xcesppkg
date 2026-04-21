@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.0.98
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.75, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.80: full swanctl.conf configuration support for IPsec —
+  9 new schema node types (connection, local, remote, children, proposals,
+  local-ts, remote-ts, secret, pool), new ipsec.py xcespmap rule renders
+  connections/secrets/pools blocks from XCESP config, RtrStrongswanPObj writes
+  and hot-reloads swanctl.conf atomically
+
 ## 0.0.97
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.74, xcespwdog 0.0.7
