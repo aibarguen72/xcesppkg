@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.0.107
+
+- xcesp-activate: auto-generate /run/xcesp/xcespwdog_proc.ini at each start by
+  parsing xcespserver.conf (server N / processes routing / count M); xcespwdog reads
+  this via PROC_CONFIG_FILE — no more manual [process.N] entries in xcespwdog.ini
+- xcespwdog.ini template: add PROC_CONFIG_FILE, remove hardcoded xcespproc entries;
+  set WDOG_INTERVAL_TIMER=180000 and add -p 1514 for proper log forwarding
+- xcesp-activate: auto-patch existing xcespwdog.ini installations to inject
+  PROC_CONFIG_FILE if missing (one-time migration, non-destructive)
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.79, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.86 (same binaries as 0.0.104–0.0.106)
+
 ## 0.0.106
 
 - Bundle xcesp-server schema (on-server/server.schema) — adds `server`, `license-code`,
