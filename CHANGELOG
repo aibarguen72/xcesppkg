@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.104
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.79, xcespwdog 0.0.7
+  with reverse-order teardown in clearAllObjects() and frrinit.sh stop without nsExecPrefix
+
 ## 0.0.103
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.78, xcespwdog 0.0.7
