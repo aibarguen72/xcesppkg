@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.103
+
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.78, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.85: fix host-route /32 and /128 detection in routeExists()
+
 ## 0.0.102
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.78, xcespwdog 0.0.7
