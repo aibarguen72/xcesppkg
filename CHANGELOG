@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.0.105
+
+- install.sh: add operator group membership instructions (sudo usermod -aG xcesp
+  <username>) to the post-install summary — users must join the xcesp group to
+  access ctrl.sock and use xcespcli
+- install.sh: add schema installation verification (counts installed .schema files,
+  warns if fewer than 10 found) and TAB-completion troubleshooting hints in summary
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.79, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.86 (same binaries as 0.0.104)
+
 ## 0.0.104
 
 - Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.79, xcespwdog 0.0.7

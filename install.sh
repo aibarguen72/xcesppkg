@@ -214,6 +214,18 @@ systemctl enable xcesp.service
 info "  xcesp.service installed and enabled"
 
 # ---------------------------------------------------------------------------
+# Schema installation verification
+# ---------------------------------------------------------------------------
+info "Verifying schema installation..."
+SCHEMA_COUNT=$(find "$SCHEMA_DIR" -name "*.schema" 2>/dev/null | wc -l)
+if [ "$SCHEMA_COUNT" -lt 10 ]; then
+    warn "Schema directory looks incomplete: only $SCHEMA_COUNT .schema files found in $SCHEMA_DIR"
+    warn "Expected at least 60. Re-run install.sh or check for cp errors above."
+else
+    info "  Schema files installed: $SCHEMA_COUNT (in $SCHEMA_DIR)"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 echo ""
@@ -227,7 +239,7 @@ echo "  mainsw          : $MAINSW_DIR/"
 echo "  backupsw        : $BACKUPSW_DIR/  (empty — ready for a second version)"
 echo "  Configuration   : $CFG_DIR/"
 echo "  Logs            : $LOG_DIR/"
-echo "  Schema          : $SCHEMA_DIR/    (synced from mainsw on each start)"
+echo "  Schema          : $SCHEMA_DIR/    ($SCHEMA_COUNT .schema files)"
 echo "  Rules           : $RULES_DIR/     (synced from mainsw on each start)"
 echo "  Python venv     : $VENV_DIR/"
 echo "  Runtime dir     : $RUN_DIR/       (ctrl.sock lives here)"
@@ -238,6 +250,24 @@ echo "  Start   : systemctl start xcesp"
 echo "  Status  : systemctl status xcesp"
 echo "  Logs    : journalctl -u xcesp -f   or   tail -f $LOG_DIR/xcesp.log"
 echo "  CLI     : xcespcli [--socket $RUN_DIR/ctrl.sock]"
+echo ""
+echo "---------------------------------------------------------------------"
+echo " Operator access"
+echo "---------------------------------------------------------------------"
+echo "  xcespcli connects via Unix socket: $RUN_DIR/ctrl.sock"
+echo "  The socket is accessible only to members of the '$XCESP_GROUP' group."
+echo ""
+echo "  To grant CLI access to an operator account:"
+echo "    sudo usermod -aG $XCESP_GROUP <username>"
+echo "  The user must log out and back in for the new group to take effect."
+echo ""
+echo "---------------------------------------------------------------------"
+echo " Schema TAB/? completion"
+echo "---------------------------------------------------------------------"
+echo "  xcespcli loads its schema automatically from xcespserver (CLI_ACK)."
+echo "  If TAB completion does not work, verify:"
+echo "    ls $SCHEMA_DIR/on-rtr/*.schema | wc -l   # should be ~55"
+echo "    xcespcli --schema-dir $SCHEMA_DIR         # check for 'schema load failed'"
 echo ""
 echo "To install a second version and swap:"
 echo "  1. Unpack a new package into $BACKUPSW_DIR/"
