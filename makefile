@@ -44,9 +44,10 @@ SCHEMA_DIRECT := ../xcesptest/schema/domain.schema \
                  ../xcesptest/schema/udptester.schema \
                  ../xcesptest/schema/udptester.status
 
-SCHEMA_ONRTR := ../xcesp-on-rtr/schema
-SCHEMA_ONPW  := ../xcesp-on-pw/schema
-SCHEMA_ONXC  := ../xcesp-on-xc/schema
+SCHEMA_ONRTR   := ../xcesp-on-rtr/schema
+SCHEMA_ONPW    := ../xcesp-on-pw/schema
+SCHEMA_ONXC    := ../xcesp-on-xc/schema
+SCHEMA_ONSERVER := ../xcesp-server/schema
 
 # Rules: direct files from xcesptest + each ON library's own rules directory.
 RULES_WORKER    := ../xcesptest/rules/worker.py
@@ -97,12 +98,14 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	mkdir -p $(PKG_NAME)/schema
 	cp $(SCHEMA_DIRECT) $(PKG_NAME)/schema/
 	# ON library schema directories (copied directly — bypasses broken symlinks)
-	mkdir -p $(PKG_NAME)/schema/on-rtr $(PKG_NAME)/schema/on-pw $(PKG_NAME)/schema/on-xc
-	cp -r $(SCHEMA_ONRTR)/. $(PKG_NAME)/schema/on-rtr/
-	cp -r $(SCHEMA_ONPW)/.  $(PKG_NAME)/schema/on-pw/
-	cp -r $(SCHEMA_ONXC)/.  $(PKG_NAME)/schema/on-xc/
+	mkdir -p $(PKG_NAME)/schema/on-rtr $(PKG_NAME)/schema/on-pw $(PKG_NAME)/schema/on-xc \
+	         $(PKG_NAME)/schema/on-server
+	cp -r $(SCHEMA_ONRTR)/.   $(PKG_NAME)/schema/on-rtr/
+	cp -r $(SCHEMA_ONPW)/.    $(PKG_NAME)/schema/on-pw/
+	cp -r $(SCHEMA_ONXC)/.    $(PKG_NAME)/schema/on-xc/
+	cp -r $(SCHEMA_ONSERVER)/. $(PKG_NAME)/schema/on-server/
 	# Flatten validate hooks from plugin schemas to top-level schema dir
-	find $(SCHEMA_ONRTR) $(SCHEMA_ONPW) $(SCHEMA_ONXC) -maxdepth 1 \
+	find $(SCHEMA_ONRTR) $(SCHEMA_ONPW) $(SCHEMA_ONXC) $(SCHEMA_ONSERVER) -maxdepth 1 \
 	    -name "*.validate.py" -exec cp {} $(PKG_NAME)/schema/ \; 2>/dev/null || true
 
 	# --- Python rules ---

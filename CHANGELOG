@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.106
+
+- Bundle xcesp-server schema (on-server/server.schema) — adds `server`, `license-code`,
+  and `processes` node types required for server/license/processes configuration via CLI
+- Bundles xcespserver 0.0.29, xcespcli 0.0.48, xcespproc 0.0.79, xcespwdog 0.0.7
+  with xcesp-on-rtr 0.0.86 (same binaries as 0.0.104/0.0.105)
+
 ## 0.0.105
 
 - install.sh: add operator group membership instructions (sudo usermod -aG xcesp
