@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.108
+
+- xcesp-activate: fix migration patch — after injecting PROC_CONFIG_FILE, also
+  remove static [process.2..N] xcespproc entries from xcespwdog.ini; duplicate
+  section names across xcespwdog.ini and xcespwdog_proc.ini prevented all processes
+  (including xcespserver) from launching
+
 ## 0.0.107
 
 - xcesp-activate: auto-generate /run/xcesp/xcespwdog_proc.ini at each start by

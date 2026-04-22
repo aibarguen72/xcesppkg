@@ -146,11 +146,29 @@ log "  xcespwdog_proc.ini: $routing_count routing process(es)"
 chown "$XCESP_USER:$XCESP_GROUP" "$WDOG_PROC_FILE"
 chmod 0640 "$WDOG_PROC_FILE"
 
-# Patch existing xcespwdog.ini installations that pre-date PROC_CONFIG_FILE support
+# Patch existing xcespwdog.ini installations that pre-date PROC_CONFIG_FILE support:
+# 1. Inject PROC_CONFIG_FILE if missing.
+# 2. Remove any static [process.N] entries for xcespproc (N >= 2) — they would
+#    collide with the same section names in xcespwdog_proc.ini and prevent startup.
 WDOG_INI=$XCESP_BASE/cfg/xcespwdog.ini
-if [ -f "$WDOG_INI" ] && ! grep -q "^PROC_CONFIG_FILE" "$WDOG_INI"; then
-    sed -i "/^LOG_LOCAL_PORT/a PROC_CONFIG_FILE        = $WDOG_PROC_FILE" "$WDOG_INI"
-    log "  injected PROC_CONFIG_FILE into $WDOG_INI"
+if [ -f "$WDOG_INI" ]; then
+    if ! grep -q "^PROC_CONFIG_FILE" "$WDOG_INI"; then
+        sed -i "/^LOG_LOCAL_PORT/a PROC_CONFIG_FILE        = $WDOG_PROC_FILE" "$WDOG_INI"
+        log "  injected PROC_CONFIG_FILE into $WDOG_INI"
+    fi
+    # Remove static xcespproc [process.N] blocks (process.2 and above).
+    # Keep only [process.1] (xcespserver) and the [WDOG] section.
+    # Strategy: delete from any [process.N] line where N>=2 through the next
+    # [process.M] or end-of-file, using awk.
+    cleaned=$(awk '
+        /^\[process\.([2-9]|[0-9]{2,})\]/ { skip=1 }
+        /^\[process\.1\]/ { skip=0 }
+        !skip { print }
+    ' "$WDOG_INI")
+    if [ "$(echo "$cleaned" | wc -l)" -lt "$(wc -l < "$WDOG_INI")" ]; then
+        echo "$cleaned" > "$WDOG_INI"
+        log "  removed static xcespproc entries from $WDOG_INI (now managed by PROC_CONFIG_FILE)"
+    fi
 fi
 
 log "activation complete"
