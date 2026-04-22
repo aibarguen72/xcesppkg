@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.109
+
+- xcesp-activate: fix xcespwdog_proc.ini generation — include [process.1]
+  (xcespserver) as the first entry; when PROC_CONFIG_FILE is active xcespwdog reads
+  ALL process entries from that file only, so xcespserver must be listed there too
+
 ## 0.0.108
 
 - xcesp-activate: fix migration patch — after injecting PROC_CONFIG_FILE, also
