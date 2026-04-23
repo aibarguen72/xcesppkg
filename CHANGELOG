@@ -1,6 +1,11 @@
 # Changelog - xcesppkg
 
 ## 0.0.117
+## 0.0.118
+
+- Bundles xcesp-on-rtr 0.0.92: fix stale charon socket files — charon.vici left after pkill caused next restart to run without VICI (EADDRINUSE on bind); cleanStaleSwanFiles() now removes them before start and after stop
+- Bundles xcespserver 0.0.30, xcespcli 0.0.51, xcespproc 0.0.79, xcespwdog 0.0.7 (unchanged)
+
 
 - Bundles xcesp-on-rtr 0.0.91: change `dpd-delay` to `ipsec-time` type; add to Check 1e validator
 - Bundles xcespcli 0.0.51: add `show ipsec` TAB/? completion (`sa` → `router <name>`)
