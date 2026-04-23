@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.112
+
+- `install.sh`: add xcesp user to frr group and set `chmod g+rwx /etc/frr` when FRR is installed; allows xcespproc to create per-namespace `/etc/frr/<ns>/` subdirectories required to run FRR in named network namespaces
+- `scripts/xcesp-activate`: same frr group check on every service start — handles the case where FRR is installed after xcesppkg without a reinstall
+- Bundles xcespserver 0.0.30, xcespcli 0.0.49, xcespproc 0.0.79, xcespwdog 0.0.7
+
 ## 0.0.111
 
 - Bundles xcesp-on-rtr 0.0.87: `schema/router.validate.py` adds server feature gate
