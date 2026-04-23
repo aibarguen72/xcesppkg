@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.128
+
+- Bundles xcespproc 0.0.86: `applyConfig()` guards against duplicate charon launch on xcespproc reconnect — fixes three-charon scenario seen in production
+
 ## 0.0.127
 
 - Bundles xcespproc 0.0.85: charon now launched with `STRONGSWAN_CONF` pointing to a per-namespace conf (`charon-ns.conf`) — fixes charon restart loop on RHEL where the system-wide strongswan.conf uses a different VICI socket path than Fedora
