@@ -99,6 +99,57 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# FRR group integration — allow xcespproc to write to /etc/frr/<ns>/
+# ---------------------------------------------------------------------------
+# xcespproc creates per-namespace subdirectories under /etc/frr/ to store the
+# daemons file and frr.conf for each router namespace.  /etc/frr is owned by
+# frr:frr; adding xcesp to the frr group and making /etc/frr group-writable
+# gives the minimum required access without granting broader privileges.
+info "Checking FRR group integration..."
+if getent group frr > /dev/null 2>&1; then
+    if ! id -Gn "$XCESP_USER" 2>/dev/null | grep -qw frr; then
+        usermod -aG frr "$XCESP_USER"
+        info "  Added $XCESP_USER to frr group"
+    else
+        info "  $XCESP_USER is already in the frr group"
+    fi
+    # Ensure the frr group has write access to /etc/frr so xcespproc can
+    # create per-namespace subdirectories at runtime.
+    if [ -d /etc/frr ]; then
+        chmod g+rwx /etc/frr
+        info "  /etc/frr: group write enabled"
+    fi
+
+    # sudoers rule for frrinit.sh and vtysh.
+    # frrinit.sh unconditionally checks EUID=0 and exits if not root.
+    # xcespproc calls it via "sudo -n frrinit.sh start <ns>".
+    # vtysh must also run as root to connect to FRR daemon VTY sockets.
+    FRRINIT=""
+    for candidate in /usr/libexec/frr/frrinit.sh /usr/lib/frr/frrinit.sh \
+                     /usr/local/lib/frr/frrinit.sh; do
+        [ -f "$candidate" ] && FRRINIT="$candidate" && break
+    done
+    VTYSH_BIN="$(command -v vtysh 2>/dev/null || true)"
+
+    if [ -n "$FRRINIT" ] || [ -n "$VTYSH_BIN" ]; then
+        FRR_SUDOERS=/etc/sudoers.d/xcesp-frr
+        > "$FRR_SUDOERS"
+        [ -n "$FRRINIT" ] && \
+            echo "$XCESP_USER ALL=(root) NOPASSWD: $FRRINIT *" >> "$FRR_SUDOERS" && \
+            info "  sudoers: $XCESP_USER → $FRRINIT"
+        [ -n "$VTYSH_BIN" ] && \
+            echo "$XCESP_USER ALL=(root) NOPASSWD: $VTYSH_BIN *" >> "$FRR_SUDOERS" && \
+            info "  sudoers: $XCESP_USER → $VTYSH_BIN"
+        chmod 0440 "$FRR_SUDOERS"
+        info "  $FRR_SUDOERS installed"
+    else
+        info "  frrinit.sh not found — skipping FRR sudoers rule (install FRR first)"
+    fi
+else
+    info "  frr group not found — FRR not installed, skipping"
+fi
+
+# ---------------------------------------------------------------------------
 # sudoers rule — allow xcesp to load kernel modules via xcespserver
 # ---------------------------------------------------------------------------
 info "Installing sudoers rule for kernel module loading..."

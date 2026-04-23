@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.121
+
+- `install.sh`: add FRR group integration — adds `xcesp` user to `frr` group, enables group-write on `/etc/frr`, installs sudoers rules for `frrinit.sh` and `vtysh`
+- `scripts/xcesp-activate`: add FRR group write access section — re-runs frr group and sudoers setup on every activation so `dnf install frr` after initial install is handled without a reinstall
+- Bundles xcespserver 0.0.30, xcespcli 0.0.51, xcespproc 0.0.80, xcespwdog 0.0.7 (unchanged)
+
 ## 0.0.120
 
 - Bundles xcespproc 0.0.80: rebuild against xcesp-on-rtr 0.0.93 so swanctl VICI socket paths use `unix://` URI prefix — fixes ENOENT error when connecting swanctl to per-namespace charon

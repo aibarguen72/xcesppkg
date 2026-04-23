@@ -95,6 +95,44 @@ if [ -d "$MAINSW/python" ] && [ -d "$VENV" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# FRR group write access — needed so xcespproc can create /etc/frr/<ns>/
+# ---------------------------------------------------------------------------
+# /etc/frr is owned by frr:frr.  xcespproc runs as the xcesp user (which is
+# added to the frr group by install.sh).  Ensure group write is set on every
+# start so that "dnf install frr" after the initial install.sh still works.
+if getent group frr > /dev/null 2>&1 && [ -d /etc/frr ]; then
+    # Add xcesp to frr group if not already there (idempotent)
+    if ! id -Gn "$XCESP_USER" 2>/dev/null | grep -qw frr; then
+        usermod -aG frr "$XCESP_USER"
+        log "  added $XCESP_USER to frr group"
+    fi
+    chmod g+rwx /etc/frr
+    log "  /etc/frr: group write ensured"
+
+    # Install/refresh frrinit.sh + vtysh sudoers rule.
+    # frrinit.sh unconditionally requires EUID=0; xcespproc invokes it via sudo -n.
+    # Re-run on every activation so that "dnf install frr" after the initial
+    # install.sh is handled without a reinstall.
+    FRRINIT=""
+    for candidate in /usr/libexec/frr/frrinit.sh /usr/lib/frr/frrinit.sh \
+                     /usr/local/lib/frr/frrinit.sh; do
+        [ -f "$candidate" ] && FRRINIT="$candidate" && break
+    done
+    VTYSH_BIN="$(command -v vtysh 2>/dev/null || true)"
+
+    if [ -n "$FRRINIT" ] || [ -n "$VTYSH_BIN" ]; then
+        FRR_SUDOERS=/etc/sudoers.d/xcesp-frr
+        > "$FRR_SUDOERS"
+        [ -n "$FRRINIT" ] && \
+            echo "$XCESP_USER ALL=(root) NOPASSWD: $FRRINIT *" >> "$FRR_SUDOERS"
+        [ -n "$VTYSH_BIN" ] && \
+            echo "$XCESP_USER ALL=(root) NOPASSWD: $VTYSH_BIN *" >> "$FRR_SUDOERS"
+        chmod 0440 "$FRR_SUDOERS"
+        log "  $FRR_SUDOERS refreshed"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # Generate xcespwdog process list from xcespserver.conf
 # ---------------------------------------------------------------------------
 # Reads 'server N / processes routing / count M' and writes one [process.N]
