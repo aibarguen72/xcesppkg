@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.127
+
+- Bundles xcespproc 0.0.85: charon now launched with `STRONGSWAN_CONF` pointing to a per-namespace conf (`charon-ns.conf`) — fixes charon restart loop on RHEL where the system-wide strongswan.conf uses a different VICI socket path than Fedora
+
 ## 0.0.126
 
 - Bundles xcespproc 0.0.84: rebuild against xcesp-on-rtr 0.0.97 — `show ipsec sa` now detects `/etc/swanctl` vs `/etc/strongswan/swanctl` at runtime, fixing empty output on RHEL/older Fedora
