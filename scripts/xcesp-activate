@@ -133,6 +133,24 @@ if getent group frr > /dev/null 2>&1 && [ -d /etc/frr ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# IPsec config directory sudoers rule — refresh on every activation
+# ---------------------------------------------------------------------------
+# xcespproc uses "sudo -n mkdir -p" to create per-namespace swanctl conf dirs
+# under /etc/swanctl/ or /etc/strongswan/swanctl/.  Refresh the rule here so
+# that a fresh OS install or upgrade does not leave it missing.
+SWAN_SUDOERS=/etc/sudoers.d/xcesp-swan
+if [ ! -f "$SWAN_SUDOERS" ]; then
+    cat > "$SWAN_SUDOERS" <<'SUDOERS'
+# Allow xcespproc to create per-namespace IPsec config directories.
+xcesp ALL=(root) NOPASSWD: /usr/bin/mkdir -p /etc/swanctl/*, \
+                            /usr/bin/mkdir -p /etc/strongswan/swanctl/*, \
+                            /usr/bin/mkdir -p /run/strongswan/*
+SUDOERS
+    chmod 0440 "$SWAN_SUDOERS"
+    log "  $SWAN_SUDOERS installed"
+fi
+
+# ---------------------------------------------------------------------------
 # Generate xcespwdog process list from xcespserver.conf
 # ---------------------------------------------------------------------------
 # Reads 'server N / processes routing / count M' and writes one [process.N]

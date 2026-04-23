@@ -150,6 +150,26 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# sudoers rule — allow xcesp to create IPsec config directories via xcespproc
+# ---------------------------------------------------------------------------
+# xcespproc creates per-namespace subdirectories under /etc/swanctl/ (newer
+# Fedora) or /etc/strongswan/swanctl/ (RHEL/older Fedora) to hold swanctl.conf
+# and strongswan.conf for each router namespace.  These paths are under /etc/
+# and not writable by the xcesp user; sudo -n mkdir -p is used at runtime.
+info "Installing sudoers rule for IPsec config directory creation..."
+SWAN_SUDOERS=/etc/sudoers.d/xcesp-swan
+cat > "$SWAN_SUDOERS" <<'SUDOERS'
+# Allow xcespproc to create per-namespace IPsec config directories.
+# xcespproc calls "sudo -n mkdir -p /etc/swanctl/<ns>/" (or the
+# /etc/strongswan/swanctl/<ns>/ equivalent) when setting up each router.
+xcesp ALL=(root) NOPASSWD: /usr/bin/mkdir -p /etc/swanctl/*, \
+                            /usr/bin/mkdir -p /etc/strongswan/swanctl/*, \
+                            /usr/bin/mkdir -p /run/strongswan/*
+SUDOERS
+chmod 0440 "$SWAN_SUDOERS"
+info "  $SWAN_SUDOERS installed"
+
+# ---------------------------------------------------------------------------
 # sudoers rule — allow xcesp to load kernel modules via xcespserver
 # ---------------------------------------------------------------------------
 info "Installing sudoers rule for kernel module loading..."
