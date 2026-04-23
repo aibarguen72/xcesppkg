@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.111
+
+- Bundles xcesp-on-rtr 0.0.87: `schema/router.validate.py` adds server feature gate
+  checks — rejects router with active `dynamic-routing` block when server flag is off;
+  rejects router with `ipsec` child block when server `ipsec` flag is off
+- Bundles xcespserver 0.0.30, xcespcli 0.0.49, xcespproc 0.0.79, xcespwdog 0.0.7
+
 ## 0.0.110
 
 - install.sh: add /etc/sudoers.d/xcesp-modprobe rule allowing xcesp user to run
