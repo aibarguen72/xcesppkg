@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.114
+
+- Bundles xcesp-on-rtr 0.0.88: add `show ipsec sa` query — `queryIpsecSa()` runs `swanctl --list-sas` in per-namespace env and parses IKE/CHILD SA output to JSON
+- Bundles xcespcli 0.0.50: add `show ipsec sa [router <name>]` CLI command with formatted IKE SA header + CHILD SA table output
+- Bundles xcespserver 0.0.30, xcespproc 0.0.79, xcespwdog 0.0.7 (unchanged)
+
 ## 0.0.113
 
 - `install.sh` + `scripts/xcesp-activate`: install `/etc/sudoers.d/xcesp-frr` when FRR is present — grants `xcesp ALL=(root) NOPASSWD` for `frrinit.sh *` and `vtysh *`; `frrinit.sh` unconditionally checks EUID=0 so xcespproc must call it via `sudo -n`; without this rule FRR silently fails to start in named network namespaces
