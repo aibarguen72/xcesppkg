@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.115
+
+- Bundles xcesp-on-rtr 0.0.89: fix server feature gate validator — bare IOS-style boolean attrs in the server block (e.g. `dynamic-routing` without `true`) now correctly detected as enabled; startup validation warnings no longer appear when features are configured
+- Bundles xcespserver 0.0.30, xcespcli 0.0.50, xcespproc 0.0.79, xcespwdog 0.0.7 (unchanged)
+
 ## 0.0.114
 
 - Bundles xcesp-on-rtr 0.0.88: add `show ipsec sa` query — `queryIpsecSa()` runs `swanctl --list-sas` in per-namespace env and parses IKE/CHILD SA output to JSON
