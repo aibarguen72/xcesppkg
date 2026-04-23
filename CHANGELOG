@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.119
+
+- Bundles xcesp-on-rtr 0.0.93: fix swanctl VICI socket connection — strongswan.conf now writes `unix://` URI prefix for socket paths; bare paths were not recognised as UNIX socket URIs
+- Bundles xcespserver 0.0.30, xcespcli 0.0.51, xcespproc 0.0.79, xcespwdog 0.0.7 (unchanged)
+
 ## 0.0.117
 ## 0.0.118
 
