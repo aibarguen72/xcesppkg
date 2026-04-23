@@ -99,6 +99,23 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# sudoers rule — allow xcesp to load kernel modules via xcespserver
+# ---------------------------------------------------------------------------
+info "Installing sudoers rule for kernel module loading..."
+SUDOERS_FILE=/etc/sudoers.d/xcesp-modprobe
+cat > "$SUDOERS_FILE" <<'SUDOERS'
+# Allow the xcesp service account to load specific kernel modules.
+# Required by xcespserver when 'mpls true', 'l2tp true', or 'vxlan true'
+# is configured in xcespserver.conf under the server block.
+xcesp ALL=(root) NOPASSWD: /usr/sbin/modprobe mpls_router, \
+                            /usr/sbin/modprobe mpls_iptunnel, \
+                            /usr/sbin/modprobe l2tp_core, \
+                            /usr/sbin/modprobe vxlan
+SUDOERS
+chmod 0440 "$SUDOERS_FILE"
+info "  $SUDOERS_FILE installed"
+
+# ---------------------------------------------------------------------------
 # Configuration templates (non-destructive: existing files are never overwritten)
 # ---------------------------------------------------------------------------
 info "Installing configuration templates to $CFG_DIR ..."

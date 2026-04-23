@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.0.110
+
+- install.sh: add /etc/sudoers.d/xcesp-modprobe rule allowing xcesp user to run
+  modprobe for mpls_router, mpls_iptunnel, l2tp_core, vxlan (required by xcespserver
+  kernel module auto-load feature)
+- xcesp-server/schema/server.schema: add mpls, l2tp, vxlan boolean attrs
+- Bundles xcespserver 0.0.30, xcespcli 0.0.49, xcespproc 0.0.79, xcespwdog 0.0.7
+
 ## 0.0.109
 
 - xcesp-activate: fix xcespwdog_proc.ini generation — include [process.1]
