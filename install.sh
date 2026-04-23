@@ -90,12 +90,12 @@ done
 # ---------------------------------------------------------------------------
 info "Setting file capabilities on xcespproc..."
 if command -v setcap > /dev/null 2>&1; then
-    setcap cap_net_admin,cap_sys_admin=ep "$BINDIR/xcespproc"
-    setcap cap_net_admin,cap_sys_admin=ep "$MAINSW_DIR/bin/xcespproc"
+    setcap cap_net_admin,cap_sys_admin,cap_net_bind_service=ep "$BINDIR/xcespproc"
+    setcap cap_net_admin,cap_sys_admin,cap_net_bind_service=ep "$MAINSW_DIR/bin/xcespproc"
     info "  cap_net_admin,cap_sys_admin=ep set"
 else
     warn "setcap not found — install libcap2-bin (Debian/Ubuntu) or libcap (RHEL/Fedora)"
-    warn "Then run:  setcap cap_net_admin,cap_sys_admin=ep $BINDIR/xcespproc"
+    warn "Then run:  setcap cap_net_admin,cap_sys_admin,cap_net_bind_service=ep $BINDIR/xcespproc"
 fi
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.124
+
+- `install.sh`, `scripts/xcesp-activate`: add `cap_net_bind_service` to xcespproc's capability set — required by charon's `socket-default` plugin to bind UDP ports 500/4500; without it charon logs "no socket implementation registered, receiving failed" and cannot send or receive IKE packets
+
 ## 0.0.123
 
 - `install.sh`, `scripts/xcesp-activate`: expand `xcesp-swan` sudoers rule to include `chown` on swanctl and strongswan dirs so newly-created directories can be transferred to the xcesp user
