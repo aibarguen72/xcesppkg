@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.126
+
+- Bundles xcespproc 0.0.84: rebuild against xcesp-on-rtr 0.0.97 — `show ipsec sa` now detects `/etc/swanctl` vs `/etc/strongswan/swanctl` at runtime, fixing empty output on RHEL/older Fedora
+- Bundles xcespserver 0.0.30, xcespcli 0.0.51, xcespwdog 0.0.7 (unchanged)
+
 ## 0.0.125
 
 - Bundles xcespproc 0.0.83: rebuild against xcesp-on-rtr 0.0.96 — `raiseCapsForChild()` raises `CAP_NET_BIND_SERVICE` as ambient so charon inherits it and the `socket-default` plugin can bind UDP 500/4500 for IKE
