@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.113
+
+- `install.sh` + `scripts/xcesp-activate`: install `/etc/sudoers.d/xcesp-frr` when FRR is present — grants `xcesp ALL=(root) NOPASSWD` for `frrinit.sh *` and `vtysh *`; `frrinit.sh` unconditionally checks EUID=0 so xcespproc must call it via `sudo -n`; without this rule FRR silently fails to start in named network namespaces
+
 ## 0.0.112
 
 - `install.sh`: add xcesp user to frr group and set `chmod g+rwx /etc/frr` when FRR is installed; allows xcespproc to create per-namespace `/etc/frr/<ns>/` subdirectories required to run FRR in named network namespaces
