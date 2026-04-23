@@ -141,10 +141,13 @@ fi
 SWAN_SUDOERS=/etc/sudoers.d/xcesp-swan
 if [ ! -f "$SWAN_SUDOERS" ]; then
     cat > "$SWAN_SUDOERS" <<'SUDOERS'
-# Allow xcespproc to create per-namespace IPsec config directories.
+# Allow xcespproc to create and own per-namespace IPsec config directories.
 xcesp ALL=(root) NOPASSWD: /usr/bin/mkdir -p /etc/swanctl/*, \
                             /usr/bin/mkdir -p /etc/strongswan/swanctl/*, \
-                            /usr/bin/mkdir -p /run/strongswan/*
+                            /usr/bin/mkdir -p /run/strongswan/*, \
+                            /usr/bin/chown * /etc/swanctl/*, \
+                            /usr/bin/chown * /etc/strongswan/swanctl/*, \
+                            /usr/bin/chown * /run/strongswan/*
 SUDOERS
     chmod 0440 "$SWAN_SUDOERS"
     log "  $SWAN_SUDOERS installed"

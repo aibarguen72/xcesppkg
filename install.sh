@@ -159,12 +159,15 @@ fi
 info "Installing sudoers rule for IPsec config directory creation..."
 SWAN_SUDOERS=/etc/sudoers.d/xcesp-swan
 cat > "$SWAN_SUDOERS" <<'SUDOERS'
-# Allow xcespproc to create per-namespace IPsec config directories.
-# xcespproc calls "sudo -n mkdir -p /etc/swanctl/<ns>/" (or the
-# /etc/strongswan/swanctl/<ns>/ equivalent) when setting up each router.
+# Allow xcespproc to create and own per-namespace IPsec config directories.
+# xcespproc calls "sudo -n mkdir -p <dir> && sudo -n chown $(id -u) <dir>"
+# when setting up each router's namespace swanctl/strongswan conf dirs.
 xcesp ALL=(root) NOPASSWD: /usr/bin/mkdir -p /etc/swanctl/*, \
                             /usr/bin/mkdir -p /etc/strongswan/swanctl/*, \
-                            /usr/bin/mkdir -p /run/strongswan/*
+                            /usr/bin/mkdir -p /run/strongswan/*, \
+                            /usr/bin/chown * /etc/swanctl/*, \
+                            /usr/bin/chown * /etc/strongswan/swanctl/*, \
+                            /usr/bin/chown * /run/strongswan/*
 SUDOERS
 chmod 0440 "$SWAN_SUDOERS"
 info "  $SWAN_SUDOERS installed"

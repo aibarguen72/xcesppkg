@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.123
+
+- `install.sh`, `scripts/xcesp-activate`: expand `xcesp-swan` sudoers rule to include `chown` on swanctl and strongswan dirs so newly-created directories can be transferred to the xcesp user
+- Bundles xcespproc 0.0.82: rebuild against xcesp-on-rtr 0.0.95 — `sudo chown $(id -u)` after `sudo mkdir` so conf files can be written into newly-created dirs
+- Bundles xcespserver 0.0.30, xcespcli 0.0.51, xcespwdog 0.0.7 (unchanged)
+
 ## 0.0.122
 
 - `install.sh`, `scripts/xcesp-activate`: add `xcesp-swan` sudoers rule — allows `xcespproc` to `sudo -n mkdir -p` under `/etc/swanctl/`, `/etc/strongswan/swanctl/`, and `/run/strongswan/` so per-namespace IPsec config dirs can be created by the unprivileged `xcesp` user
