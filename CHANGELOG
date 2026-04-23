@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.117
+
+- Bundles xcesp-on-rtr 0.0.91: change `dpd-delay` to `ipsec-time` type; add to Check 1e validator
+- Bundles xcespcli 0.0.51: add `show ipsec` TAB/? completion (`sa` → `router <name>`)
+- Bundles xcespserver 0.0.30, xcespproc 0.0.79, xcespwdog 0.0.7 (unchanged)
+
 ## 0.0.116
 
 - Bundles xcesp-on-rtr 0.0.90: add `restart` to `ipsec-close-action` enum; add `ipsec-time` type (accepts `<N>[s|m|h|d]`) for all `*-time`, `*-timeout` and `inactivity` attrs in IPsec connection/children; Check 1e validates format on config commit
