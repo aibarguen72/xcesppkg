@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.132
+
+- Bundles xcespproc 0.0.90 / xcesp-on-rtr 0.0.103: `show ipsec sa` no longer breaks the CLI session — `swanctl --list-sas` capped at 5s timeout; packet counter parsing fixed ("packets" not "pkts")
+
 ## 0.0.131
 
 - Bundles xcespproc 0.0.89 / xcesp-on-rtr 0.0.102: replace `ip vrf exec` with fwmark-based VRF routing — fixes charon launch failure with "Permission denied" on SELinux-enforcing Fedora when `ipsec { vrf ... }` is configured
