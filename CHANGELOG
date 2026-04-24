@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.135
+
+- Bundles xcespproc 0.0.93 / xcesp-on-rtr 0.0.106: fix `show ipsec sa` returning "(no IPsec security associations)" for all routers — the 0.0.134 timeout fix inadvertently added `timeout 8` before swanctl's env-var prefix, breaking the env assignment
+
 ## 0.0.134
 
 - Bundles xcespproc 0.0.92 / xcesp-on-rtr 0.0.105: all show queries now have an 8 s timeout via `IpCmd::run(cmd, 8)` — a hung `ip route show` in a bad namespace no longer stalls xcespproc's event loop causing "server disconnected"; also sets `udp_l3mdev_accept=1`/`raw_l3mdev_accept=1` in the router namespace so IKE packets arrive on VRF slave interfaces and IPsec child SAs can establish
