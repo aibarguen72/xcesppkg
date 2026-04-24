@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.136
+
+- Bundles xcespproc 0.0.94 / xcesp-on-rtr 0.0.107: fix GRE-over-IPsec — charon now correctly binds to the WAN loopback address (via a leaked local route in the namespace main table), so negotiated traffic selectors match actual GRE outer packets; previously charon used the GRE interface address and strongSwan narrowed TS to 10.102.1.x instead of 10.100.1.x, causing 100% ping loss through GRE tunnels
+
 ## 0.0.135
 
 - Bundles xcespproc 0.0.93 / xcesp-on-rtr 0.0.106: fix `show ipsec sa` returning "(no IPsec security associations)" for all routers — the 0.0.134 timeout fix inadvertently added `timeout 8` before swanctl's env-var prefix, breaking the env assignment
