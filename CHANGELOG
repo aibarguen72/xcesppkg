@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.138
+
+- Bundles xcespproc 0.0.94 / xcesp-on-rtr 0.0.109: fix charon binding to wrong IKE local address when running in a VRF — `interfaces_use = lo` restricts charon to the loopback interface where the WAN loopback address is placed by `router-id`; prevents TS narrowing to GRE overlay addresses and stops BGP-over-GRE flapping
+
 ## 0.0.137
 
 - Bundles xcespproc 0.0.94 / xcesp-on-rtr 0.0.108: downgrade "File exists" on `ip route add local` from WARNING to INFO — when `router-id` matches the WAN loopback, `RtrRouterPObj` already adds the address to `lo`, creating the same local route; the message is now "already present" at INFO level
