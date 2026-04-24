@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.131
+
+- Bundles xcespproc 0.0.89 / xcesp-on-rtr 0.0.102: replace `ip vrf exec` with fwmark-based VRF routing — fixes charon launch failure with "Permission denied" on SELinux-enforcing Fedora when `ipsec { vrf ... }` is configured
+
 ## 0.0.130
 
 - Bundles xcespproc 0.0.88 / xcesp-on-rtr 0.0.101: defers charon launch until the configured VRF device exists — fixes "Invalid VRF name" timing error when VRF and IPsec objects start in parallel
