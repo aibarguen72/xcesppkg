@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.130
+
+- Bundles xcespproc 0.0.88 / xcesp-on-rtr 0.0.101: defers charon launch until the configured VRF device exists — fixes "Invalid VRF name" timing error when VRF and IPsec objects start in parallel
+
 ## 0.0.129
 
 - Bundles xcespproc 0.0.87: `ipsec` node supports new `vrf <name>` attribute — charon is launched inside the named VRF so IKE negotiation uses the correct routing table for WAN-addressed DMVPN IPsec
