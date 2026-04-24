@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.129
+
+- Bundles xcespproc 0.0.87: `ipsec` node supports new `vrf <name>` attribute — charon is launched inside the named VRF so IKE negotiation uses the correct routing table for WAN-addressed DMVPN IPsec
+
 ## 0.0.128
 
 - Bundles xcespproc 0.0.86: `applyConfig()` guards against duplicate charon launch on xcespproc reconnect — fixes three-charon scenario seen in production
