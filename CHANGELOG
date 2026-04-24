@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.137
+
+- Bundles xcespproc 0.0.94 / xcesp-on-rtr 0.0.108: downgrade "File exists" on `ip route add local` from WARNING to INFO — when `router-id` matches the WAN loopback, `RtrRouterPObj` already adds the address to `lo`, creating the same local route; the message is now "already present" at INFO level
+
 ## 0.0.136
 
 - Bundles xcespproc 0.0.94 / xcesp-on-rtr 0.0.107: fix GRE-over-IPsec — charon now correctly binds to the WAN loopback address (via a leaked local route in the namespace main table), so negotiated traffic selectors match actual GRE outer packets; previously charon used the GRE interface address and strongSwan narrowed TS to 10.102.1.x instead of 10.100.1.x, causing 100% ping loss through GRE tunnels
