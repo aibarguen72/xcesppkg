@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.0.133
+
+- Bundles xcespproc 0.0.91 / xcesp-on-rtr 0.0.104: fix `show ipsec sa` always returning empty — env-var prefix ordering bug caused swanctl to never be executed
+
 ## 0.0.132
 
 - Bundles xcespproc 0.0.90 / xcesp-on-rtr 0.0.103: `show ipsec sa` no longer breaks the CLI session — `swanctl --list-sas` capped at 5s timeout; packet counter parsing fixed ("packets" not "pkts")
