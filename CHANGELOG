@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.0.139
+
+- Bundles xcespserver 0.0.31, xcespcli 0.0.52, xcespproc 0.0.94,
+  xcespwdog 0.0.7 with:
+  - xcespserver: server block captured at startup and prepended to PUT hook
+    validation payloads so dynamic-routing feature flags are always visible
+    to validator scripts (fixes spurious rejections on successive PUTs)
+  - xcespcli: navigation TAB/? completion generalised to any depth; candidate
+    config included in instance-name completion; improved navigation error
+    messages
+  - xcespconfig: `validateHooks()` accepts optional `contextPrefix` parameter
+
 ## 0.0.138
 
 - Bundles xcespproc 0.0.94 / xcesp-on-rtr 0.0.109: fix charon binding to wrong IKE local address when running in a VRF — `interfaces_use = lo` restricts charon to the loopback interface where the WAN loopback address is placed by `router-id`; prevents TS narrowing to GRE overlay addresses and stops BGP-over-GRE flapping
