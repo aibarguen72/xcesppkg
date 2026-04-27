@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.140
+
+- Bundles xcespserver 0.0.32, xcespcli 0.0.53, xcespproc 0.0.95, xcespwdog 0.0.7 with:
+  - xcespcli: new `ping` and `dumprt` real-time streaming diagnostic commands; Ctrl+C sends cancel and waits for statistics; `recvStreamingAction()` / `recvFrameOrTimeout()` infrastructure
+  - xcespserver: streaming action protocol (`ACTION_STREAM_DATA` / `ACTION_STREAM_END` / `ACTION_CANCEL`) relayed between xcespproc and xcespcli; streaming actions exempt from inactivity timeout
+  - xcespproc: fork-based streaming action launcher using PTY; `cancelStreamingAction()` sends SIGTERM to subprocess; rebuild against xcesp-on-rtr 0.0.110 (StreamingActionExec, OSPF/RIP objects) and evapplication 0.0.7 (POLLHUP/POLLERR dispatch fix)
+
 ## 0.0.139
 
 - Bundles xcespserver 0.0.31, xcespcli 0.0.52, xcespproc 0.0.94,
