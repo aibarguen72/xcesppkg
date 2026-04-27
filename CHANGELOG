@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.143
+
+- Bundles xcespserver 0.0.35, xcespcli 0.0.53, xcespproc 0.0.97, xcespwdog 0.0.7 with:
+  - xcespserver 0.0.35: fix license gate falling back to limit 0 when PUT has no server block
+  - xcespproc 0.0.97: OSPFv3 (`RtrOspf6PObj`) and RIPng (`RtrRipngPObj`) ProcObjects; IPv6 forwarding enabled in router namespaces (`RtrRouterPObj::applyForwarding`)
+
 ## 0.0.142
 
 - Bundles xcespserver 0.0.34, xcespcli 0.0.53, xcespproc 0.0.96, xcespwdog 0.0.7 with:
