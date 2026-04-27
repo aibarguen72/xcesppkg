@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.0.141
+
+- Bundles xcespserver 0.0.33, xcespcli 0.0.53, xcespproc 0.0.96, xcespwdog 0.0.7 with:
+  - xcespserver: license enforcement framework — `LICENSE_ENFORCE` INI flag; router-count gate at commit reads incoming config's license codes; `licenseEnforce` propagated to xcespproc via `SERVER_CAP`; `kFeatureNames[]` extended with mpls/l2tp/vxlan (bits 3–5); `genlic.py` updated to generate licenses for all six features
+  - xcespproc: parse `LICENSE_ENFORCE` from `SERVER_CAP`; rebuild against xcesp-on-rtr 0.0.111
+  - xcesp-on-rtr 0.0.111: license gates in `RtrFrrPObj` (dynamic-routing), `RtrStrongswanPObj` (ipsec), and `RtrRouterPObj` (mpls/l2tp/vxlan) — when enforcement is active and license absent, subsystem reports LLD / skips module load
+
 ## 0.0.140
 
 - Bundles xcespserver 0.0.32, xcespcli 0.0.53, xcespproc 0.0.95, xcespwdog 0.0.7 with:
