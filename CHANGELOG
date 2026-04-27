@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.142
+
+- Bundles xcespserver 0.0.34, xcespcli 0.0.53, xcespproc 0.0.96, xcespwdog 0.0.7 with:
+  - xcespserver: fix authMac resolution in `applyNewConfig()` — resolve from incoming config's `authMethod` using detected capabilities instead of copying running config's (empty) authMac; fixes commit rejection when `license-auth` and `license-code` are committed together for the first time
+
 ## 0.0.141
 
 - Bundles xcespserver 0.0.33, xcespcli 0.0.53, xcespproc 0.0.96, xcespwdog 0.0.7 with:
