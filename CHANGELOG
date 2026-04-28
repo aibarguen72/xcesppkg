@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.145
+
+- Bundles xcespserver 0.0.35, xcespcli 0.0.54, xcespproc 0.0.98, xcespwdog 0.0.7 with:
+  - xcespproc 0.0.98: rebuilt against xcesp-on-rtr 0.0.114 (L2TP unmanaged pseudowire support: `type l2tp`, single-session and multi-session modes, `ip l2tp` tunnel/session management, CAP_SYS_MODULE for module loading, bridge port re-enslavement on device arrival)
+
 ## 0.0.144
 
 - Bundles xcespserver 0.0.35, xcespcli 0.0.54, xcespproc 0.0.98, xcespwdog 0.0.7 with:
