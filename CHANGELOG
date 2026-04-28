@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.144
+
+- Bundles xcespserver 0.0.35, xcespcli 0.0.54, xcespproc 0.0.98, xcespwdog 0.0.7 with:
+  - xcespcli 0.0.54: IGP show/clear commands for RIP, RIPng, OSPFv2, OSPFv3 (neighbor, database, route, status)
+  - xcespproc 0.0.98: rebuilt against xcesp-on-rtr 0.0.113 (IGP show queries and clear actions)
+
 ## 0.0.143
 
 - Bundles xcespserver 0.0.35, xcespcli 0.0.53, xcespproc 0.0.97, xcespwdog 0.0.7 with:
