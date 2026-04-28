@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.146
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.55, xcespproc 0.0.98, xcespwdog 0.0.7 with:
+  - xcespserver 0.0.36: CLI banner (XCESP logo, platform capabilities line, user-banner), prompt hostname from server `hostname` attr, `banner` child node in server schema (`logo-banner`, `server-banner`, `user-banner` multiline-string); extended CLI_ACK with SERVER_VERSION/NAME/BANNER fields
+  - xcespcli 0.0.55: reconnect on connection loss (R to retry / any key to exit); XCESP ASCII art banner before first prompt; prompt uses server-configured hostname; `DispatchResult` enum replacing bool return from `dispatch()`
+
 ## 0.0.145
 
 - Bundles xcespserver 0.0.35, xcespcli 0.0.54, xcespproc 0.0.98, xcespwdog 0.0.7 with:
