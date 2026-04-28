@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.147
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.55, xcespproc 0.0.98, xcespwdog 0.0.7 with:
+  - xcesp-on-rtr 0.0.115: VXLAN static unicast VTEP interface type (`type vxlan`); `vxlan.schema` (new); `vxlan-vni` type; `applyVxlan()` creates netdev via `ip link add type vxlan`, syncs FDB BUM entries via `bridge fdb append/del`; `UNKNOWN` operstate treated as UP
+
 ## 0.0.146
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.55, xcespproc 0.0.98, xcespwdog 0.0.7 with:
