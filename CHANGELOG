@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.150
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.57, xcespproc 0.0.100, xcespwdog 0.0.7
+  - xcespcli 0.0.57: fix EVPN formatter JSON structure bugs (flat summary, RD-grouped routes)
+
 ## 0.0.149
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.56, xcespproc 0.0.100, xcespwdog 0.0.7 with:
