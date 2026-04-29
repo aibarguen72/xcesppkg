@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.148
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.55, xcespproc 0.0.99, xcespwdog 0.0.7 with:
+  - xcesp-on-rtr 0.0.116: EVPN-VXLAN L2 services — `evpn` VXLAN mode, `l2vpn evpn` BGP AF with `advertise-all-vni`, per-VNI RD/RT (`evpn-vni.schema`), `no-ebgp-requires-policy` opt-in; `addrgenmode none` + `neigh_suppress on learning off` for EVPN bridge ports
+
 ## 0.0.147
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.55, xcespproc 0.0.98, xcespwdog 0.0.7 with:
