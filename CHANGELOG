@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.0.153
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.60, xcespproc 0.0.102, xcespwdog 0.0.7
+  - xcespcli 0.0.60: fix `selectBest` to handle nested `[[{path}]]` in EVPN type-filtered output
+
 ## 0.0.152
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.59, xcespproc 0.0.102, xcespwdog 0.0.7
