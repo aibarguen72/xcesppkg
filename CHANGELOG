@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.151
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.58, xcespproc 0.0.101, xcespwdog 0.0.7
+  - xcespcli 0.0.58: fix `formatEvpnRoutes` — NLRI values are objects not arrays; use `paths` sub-array, `routeType` field, `path` string for AS path
+  - xcespproc 0.0.101/xcesp-on-rtr 0.0.118: fix `queryEvpnRoutes` FRR command (drop `route` keyword)
+
 ## 0.0.150
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.57, xcespproc 0.0.100, xcespwdog 0.0.7
