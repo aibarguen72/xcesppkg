@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.154
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.61, xcespproc 0.0.103, xcespwdog 0.0.7
+  - xcesp-on-rtr 0.0.120 / xcespproc 0.0.103: BFD support — bfdd daemon, RtrBfdPObj, show bfd peers, BGP/OSPF/OSPF6/RIP BFD profile integration, FRR prerequisite `ip ospf bfd` + `ip ospf bfd profile` ordering fix
+  - xcespcli 0.0.61: `show bfd peers` command with Peer/Local/VRF/Status/Uptime table formatter
+
 ## 0.0.153
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.60, xcespproc 0.0.102, xcespwdog 0.0.7
