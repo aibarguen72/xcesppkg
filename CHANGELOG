@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.0.155
+
+- Bundles xcespserver 0.0.37, xcespcli 0.0.62, xcespproc 0.0.104, xcespwdog 0.0.7
+  - xcespmap 0.0.8: quote semicolons in INI values to prevent inline-comment stripping
+  - xcespserver 0.0.37: `FileActionHandler` — server-local file/reboot/sw-install actions; `DSK_DIR` INI key; `DSK_DIR` sent in CLI_ACK to CLI
+  - xcespproc 0.0.104: `dump-file` streaming action (capture traffic to pcap file)
+  - xcespcli 0.0.62: `dump-file`, `copy`, `delete`, `show file`, `show dir`, `reboot`, `software-install` commands
+- `cfg/xcespserver.ini`: add `DSK_DIR = /var/xcesp/dsk`
+- `install.sh`: create `/var/xcesp/dsk/{img,bcfg,log,cap}` with `xcesp` group ownership on install
+
 ## 0.0.154
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.61, xcespproc 0.0.103, xcespwdog 0.0.7

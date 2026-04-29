@@ -17,6 +17,7 @@ RULES_DIR=$XCESP_BASE/rules
 VENV_DIR=$XCESP_BASE/venv
 MAINSW_DIR=$XCESP_BASE/mainsw
 BACKUPSW_DIR=$XCESP_BASE/backupsw
+DSK_DIR=$XCESP_BASE/dsk
 RUN_DIR=/run/xcesp
 SYSTEMD_DIR=/etc/systemd/system
 XCESP_USER=xcesp
@@ -72,6 +73,14 @@ if [ ! -d "$BACKUPSW_DIR" ]; then
 else
     info "  $BACKUPSW_DIR already exists — leaving untouched"
 fi
+
+# dsk: file storage directories (writable by xcesp group)
+for d in "$DSK_DIR/img" "$DSK_DIR/bcfg" "$DSK_DIR/log" "$DSK_DIR/cap"; do
+    mkdir -p "$d"
+    chown root:"$XCESP_GROUP" "$d"
+    chmod 775 "$d"
+done
+info "  Created $DSK_DIR/{img,bcfg,log,cap}"
 
 # ---------------------------------------------------------------------------
 # Binaries → /var/xcesp/mainsw/bin/  AND  /usr/bin/
