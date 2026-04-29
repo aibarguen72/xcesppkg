@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.149
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.56, xcespproc 0.0.100, xcespwdog 0.0.7 with:
+  - xcesp-on-rtr 0.0.117: EVPN show queries (`evpn-status`, `evpn-routes`) in `ShowQueryExec`
+  - xcespcli 0.0.56: `show bgp evpn status` and `show bgp evpn routes [rd|type|vni]` commands with EVPN-specific formatters; `l2vpn-evpn` AFI/SAFI renamed to `evpn`
+
 ## 0.0.148
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.55, xcespproc 0.0.99, xcespwdog 0.0.7 with:
