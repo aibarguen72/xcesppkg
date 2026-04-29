@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.0.152
+
+- Bundles xcespserver 0.0.36, xcespcli 0.0.59, xcespproc 0.0.102, xcespwdog 0.0.7
+  - xcespcli 0.0.59: fix `formatEvpnRoutes` VNI-flat JSON structure
+  - xcespproc 0.0.102/xcesp-on-rtr 0.0.119: fix `route` keyword for vni/type EVPN filters
+
 ## 0.0.151
 
 - Bundles xcespserver 0.0.36, xcespcli 0.0.58, xcespproc 0.0.101, xcespwdog 0.0.7
