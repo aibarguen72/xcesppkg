@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.1.10
+
+- Bundles xcespproc 0.1.4 (xcesp-on-rtr 0.0.123): NAT iptables failures now visible as WARNING; `modprobe -a nf_conntrack iptable_nat` added before every DNAT/SNAT apply to fix NAT rules not applied on embedded ARM64 kernels; `CAP_NET_RAW` ambient capability propagation corrected
+
 ## 0.1.9
 
 - `scripts/xcesp-activate`: add `cap_net_raw` to xcespproc `setcap` call — was missing from xcesp-activate (though present in install.sh since 0.1.4), causing every `systemctl restart xcesp` to strip `cap_net_raw` back off xcespproc and break ping inside network namespaces
