@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.1.8
+
+- Bundles xcespserver 0.1.4, xcespcli 0.1.3 with xcespproc 0.1.3, xcespwdog (unchanged)
+- `scripts/xcesp-activate`: fix awk parser for `processes routing / count N` — use anchored patterns to distinguish indented child-block `!` from the unindented server-block `!`; a `license-code` block's closing `!` previously reset `in_server` before reaching the `processes` section, silently reverting to the default of 2 routing processes
+- `scripts/xcesp-activate`: add router-count fallback — when no explicit `processes routing` block exists, counts `^router ` lines in `xcespserver.conf` as the routing process count
+
 ## 0.1.7
 
 - `install.sh`: add `Defaults:xcesp !use_pty` to xcesp-frr sudoers file — systems with global `Defaults use_pty` block sudo in service processes that have no TTY

@@ -165,17 +165,27 @@ DEFAULT_ROUTING_COUNT=2
 
 routing_count=$DEFAULT_ROUTING_COUNT
 if [ -f "$SERVER_CONF" ]; then
-    parsed=$(awk '
-        /^[[:space:]]*server[[:space:]]/ { in_server=1; next }
-        in_server && /^[[:space:]]*processes[[:space:]]+routing/ { in_proc=1; next }
-        in_server && in_proc && /^[[:space:]]*count[[:space:]]+[0-9]+/ {
+    # First preference: explicit "processes routing / count N" inside a server block.
+    # Use anchored patterns to distinguish indented child "!" from the unindented "!"
+    # that closes the server block itself — otherwise a license-code or banner child
+    # block's closing "!" would prematurely reset in_server before we reach processes.
+    explicit_count=$(awk '
+        /^server[[:space:]]/  { in_server=1; in_proc=0; next }
+        in_server && /^[[:space:]]+processes[[:space:]]+routing/ { in_proc=1; next }
+        in_server && in_proc && /^[[:space:]]+count[[:space:]]+[0-9]+/ {
             match($0, /[0-9]+/); count=substr($0,RSTART,RLENGTH)
         }
-        /^[[:space:]]*!/ && in_server && in_proc { in_proc=0; next }
-        /^[[:space:]]*!/ && in_server { in_server=0; next }
+        in_server && in_proc && /^[[:space:]]+!/ { in_proc=0; next }
+        in_server && /^!/  { in_server=0; next }
         END { if (count) print count }
     ' "$SERVER_CONF")
-    [ -n "$parsed" ] && routing_count=$parsed
+    if [ -n "$explicit_count" ]; then
+        routing_count=$explicit_count
+    else
+        # Fallback: count top-level "router <name>" blocks — one process per router
+        router_count=$(grep -c '^router ' "$SERVER_CONF" 2>/dev/null || echo 0)
+        [ "$router_count" -gt 0 ] && routing_count=$router_count
+    fi
 fi
 
 # Clamp to valid range
