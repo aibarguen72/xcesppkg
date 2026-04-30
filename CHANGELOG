@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.1.12
+
+- `scripts/xcesp-activate`: create `/run/xtables.lock` with `root:xcesp 0664` permissions on every service start — `iptables-legacy` requires this file to exist and be group-writable; on embedded systems `/run` is tmpfs and the file is absent after boot, causing `Permission denied` even when xcespproc has `cap_net_admin`
+
 ## 0.1.11
 
 - Bundles xcespproc 0.1.5 (xcesp-on-rtr 0.0.124): auto-detect `iptables-legacy` and use it over `iptables-nft` for DNAT/SNAT rules; fixes `unknown option "--to-destination"` on embedded ARM64 systems where iptables is the nf_tables variant

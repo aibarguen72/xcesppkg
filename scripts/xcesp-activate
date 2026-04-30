@@ -40,6 +40,11 @@ install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 /run/xcesp
 # /run/netns must be owned by xcesp so xcespproc can create namespace bind-files
 # without needing to call mount --make-shared (which requires root even with caps)
 install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0755 /run/netns
+# xtables lock file: iptables-legacy requires this to exist and be group-writable.
+# /run is tmpfs cleared on reboot, so re-create it here on every start.
+touch /run/xtables.lock
+chown "root:$XCESP_GROUP" /run/xtables.lock
+chmod 0664 /run/xtables.lock
 
 # ---------------------------------------------------------------------------
 # Binaries
