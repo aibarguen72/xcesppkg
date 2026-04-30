@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.1.4
+
+- Bundles xcespserver 0.1.3, xcespcli 0.1.2
+- `install.sh`: add `cap_net_raw` to xcespproc capabilities — required for ping inside network namespaces; previously missing (xcesptest/activate.sh had it, install.sh did not)
+
 ## 0.1.3
 
 - `install.sh`: fix venv detection — check `import ensurepip` instead of

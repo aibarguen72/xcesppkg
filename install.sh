@@ -99,13 +99,14 @@ done
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------
 info "Setting file capabilities on xcespproc..."
+XCESPPROC_CAPS="cap_net_admin,cap_sys_admin,cap_net_raw,cap_net_bind_service=ep"
 if command -v setcap > /dev/null 2>&1; then
-    setcap cap_net_admin,cap_sys_admin,cap_net_bind_service=ep "$BINDIR/xcespproc"
-    setcap cap_net_admin,cap_sys_admin,cap_net_bind_service=ep "$MAINSW_DIR/bin/xcespproc"
-    info "  cap_net_admin,cap_sys_admin=ep set"
+    setcap "$XCESPPROC_CAPS" "$BINDIR/xcespproc"
+    setcap "$XCESPPROC_CAPS" "$MAINSW_DIR/bin/xcespproc"
+    info "  $XCESPPROC_CAPS set"
 else
     warn "setcap not found — install libcap2-bin (Debian/Ubuntu) or libcap (RHEL/Fedora)"
-    warn "Then run:  setcap cap_net_admin,cap_sys_admin,cap_net_bind_service=ep $BINDIR/xcespproc"
+    warn "Then run:  setcap $XCESPPROC_CAPS $BINDIR/xcespproc"
 fi
 
 # ---------------------------------------------------------------------------
