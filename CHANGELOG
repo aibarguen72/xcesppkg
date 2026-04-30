@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.1.13
+
+- Bundles xcespproc 0.1.6 (xcesp-on-rtr 0.0.125): NAT namespace entry now uses direct `setns()` instead of `ip netns exec` — fixes `Permission denied` when the `ip` binary has file capabilities that stripped `CAP_NET_ADMIN` from `iptables-legacy` on embedded ARM64
+
 ## 0.1.12
 
 - `scripts/xcesp-activate`: create `/run/xtables.lock` with `root:xcesp 0664` permissions on every service start — `iptables-legacy` requires this file to exist and be group-writable; on embedded systems `/run` is tmpfs and the file is absent after boot, causing `Permission denied` even when xcespproc has `cap_net_admin`
