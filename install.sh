@@ -144,7 +144,9 @@ if getent group frr > /dev/null 2>&1; then
 
     if [ -n "$FRRINIT" ] || [ -n "$VTYSH_BIN" ]; then
         FRR_SUDOERS=/etc/sudoers.d/xcesp-frr
-        > "$FRR_SUDOERS"
+        # Disable use_pty for xcesp: some systems set "Defaults use_pty" globally
+        # which prevents sudo from working in service processes that have no TTY.
+        echo "Defaults:$XCESP_USER !use_pty" > "$FRR_SUDOERS"
         [ -n "$FRRINIT" ] && \
             echo "$XCESP_USER ALL=(root) NOPASSWD: $FRRINIT *" >> "$FRR_SUDOERS" && \
             info "  sudoers: $XCESP_USER → $FRRINIT"
@@ -153,6 +155,13 @@ if getent group frr > /dev/null 2>&1; then
             info "  sudoers: $XCESP_USER → $VTYSH_BIN"
         chmod 0440 "$FRR_SUDOERS"
         info "  $FRR_SUDOERS installed"
+
+        # Ensure /etc/sudoers includes /etc/sudoers.d — some embedded systems
+        # ship a sudoers without the @includedir line, making drop-in files invisible.
+        if ! grep -qE '^[#@]includedir\s+/etc/sudoers\.d' /etc/sudoers; then
+            echo "@includedir /etc/sudoers.d" >> /etc/sudoers
+            info "  Added @includedir /etc/sudoers.d to /etc/sudoers"
+        fi
     else
         info "  frrinit.sh not found — skipping FRR sudoers rule (install FRR first)"
     fi

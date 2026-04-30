@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.1.7
+
+- `install.sh`: add `Defaults:xcesp !use_pty` to xcesp-frr sudoers file — systems with global `Defaults use_pty` block sudo in service processes that have no TTY
+- `install.sh`: append `@includedir /etc/sudoers.d` to `/etc/sudoers` when the includedir line is missing — embedded systems often ship without it, making all drop-in sudoers rules invisible
+
 ## 0.1.6
 
 - Bundles xcespproc 0.1.3 (xcesp-on-rtr 0.0.122): FRR startup no longer uses `sudo -n` when running as root; timeout error shows log first line and exact sudoers fix command
