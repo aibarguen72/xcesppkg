@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.1.14
+
+- Bundles xcespserver 0.1.5: logo banner now shows xcesppkg version (read from `mainsw/VERSION`) instead of xcespserver build version
+- `install.sh`: create `/home/xcesp` (mode 0750) and `/home/xcesp/.ssh` (mode 0700) after user creation — xcesp user was created without a home directory, causing scp/sftp to fail with "Could not create directory '/home/xcesp/.ssh'"
+- `scripts/xcesp-activate`: also create `/home/xcesp` and `/home/xcesp/.ssh` on every service start to fix existing installs without requiring reinstall
+
 ## 0.1.13
 
 - Bundles xcespproc 0.1.6 (xcesp-on-rtr 0.0.125): NAT namespace entry now uses direct `setns()` instead of `ip netns exec` — fixes `Permission denied` when the `ip` binary has file capabilities that stripped `CAP_NET_ADMIN` from `iptables-legacy` on embedded ARM64

@@ -45,6 +45,10 @@ install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0755 /run/netns
 touch /run/xtables.lock
 chown "root:$XCESP_GROUP" /run/xtables.lock
 chmod 0664 /run/xtables.lock
+# Home directory for xcesp user: needed for scp/sftp known_hosts storage.
+# Older installs used --no-create-home; ensure the directory exists here.
+install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 "/home/$XCESP_USER"
+install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0700 "/home/$XCESP_USER/.ssh"
 
 # ---------------------------------------------------------------------------
 # Binaries

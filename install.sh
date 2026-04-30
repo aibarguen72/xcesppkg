@@ -44,15 +44,21 @@ if ! getent group "$XCESP_GROUP" > /dev/null 2>&1; then
     groupadd --system "$XCESP_GROUP"
     info "  Created group: $XCESP_GROUP"
 fi
+XCESP_HOME="/home/$XCESP_USER"
 if ! getent passwd "$XCESP_USER" > /dev/null 2>&1; then
     useradd --system \
             --gid "$XCESP_GROUP" \
+            --home-dir "$XCESP_HOME" \
             --no-create-home \
             --shell /usr/sbin/nologin \
             --comment "XCESP service account" \
             "$XCESP_USER"
     info "  Created user: $XCESP_USER"
 fi
+# Home directory: needed for scp/sftp known_hosts storage.
+# Idempotent — safe to run on reinstall or if user already existed.
+install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 "$XCESP_HOME"
+install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0700 "$XCESP_HOME/.ssh"
 
 # ---------------------------------------------------------------------------
 # Directory layout
