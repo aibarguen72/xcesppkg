@@ -15,6 +15,7 @@ LOG_DIR=$XCESP_BASE/log
 SCHEMA_DIR=$XCESP_BASE/schema
 RULES_DIR=$XCESP_BASE/rules
 VENV_DIR=$XCESP_BASE/venv
+PYLIB_DIR=$XCESP_BASE/lib/python
 MAINSW_DIR=$XCESP_BASE/mainsw
 BACKUPSW_DIR=$XCESP_BASE/backupsw
 DSK_DIR=$XCESP_BASE/dsk
@@ -265,31 +266,55 @@ chown "$XCESP_USER:$XCESP_GROUP" "$RUN_DIR"
 chmod 0750 "$RUN_DIR"
 
 # ---------------------------------------------------------------------------
-# Python virtual environment (at /var/xcesp/venv — not swapped)
+# Python environment — venv if available, direct install otherwise.
+# xcesppy uses only stdlib (json, socket) so no third-party packages are
+# needed; venv is just the cleaner isolation option when present.
 # ---------------------------------------------------------------------------
-info "Setting up Python virtual environment at $VENV_DIR ..."
+info "Setting up Python environment..."
+PYTHON_MODE="direct"
 
-if ! python3 -c "import venv" > /dev/null 2>&1; then
-    error "python3-venv is not available.\n  Debian/Ubuntu: apt install python3-venv\n  RHEL/Fedora:   dnf install python3"
+if python3 -c "import venv" > /dev/null 2>&1; then
+    PYTHON_MODE="venv"
+else
+    warn "python3-venv not available — xcesppy will be installed to $PYLIB_DIR instead"
 fi
 
-python3 -m venv "$VENV_DIR"
-"$VENV_DIR/bin/pip" install --quiet --upgrade pip
+if [ "$PYTHON_MODE" = "venv" ]; then
+    python3 -m venv "$VENV_DIR"
+    "$VENV_DIR/bin/pip" install --quiet --upgrade pip
 
-# Install xcesppy from mainsw/python
-if [ -f "$MAINSW_DIR/python/pyproject.toml" ]; then
-    info "  Installing xcesppy into virtual environment..."
-    "$VENV_DIR/bin/pip" install --quiet "$MAINSW_DIR/python"
+    if [ -f "$MAINSW_DIR/python/pyproject.toml" ]; then
+        info "  Installing xcesppy into virtual environment..."
+        "$VENV_DIR/bin/pip" install --quiet "$MAINSW_DIR/python"
+    fi
+
+    if [ -f "$MAINSW_DIR/python/requirements.txt" ]; then
+        info "  Installing additional Python requirements..."
+        "$VENV_DIR/bin/pip" install --quiet -r "$MAINSW_DIR/python/requirements.txt"
+    fi
+
+    chown -R "$XCESP_USER:$XCESP_GROUP" "$VENV_DIR"
+    chmod -R o-rwx "$VENV_DIR"
+    info "  Virtual environment ready: $VENV_DIR"
+else
+    # Copy xcesppy source to a fixed location outside the swap tree, then
+    # register it via a .pth file in Python's site-packages so every user
+    # and script on the system can 'import xcesppy' without setting PYTHONPATH.
+    mkdir -p "$PYLIB_DIR"
+    cp -rT "$MAINSW_DIR/python/xcesppy" "$PYLIB_DIR/xcesppy"
+    chown -R root:root "$PYLIB_DIR"
+    chmod -R a+rX "$PYLIB_DIR"
+
+    SITE_PKG=$(python3 -c "import site; print(site.getsitepackages()[0])" 2>/dev/null || true)
+    if [ -n "$SITE_PKG" ] && [ -d "$SITE_PKG" ]; then
+        echo "$PYLIB_DIR" > "$SITE_PKG/xcesppy.pth"
+        info "  xcesppy installed to $PYLIB_DIR"
+        info "  Registered via $SITE_PKG/xcesppy.pth"
+    else
+        warn "Could not determine site-packages directory"
+        warn "Add PYTHONPATH=$PYLIB_DIR to your environment to use xcesppy"
+    fi
 fi
-
-# Install any additional requirements (future packages go here)
-if [ -f "$MAINSW_DIR/python/requirements.txt" ]; then
-    info "  Installing additional Python requirements..."
-    "$VENV_DIR/bin/pip" install --quiet -r "$MAINSW_DIR/python/requirements.txt"
-fi
-
-chown -R "$XCESP_USER:$XCESP_GROUP" "$VENV_DIR"
-chmod -R o-rwx "$VENV_DIR"
 
 # ---------------------------------------------------------------------------
 # Management scripts → /usr/bin/
@@ -341,7 +366,11 @@ echo "  Configuration   : $CFG_DIR/"
 echo "  Logs            : $LOG_DIR/"
 echo "  Schema          : $SCHEMA_DIR/    ($SCHEMA_COUNT .schema files)"
 echo "  Rules           : $RULES_DIR/     (synced from mainsw on each start)"
-echo "  Python venv     : $VENV_DIR/"
+if [ "$PYTHON_MODE" = "venv" ]; then
+    echo "  Python          : venv at $VENV_DIR/"
+else
+    echo "  Python          : direct install at $PYLIB_DIR/ (no venv)"
+fi
 echo "  Runtime dir     : $RUN_DIR/       (ctrl.sock lives here)"
 echo ""
 echo "Review $CFG_DIR/xcespwdog.ini before starting the service."

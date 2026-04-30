@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.1.2
+
+- `install.sh`: make Python venv optional — if `python3-venv` is not available,
+  xcesppy source is copied to `/var/xcesp/lib/python/` and registered via a
+  `.pth` file in the system's `site-packages` directory; venv is still used
+  when available as the cleaner isolation option
+
 ## 0.1.1
 
 - FIRST STEP of XCESP Project completed with all regression tests PASSED
