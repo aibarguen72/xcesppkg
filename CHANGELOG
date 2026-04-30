@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.1.11
+
+- Bundles xcespproc 0.1.5 (xcesp-on-rtr 0.0.124): auto-detect `iptables-legacy` and use it over `iptables-nft` for DNAT/SNAT rules; fixes `unknown option "--to-destination"` on embedded ARM64 systems where iptables is the nf_tables variant
+
 ## 0.1.10
 
 - Bundles xcespproc 0.1.4 (xcesp-on-rtr 0.0.123): NAT iptables failures now visible as WARNING; `modprobe -a nf_conntrack iptable_nat` added before every DNAT/SNAT apply to fix NAT rules not applied on embedded ARM64 kernels; `CAP_NET_RAW` ambient capability propagation corrected
