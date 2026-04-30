@@ -273,10 +273,10 @@ chmod 0750 "$RUN_DIR"
 info "Setting up Python environment..."
 PYTHON_MODE="direct"
 
-if python3 -c "import venv" > /dev/null 2>&1; then
+if python3 -c "import ensurepip" > /dev/null 2>&1; then
     PYTHON_MODE="venv"
 else
-    warn "python3-venv not available — xcesppy will be installed to $PYLIB_DIR instead"
+    warn "python3-venv / ensurepip not available — xcesppy will be installed to $PYLIB_DIR instead"
 fi
 
 if [ "$PYTHON_MODE" = "venv" ]; then

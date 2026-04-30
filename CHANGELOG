@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.1.3
+
+- `install.sh`: fix venv detection — check `import ensurepip` instead of
+  `import venv`; on Debian/Ubuntu `venv` is importable even without the
+  `python3-venv` package, but `ensurepip` is the module that package actually
+  provides and that `python3 -m venv` requires to succeed
+
 ## 0.1.2
 
 - `install.sh`: make Python venv optional — if `python3-venv` is not available,
