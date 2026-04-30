@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.1.5
+
+- Bundles xcespproc 0.1.2 (xcesp-on-rtr 0.0.121): FRR startup failures now logged to `/tmp/frr_<ns>.log` with 30 s timeout error
+
 ## 0.1.4
 
 - Bundles xcespserver 0.1.3, xcespcli 0.1.2
