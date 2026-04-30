@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.1.6
+
+- Bundles xcespproc 0.1.3 (xcesp-on-rtr 0.0.122): FRR startup no longer uses `sudo -n` when running as root; timeout error shows log first line and exact sudoers fix command
+
 ## 0.1.5
 
 - Bundles xcespproc 0.1.2 (xcesp-on-rtr 0.0.121): FRR startup failures now logged to `/tmp/frr_<ns>.log` with 30 s timeout error
