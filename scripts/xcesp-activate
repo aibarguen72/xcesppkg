@@ -53,7 +53,7 @@ if [ -d "$MAINSW/bin" ]; then
     done
     # Re-apply capabilities after binary replacement
     if command -v setcap > /dev/null 2>&1 && [ -f "$BINDIR/xcespproc" ]; then
-        setcap cap_net_admin,cap_sys_admin,cap_net_bind_service=ep "$BINDIR/xcespproc"
+        setcap cap_net_admin,cap_sys_admin,cap_net_raw,cap_net_bind_service=ep "$BINDIR/xcespproc"
         log "  setcap applied to $BINDIR/xcespproc"
     else
         log "  WARNING: setcap not available — xcespproc may lack required capabilities"

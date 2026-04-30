@@ -1,5 +1,9 @@
 # Changelog - xcesppkg
 
+## 0.1.9
+
+- `scripts/xcesp-activate`: add `cap_net_raw` to xcespproc `setcap` call — was missing from xcesp-activate (though present in install.sh since 0.1.4), causing every `systemctl restart xcesp` to strip `cap_net_raw` back off xcespproc and break ping inside network namespaces
+
 ## 0.1.8
 
 - Bundles xcespserver 0.1.4, xcespcli 0.1.3 with xcespproc 0.1.3, xcespwdog (unchanged)
