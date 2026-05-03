@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.1.21
+
+- Bundles xcespserver 0.1.6, xcespcli 0.1.4, xcespproc 0.1.7 (with xcesp-on-rtr 0.0.130)
+- xcespproc 0.1.7: IPsec spoke retry — xcespproc explicitly re-initiates `start_action=start` connections every `retry-interval` seconds after NO_PROPOSAL_CHOSEN; fixes mGRE hub/spoke race where spokes initiate before hub loads its config
+- xcespproc 0.1.7: namespace socket directory created via `::mkdir()` fallback — no longer silently fails when sudo NOPASSWD rule for mkdir is absent
+- xcespserver 0.1.6: extended strongSwan binary detection — covers RHEL/Debian ARM64 charon and swanctl paths
+- xcespcli 0.1.4: prompt path truncation for deep config nesting
+
 ## 0.1.14
 
 - Bundles xcespserver 0.1.5: logo banner now shows xcesppkg version (read from `mainsw/VERSION`) instead of xcespserver build version
