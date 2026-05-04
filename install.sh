@@ -105,7 +105,7 @@ done
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------
 info "Setting file capabilities on xcespproc..."
-XCESPPROC_CAPS="cap_net_admin,cap_sys_admin,cap_net_raw,cap_net_bind_service=ep"
+XCESPPROC_CAPS="cap_net_admin,cap_sys_admin,cap_sys_module,cap_net_raw,cap_net_bind_service=ep"
 if command -v setcap > /dev/null 2>&1; then
     setcap "$XCESPPROC_CAPS" "$BINDIR/xcespproc"
     setcap "$XCESPPROC_CAPS" "$MAINSW_DIR/bin/xcespproc"
@@ -210,6 +210,9 @@ cat > "$SUDOERS_FILE" <<'SUDOERS'
 xcesp ALL=(root) NOPASSWD: /usr/sbin/modprobe mpls_router, \
                             /usr/sbin/modprobe mpls_iptunnel, \
                             /usr/sbin/modprobe l2tp_core, \
+                            /usr/sbin/modprobe l2tp_netlink, \
+                            /usr/sbin/modprobe l2tp_ip, \
+                            /usr/sbin/modprobe l2tp_eth, \
                             /usr/sbin/modprobe vxlan
 SUDOERS
 chmod 0440 "$SUDOERS_FILE"

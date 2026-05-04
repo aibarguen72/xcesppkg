@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.23
+
+- Bundles xcespserver 0.1.7, xcespproc 0.1.9 (with xcesp-on-rtr 0.0.133)
+- **L2TP module loading fix for Fedora VMs**: Fedora kernels ship `l2tp_*` as separate `.ko` files and only `l2tp_core` is loaded by default; the L2TP genetlink family (registered by `l2tp_netlink`) was missing, so `ip l2tp add tunnel` failed with "Error talking to the kernel" / RTNETLINK ENOENT.  Now both layers load the full set:
+  - xcespserver pre-loads `l2tp_core`, `l2tp_netlink`, `l2tp_ip`, `l2tp_eth` at startup via sudo when `l2tp true` is configured
+  - xcespproc's `applyL2tp()` also modprobes `l2tp_netlink` directly
+- `install.sh`: add `cap_sys_module` to xcespproc file capabilities (so xcespproc can load modules without sudo, consistent with xcesptest's `activate.sh`)
+- `install.sh`: extend the `xcesp-modprobe` sudoers rule to allow `modprobe l2tp_netlink`, `l2tp_ip`, `l2tp_eth` (was only `l2tp_core` before)
+- ARM64 builds with `CONFIG_L2TP_*=y` (built-in) were unaffected by the original bug
+
 ## 0.1.22
 
 - Bundles xcespproc 0.1.8 (with xcesp-on-rtr 0.0.132)
