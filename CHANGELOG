@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.1.25
+
+- `install.sh`: pre-load all kernel modules (mpls, l2tp, vxlan) directly during install — install.sh runs as root so this bypasses any sudoers/capability propagation issues.  Modules stay resident until reboot or rmmod, so xcespproc / xcespserver inherit a known-good state regardless of how they later call modprobe
+- `install.sh`: restart `xcesp.service` after upgrade if it is currently running, so the user immediately runs the new binaries (previous releases required a manual `systemctl restart xcesp` step that some users missed — explaining the v0.1.23/v0.1.24 reports of L2TP still failing after upgrade)
+- Bundles xcespserver 0.1.8 and xcespproc 0.1.9 (unchanged from v0.1.24)
+
 ## 0.1.24
 
 - Bundles xcespserver 0.1.8 (with the corrected `loadConfiguredModules` logic)

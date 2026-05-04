@@ -219,6 +219,24 @@ chmod 0440 "$SUDOERS_FILE"
 info "  $SUDOERS_FILE installed"
 
 # ---------------------------------------------------------------------------
+# Pre-load kernel modules
+# ---------------------------------------------------------------------------
+# We are root in install.sh, so do the modprobe here directly.  This sidesteps
+# any sudoers / capability propagation issues — once loaded, the modules stay
+# resident until reboot or rmmod, regardless of how xcespproc / xcespserver
+# call modprobe later.  Failures are only warnings (e.g. minimal kernels).
+info "Pre-loading kernel modules ..."
+for mod in mpls_router mpls_iptunnel \
+           l2tp_core l2tp_netlink l2tp_ip l2tp_eth \
+           vxlan; do
+    if modprobe "$mod" 2>/dev/null; then
+        info "  modprobe $mod: OK"
+    else
+        warn "  modprobe $mod: failed (module not present in this kernel)"
+    fi
+done
+
+# ---------------------------------------------------------------------------
 # Configuration templates (non-destructive: existing files are never overwritten)
 # ---------------------------------------------------------------------------
 info "Installing configuration templates to $CFG_DIR ..."
@@ -356,6 +374,14 @@ install -o root -g root -m 0644 \
 systemctl daemon-reload
 systemctl enable xcesp.service
 info "  xcesp.service installed and enabled"
+
+# Restart the service if it is currently running so the upgraded binaries
+# take effect immediately.  `try-restart` is a no-op when the service is
+# stopped, so a fresh install does not get an unnecessary start.
+if systemctl is-active --quiet xcesp.service; then
+    systemctl restart xcesp.service
+    info "  xcesp.service restarted (running new binaries)"
+fi
 
 # ---------------------------------------------------------------------------
 # Schema installation verification
