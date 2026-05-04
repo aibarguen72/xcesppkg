@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.1.26
+
+- `install.sh`: detect when required kernel modules are missing from disk and auto-install `kernel-modules-extra-$(uname -r)` via dnf when available.  On Fedora, `l2tp_netlink` and `l2tp_eth` (and some mpls/vxlan variants) ship in the optional `kernel-modules-extra` RPM, not the default `kernel-modules` — minimal Fedora cloud images / VMs fail `ip l2tp add tunnel` with "Error talking to the kernel" because the L2TP genetlink family is registered by `l2tp_netlink`, which simply isn't present
+- ARM64 builds with `CONFIG_L2TP_*=y` (built-in to vmlinuz) were unaffected
+- Same xcespserver 0.1.8, xcespproc 0.1.9 binaries as 0.1.25
+
 ## 0.1.25
 
 - `install.sh`: pre-load all kernel modules (mpls, l2tp, vxlan) directly during install — install.sh runs as root so this bypasses any sudoers/capability propagation issues.  Modules stay resident until reboot or rmmod, so xcespproc / xcespserver inherit a known-good state regardless of how they later call modprobe

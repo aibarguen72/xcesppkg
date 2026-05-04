@@ -223,16 +223,40 @@ info "  $SUDOERS_FILE installed"
 # ---------------------------------------------------------------------------
 # We are root in install.sh, so do the modprobe here directly.  This sidesteps
 # any sudoers / capability propagation issues — once loaded, the modules stay
-# resident until reboot or rmmod, regardless of how xcespproc / xcespserver
-# call modprobe later.  Failures are only warnings (e.g. minimal kernels).
+# resident until reboot or rmmod.
+#
+# On Fedora / RHEL, l2tp_netlink and l2tp_eth (also some mpls/vxlan variants)
+# ship in the optional `kernel-modules-extra` RPM, NOT the default
+# `kernel-modules`.  Detect that case and auto-install when dnf is available,
+# otherwise emit a clear instruction.
+MODULES_NEEDED="mpls_router mpls_iptunnel l2tp_core l2tp_netlink l2tp_ip l2tp_eth vxlan"
+MODULES_MISSING=""
+for mod in $MODULES_NEEDED; do
+    if ! modinfo "$mod" > /dev/null 2>&1; then
+        MODULES_MISSING="$MODULES_MISSING $mod"
+    fi
+done
+if [ -n "$MODULES_MISSING" ]; then
+    warn "Missing kernel modules:$MODULES_MISSING"
+    if command -v dnf > /dev/null 2>&1; then
+        info "Installing kernel-modules-extra-$(uname -r) (provides l2tp_netlink, l2tp_eth, ...)"
+        if dnf install -y "kernel-modules-extra-$(uname -r)"; then
+            info "  kernel-modules-extra installed"
+        else
+            warn "  dnf install failed — install manually:"
+            warn "    sudo dnf install kernel-modules-extra-\$(uname -r)"
+        fi
+    else
+        warn "Install the matching kernel-modules-extra package for your distro"
+    fi
+fi
+
 info "Pre-loading kernel modules ..."
-for mod in mpls_router mpls_iptunnel \
-           l2tp_core l2tp_netlink l2tp_ip l2tp_eth \
-           vxlan; do
+for mod in $MODULES_NEEDED; do
     if modprobe "$mod" 2>/dev/null; then
         info "  modprobe $mod: OK"
     else
-        warn "  modprobe $mod: failed (module not present in this kernel)"
+        warn "  modprobe $mod: failed (module still not present after dependency install)"
     fi
 done
 
