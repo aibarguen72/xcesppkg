@@ -225,40 +225,39 @@ info "  $SUDOERS_FILE installed"
 # any sudoers / capability propagation issues — once loaded, the modules stay
 # resident until reboot or rmmod.
 #
-# On Fedora / RHEL, l2tp_netlink and l2tp_eth (also some mpls/vxlan variants)
-# ship in the optional `kernel-modules-extra` RPM, NOT the default
-# `kernel-modules`.  Detect that case and auto-install when dnf is available,
-# otherwise emit a clear instruction.
+# Missing modules are non-fatal: xcespserver only requires them if the
+# corresponding feature is enabled in xcespserver.conf (mpls true / l2tp true
+# / vxlan true).  We never call out to package managers because (a) the user
+# may be on an isolated machine with no repository access, and (b) they may
+# not need the feature at all — installing kernel-modules-extra unprompted
+# is intrusive.
+info "Pre-loading kernel modules (missing modules are reported but not fatal)..."
 MODULES_NEEDED="mpls_router mpls_iptunnel l2tp_core l2tp_netlink l2tp_ip l2tp_eth vxlan"
 MODULES_MISSING=""
 for mod in $MODULES_NEEDED; do
-    if ! modinfo "$mod" > /dev/null 2>&1; then
+    if modinfo "$mod" > /dev/null 2>&1; then
+        if modprobe "$mod" 2>/dev/null; then
+            info "  modprobe $mod: OK"
+        else
+            warn "  modprobe $mod: load failed"
+        fi
+    else
         MODULES_MISSING="$MODULES_MISSING $mod"
     fi
 done
 if [ -n "$MODULES_MISSING" ]; then
-    warn "Missing kernel modules:$MODULES_MISSING"
-    if command -v dnf > /dev/null 2>&1; then
-        info "Installing kernel-modules-extra-$(uname -r) (provides l2tp_netlink, l2tp_eth, ...)"
-        if dnf install -y "kernel-modules-extra-$(uname -r)"; then
-            info "  kernel-modules-extra installed"
-        else
-            warn "  dnf install failed — install manually:"
-            warn "    sudo dnf install kernel-modules-extra-\$(uname -r)"
-        fi
-    else
-        warn "Install the matching kernel-modules-extra package for your distro"
-    fi
+    warn ""
+    warn "The following modules are not present on this kernel:"
+    warn "    $MODULES_MISSING"
+    warn ""
+    warn "If you do not use the corresponding feature (MPLS / L2TP / VXLAN),"
+    warn "this is harmless and you can ignore this warning."
+    warn ""
+    warn "If you DO need them and you are on Fedora / RHEL, install:"
+    warn "    sudo dnf install kernel-modules-extra-\$(uname -r)"
+    warn "and re-run this installer."
+    warn ""
 fi
-
-info "Pre-loading kernel modules ..."
-for mod in $MODULES_NEEDED; do
-    if modprobe "$mod" 2>/dev/null; then
-        info "  modprobe $mod: OK"
-    else
-        warn "  modprobe $mod: failed (module still not present after dependency install)"
-    fi
-done
 
 # ---------------------------------------------------------------------------
 # Configuration templates (non-destructive: existing files are never overwritten)

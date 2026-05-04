@@ -1,5 +1,10 @@
 # Changelog - xcesppkg
 
+## 0.1.27
+
+- `install.sh`: never call package managers automatically.  v0.1.26 ran `dnf install kernel-modules-extra` when modules were missing, which is intrusive and breaks on isolated VMs without repository access (dnf hangs on the network timeout).  Now we just warn the user, list the missing modules, and provide the exact command to install them — leaving the decision to the user
+- Same xcespserver 0.1.8 / xcespproc 0.1.9 binaries as v0.1.26
+
 ## 0.1.26
 
 - `install.sh`: detect when required kernel modules are missing from disk and auto-install `kernel-modules-extra-$(uname -r)` via dnf when available.  On Fedora, `l2tp_netlink` and `l2tp_eth` (and some mpls/vxlan variants) ship in the optional `kernel-modules-extra` RPM, not the default `kernel-modules` — minimal Fedora cloud images / VMs fail `ip l2tp add tunnel` with "Error talking to the kernel" because the L2TP genetlink family is registered by `l2tp_netlink`, which simply isn't present
