@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.1.22
+
+- Bundles xcespproc 0.1.8 (with xcesp-on-rtr 0.0.132)
+- xcesp-on-rtr 0.0.132: amended L2TP-in-VRF support for L2TP IP encap pseudowires.  Adds `<local>/32` to `lo` so the kernel's `l2tp_ip_bind()` finds the address in the main local table; leaks `<remote>/32` into the main routing table via the rlink slave; sets `raw_l3mdev_accept=1` so the receive socket accepts packets arriving on VRF slave interfaces.  Works under SELinux on Fedora (where `ip vrf exec` is blocked) and on VM/ARM64 deployments
+- xcespserver, xcespcli, xcespwdog: unchanged
+
 ## 0.1.21
 
 - Bundles xcespserver 0.1.6, xcespcli 0.1.4, xcespproc 0.1.7 (with xcesp-on-rtr 0.0.130)
