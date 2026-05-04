@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.1.24
+
+- Bundles xcespserver 0.1.8 (with the corrected `loadConfiguredModules` logic)
+- Fixes the v0.1.23 regression: xcespserver was supposed to pre-load the full L2TP module set, but `loadConfiguredModules` had an early-skip when the primary module (`l2tp_core`) was already loaded — which is the default state on Fedora — so siblings (`l2tp_netlink`, `l2tp_ip`, `l2tp_eth`) were never loaded.  v0.1.8 now modprobes every module unconditionally
+- ARM64 unaffected (modules built-in)
+
 ## 0.1.23
 
 - Bundles xcespserver 0.1.7, xcespproc 0.1.9 (with xcesp-on-rtr 0.0.133)
