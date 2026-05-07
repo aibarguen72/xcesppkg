@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.28
+
+- Bundles xcespserver 0.1.9, xcespcli 0.1.5, xcespproc 0.1.10, xcespwdog 0.1.1
+  (xcesp-on-rtr 0.0.134) with: MPLS LDP support (`mpls-ldp` config block,
+  `RtrMplsLdp` proc-object, `show mpls-ldp …`), L3-EVPN IP-VRF advertising
+  (`advertise-evpn` block, VRF VNI binding), `clear-ndp` action, FRR ldpd
+  daemon-availability detection (`show server` → `frr/ldpd` row), and a
+  `RtrFrrPObj::writeDaemonsFile()` fix that appends `<daemon>=yes` when the
+  distro `daemons` template lacks the line (Fedora omits `ldpd=`/`babeld=`)
+
 ## 0.1.27
 
 - `install.sh`: never call package managers automatically.  v0.1.26 ran `dnf install kernel-modules-extra` when modules were missing, which is intrusive and breaks on isolated VMs without repository access (dnf hangs on the network timeout).  Now we just warn the user, list the missing modules, and provide the exact command to install them — leaving the decision to the user
