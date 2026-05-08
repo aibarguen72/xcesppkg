@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.1.29
+
+- Bundles xcespserver 0.1.9, xcespcli 0.1.6, xcespproc 0.1.11, xcespwdog 0.1.1
+  (xcesp-on-rtr 0.0.135) with two fixes uncovered while smoke-testing OSPF
+  on a Debian box that has FRR built with `--enable-ldpd`:
+  - **OSPF push loop**: `RtrOspfPObj::loadConfig()` now strips the `-`
+    placeholder that the mapper emits for empty optional ospf-interface
+    fields (`network-type`, `auth-mode`, `md5-key`).  An ospf-interface
+    with `passive` but no `network-type` was making FRR reject the entire
+    fragment with `% Unknown command[21]: ip ospf network -` and the push
+    retried in a loop
+  - **`show <protocol>` token expansion + autocompletion**: xcespcli now
+    has explicit completion entries for `show {ospf|ospf6|rip|ripng|bfd|
+    mpls-ldp}`.  Without them, `expandTokens()` rewrote unique-prefix
+    tokens via `validNavWords()` — so `show ospf route router RA` typed
+    at the root path was being expanded to `show ospf router router RA`
+    and rejected with `usage: ...`
+
 ## 0.1.28
 
 - Bundles xcespserver 0.1.9, xcespcli 0.1.5, xcespproc 0.1.10, xcespwdog 0.1.1
