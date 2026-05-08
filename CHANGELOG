@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.33
+
+- Bundles xcespserver 0.1.9, xcespcli 0.1.8, xcespproc 0.1.13, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.137).  Completes the MPLS data-plane fix:
+  0.1.32 added the per-interface `input=1` write in `RtrMplsLdpPObj`,
+  but `RtrInterfacePObj` was still unconditionally writing
+  `net.mpls.conf.<dev>.input=0` on every iteration — silently
+  clobbering the LDP write so the wire kept dropping labelled packets.
+  0.0.137 makes the `input=0` write conditional on having previously
+  enabled MPLS through the interface schema, so the two writers
+  coexist.  After installing 0.1.33, `sudo ip netns exec RA sysctl
+  net.mpls.conf.<rlink>.input` should report `1` for every
+  LDP-enabled interface, and the failover ping over the LSP should
+  succeed
+
 ## 0.1.32
 
 - Bundles xcespserver 0.1.9, xcespcli 0.1.8, xcespproc 0.1.12, xcespwdog
