@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.36
+
+- Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.14, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.138).  xcesp-on-rtr 0.0.138 makes
+  `RtrMplsLdpPObj`'s MPLS sysctl writes (per-ns `platform_labels`,
+  per-iface `input=1`) retryable on every `process()` cycle until they
+  all stick.  Symptom from the Debian smoke test: one LDP-enabled
+  interface had `input=1`, another had `input=0` because that interface
+  hadn't been created yet when `applyConfig` ran the first time
+
 ## 0.1.35
 
 - Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.13, xcespwdog
