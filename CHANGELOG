@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.1.30
+
+- Bundles xcespserver 0.1.9, xcespcli 0.1.7, xcespproc 0.1.11, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.135).  xcespcli 0.1.7 fixes the MPLS LDP
+  show-formatters that surfaced after the OSPF push fix unblocked the
+  Debian smoke test:
+  - `show mpls-ldp ipv4-interfaces` was always empty.  FRR's
+    `show mpls ldp <af> interface json` returns an object keyed by
+    `"<ifname>: <af>"`, not the array the formatter assumed.
+    `ldpExtractArray()` now also flattens object-of-objects
+  - `show mpls-ldp ipv4-bindings` rendered `*` in the Neighbor column.
+    FRR uses `neighborId` for the next-hop IP; the formatter only looked
+    for `neighbor`/`peer`/`lsrId`.  Added an `In-Use` column derived
+    from FRR's 0/1 `inUse` integer; reordered columns to match FRR's
+    text output: Prefix | Neighbor | Local-Label | Remote-Label | In-Use
+
 ## 0.1.29
 
 - Bundles xcespserver 0.1.9, xcespcli 0.1.6, xcespproc 0.1.11, xcespwdog 0.1.1
