@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.1.34
+
+- Bundles xcespserver 0.1.10, xcespcli 0.1.8, xcespproc 0.1.13, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.137).  xcespserver 0.1.10 detects strongSwan
+  6.x's `/usr/sbin/charon-systemd` so `show server` correctly reports
+  `strongswan: enabled (...)` on Debian 13 hosts that ship only the
+  systemd-aware charon variant
+
 ## 0.1.33
 
 - Bundles xcespserver 0.1.9, xcespcli 0.1.8, xcespproc 0.1.13, xcespwdog
