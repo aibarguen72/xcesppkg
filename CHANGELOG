@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.1.31
+
+- Bundles xcespserver 0.1.9, xcespcli 0.1.8, xcespproc 0.1.11, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.135).  xcespcli 0.1.8 reworks the
+  `show mpls-ldp ipv4-interfaces` table: drops the unused `Transport`
+  column (FRR's per-interface JSON has no transport-address field) and
+  adds `State`, `Uptime`, `Hello-Hold`, `AdjCount`.  New layout:
+  Interface | AF | State | Uptime | Hello-Int | Hello-Hold | AdjCount
+
 ## 0.1.30
 
 - Bundles xcespserver 0.1.9, xcespcli 0.1.7, xcespproc 0.1.11, xcespwdog
