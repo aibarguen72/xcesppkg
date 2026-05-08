@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.1.32
+
+- Bundles xcespserver 0.1.9, xcespcli 0.1.8, xcespproc 0.1.12, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.136).  xcesp-on-rtr 0.0.136 enables the kernel
+  MPLS data plane when an `mpls-ldp` block is present:
+  `net.mpls.platform_labels` per namespace and
+  `net.mpls.conf.<iface>.input` per LDP-enabled interface.  Without these
+  ldpd was distributing labels but the kernel was silently dropping
+  every labelled packet — the Debian three-router smoke test showed
+  100% loss after taking RA-RB down even though the wire carried
+  correctly-labelled MPLS frames
+
 ## 0.1.31
 
 - Bundles xcespserver 0.1.9, xcespcli 0.1.8, xcespproc 0.1.11, xcespwdog
