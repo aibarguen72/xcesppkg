@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.1.35
+
+- Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.13, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.137).  xcespcli 0.1.9: `dump-file` resolves
+  relative filenames against `<DSK_DIR>/cap/` so tcpdump can actually
+  write — bare `dump-file ... file ldp.pcap` was failing on both Debian
+  and ARM64 with `tcpdump: ldp.pcap: Permission denied` because
+  xcespproc's cwd is not writable by the unprivileged `xcesp` user
+
 ## 0.1.34
 
 - Bundles xcespserver 0.1.10, xcespcli 0.1.8, xcespproc 0.1.13, xcespwdog
