@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.1.38
+
+- Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.16, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.140).  Same-shape fix as 0.1.37 but for the
+  other "FRR-default-enabled" boolean: `bgp-params / no
+  ebgp-requires-policy` was silently dropped because the schema had two
+  redundant attrs (`ebgp-requires-policy` + `no-ebgp-requires-policy`)
+  both defaulting to false-and-emit-on-true.  Schema and writer now
+  consolidate to a single `ebgp-requires-policy` attr defaulting to
+  `true` (mirroring FRR); writing `no ebgp-requires-policy` emits the
+  explicit `no bgp ebgp-requires-policy` line.  Configs that used the
+  old `no-ebgp-requires-policy true` form must switch to
+  `no ebgp-requires-policy`
+
 ## 0.1.37
 
 - Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.15, xcespwdog
