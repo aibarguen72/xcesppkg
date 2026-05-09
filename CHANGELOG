@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.1.37
+
+- Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.15, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.139).  xcesp-on-rtr 0.0.139 fixes
+  `bgp-params / no default-ipv4-unicast` being silently dropped — the
+  XCESP schema, mapper and FRR fragment writer all defaulted to
+  false-and-only-emit-on-true, but FRR's default for `bgp default
+  ipv4-unicast` is enabled, so writing `no default-ipv4-unicast`
+  produced no FRR command at all.  EVPN-only setups that rely on
+  disabling the IPv4 unicast AF now work correctly
+
 ## 0.1.36
 
 - Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.14, xcespwdog
