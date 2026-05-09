@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.1.39
+
+- Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.17, xcespwdog
+  0.1.1 (xcesp-on-rtr 0.0.141).  Completes the audit-and-flip of every
+  FRR-default-enabled BGP boolean so that writing `no <attr>` actually
+  emits the corresponding `no <FRR command>` line.  11 additional knobs
+  fixed:
+  - **bgp-params**: `enforce-first-as`, `suppress-duplicates`,
+    `hard-administrative-reset`, `graceful-restart-notification`,
+    `fast-external-failover`, `network-import-check`
+  - **neighbor / group**: `enforce-first-as`, `capability-fqdn`,
+    `send-community-extended`, `send-community-standard`,
+    `send-community-large`
+
 ## 0.1.38
 
 - Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.16, xcespwdog
