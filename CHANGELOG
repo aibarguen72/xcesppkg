@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.1.45
+
+- Bundles xcespserver 0.1.16, xcespcli 0.1.11, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  Six new SSH key management
+  commands let operators audit and manage xcespserver's outbound SSH
+  state without root:
+  - `show ssh known-hosts`        — list TOFU-trusted host keys
+  - `show ssh identity`           — print xcespserver's outbound pubkey
+  - `clear ssh known-host <host>` — drop a stale entry (recover from
+                                    legitimate host-key rotation)
+  - `clear ssh known-hosts`       — wipe all
+  - `ssh-key generate [type T]`   — create xcespserver's identity
+                                    (ed25519 default)
+  - `ssh-key push scp://user@host` — install our pubkey on the remote
+                                     `~/.ssh/authorized_keys`
+  After `ssh-key push` runs once for a host, subsequent
+  `copy ... scp://host/...` transfers run keyless — no password and no
+  `sshpass` required.  Full TAB / `?` completion for every level
+
 ## 0.1.44
 
 - Bundles xcespserver 0.1.15, xcespcli 0.1.10, xcespproc 0.1.17,
