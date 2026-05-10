@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.1.41
+
+- Bundles xcespserver 0.1.12, xcespcli 0.1.10, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  xcespserver 0.1.12 hardens
+  the `copy ... scp://` / `sftp://` host-key handling: replaces the
+  permissive `StrictHostKeyChecking=no` with TOFU
+  (`StrictHostKeyChecking=accept-new` + dedicated
+  `<DSK_DIR>/known_hosts`).  First contact records the key; later
+  connections to the same host with a *different* key are rejected
+  with the standard OpenSSH MITM warning
+
+## 0.1.40
+
+- Bundles xcespserver 0.1.11, xcespcli 0.1.10, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  Two `copy` UX fixes:
+  - **xcespcli**: `TAB` / `?` after `copy` and `delete` now actually
+    list the four directory categories and follow up with
+    context-aware source / destination candidates (the previous
+    handlers had an off-by-one that made the lists unreachable)
+  - **xcespserver**: `copy ... scp://` / `sftp://` returns a clear
+    error when `sshpass` isn't installed instead of leaking
+    `sh: 1: sshpass: not found`; with no password, falls back to
+    `BatchMode=yes` so SSH key-auth either works or fails fast
+
 ## 0.1.39
 
 - Bundles xcespserver 0.1.10, xcespcli 0.1.9, xcespproc 0.1.17, xcespwdog
