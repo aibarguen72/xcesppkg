@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.1.44
+
+- Bundles xcespserver 0.1.15, xcespcli 0.1.10, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  xcespserver 0.1.15 makes
+  `copy ... scp://host/path` home-relative on the remote (matching
+  what operators typically mean), with `scp://host//path` reserved
+  for absolute root-relative paths
+
 ## 0.1.43
 
 - Bundles xcespserver 0.1.14, xcespcli 0.1.10, xcespproc 0.1.17,
