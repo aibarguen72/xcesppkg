@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.1.46
+
+- `install.sh`: give the `xcesp` group write permission on
+  `/var/xcesp/`, `mainsw/`, and `backupsw/` (mode 2775 with
+  setgid).  Without these `copy sw <url> backup-sw` failed at
+  extraction time with `tar: bin: Cannot mkdir: Permission denied`,
+  and `software-install` (which renames `mainsw <-> backupsw`) needed
+  root.  Files inside still stay root-owned; only the directory
+  permissions change.  Bundles same binaries as 0.1.45 (xcespserver
+  0.1.16, xcespcli 0.1.11, xcespproc 0.1.17, xcespwdog 0.1.1)
+
 ## 0.1.45
 
 - Bundles xcespserver 0.1.16, xcespcli 0.1.11, xcespproc 0.1.17,

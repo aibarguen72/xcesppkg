@@ -318,10 +318,20 @@ find "$SCHEMA_DIR" -type f -exec chmod 0644 {} \;
 find "$RULES_DIR"  -type d  -exec chmod 0755 {} \;
 find "$RULES_DIR"  -type f -name "*.py" -exec chmod 0755 {} \;
 find "$MAINSW_DIR" -type d -exec chmod 0755 {} \;
-chmod 0750 "$MAINSW_DIR"
-# backupsw stays root-owned (empty placeholder)
-chown root:root "$BACKUPSW_DIR"
-chmod 0755 "$BACKUPSW_DIR"
+# Group-owned by xcesp with group-write so xcespserver can extract a new
+# tarball into mainsw/ on swap and so `software-install` (which renames
+# mainsw <-> backupsw) can rename without root.  Files inside stay
+# root-owned 0644 / 0755 — the directory perms are what matter.
+chown root:"$XCESP_GROUP" "$MAINSW_DIR"
+chmod 2775 "$MAINSW_DIR"
+chown root:"$XCESP_GROUP" "$BACKUPSW_DIR"
+chmod 2775 "$BACKUPSW_DIR"
+# /var/xcesp itself: xcesp group needs write here too, otherwise
+# `software-install` cannot `rename mainsw -> mainsw_swap_tmp` etc.
+# Setgid (mode 2775) ensures any new subdir created by xcespserver
+# (e.g. extraction temps) inherits the xcesp group.
+chown root:"$XCESP_GROUP" "$XCESP_BASE"
+chmod 2775 "$XCESP_BASE"
 chown "$XCESP_USER:$XCESP_GROUP" "$RUN_DIR"
 chmod 0750 "$RUN_DIR"
 
