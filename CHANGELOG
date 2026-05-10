@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.49
+
+- Bundles xcespserver 0.1.18, xcespcli 0.1.12, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  `show server` gains a
+  `Software` section showing whether this is an XCESPPKG install,
+  the running mainsw version, and the staged backupsw version.
+  Fills the gap noted after the first end-to-end CLI upgrade test
+  — operators no longer need filesystem access to confirm what
+  upgrade landed and what's queued for the next swap
+
 ## 0.1.48
 
 - Bundles xcespserver 0.1.17, xcespcli 0.1.11, xcespproc 0.1.17,
