@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.43
+
+- Bundles xcespserver 0.1.14, xcespcli 0.1.10, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  xcespserver 0.1.14 moves
+  the TOFU `known_hosts` from `<DSK_DIR>/known_hosts` (root-owned
+  parent, not writable by the unprivileged `xcesp` user) to the
+  running user's `$HOME/.ssh/known_hosts`.  Fixes
+  `Failed to add the host to the list of known hosts` on SCP/SFTP
+  uploads in 0.1.41 / 0.1.42
+
 ## 0.1.42
 
 - Bundles xcespserver 0.1.13, xcespcli 0.1.10, xcespproc 0.1.17,
