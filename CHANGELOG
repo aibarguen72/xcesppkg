@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.42
+
+- Bundles xcespserver 0.1.13, xcespcli 0.1.10, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  xcespserver 0.1.13 drops
+  the process-lifetime cache in `sshpassAvailable()` — previously,
+  installing `sshpass` after xcespserver was already running had no
+  effect until the next restart because the negative result was
+  cached.  Now we re-check on every copy via `access(X_OK)` on
+  standard paths
+
 ## 0.1.41
 
 - Bundles xcespserver 0.1.12, xcespcli 0.1.10, xcespproc 0.1.17,
