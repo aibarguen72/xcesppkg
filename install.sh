@@ -387,15 +387,24 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Management scripts → /usr/bin/
+# Management scripts → /usr/bin/  AND  $MAINSW_DIR/scripts/
 # ---------------------------------------------------------------------------
+# Two destinations: /usr/bin/ is what systemd invokes; mainsw/scripts/ ships
+# with the package so a CLI upgrade (copy sw → backup-sw → software-install)
+# can self-update /usr/bin/xcesp-activate from the new mainsw.  Without the
+# mainsw copy, /usr/bin/xcesp-activate would stay frozen at install-time.
 info "Installing management scripts..."
+mkdir -p "$MAINSW_DIR/scripts"
 install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-activate" "$BINDIR/xcesp-activate"
 install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-activate" "$MAINSW_DIR/scripts/xcesp-activate"
+install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$BINDIR/xcesp-swap.sh"
-info "  $BINDIR/xcesp-activate"
-info "  $BINDIR/xcesp-swap.sh"
+install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$MAINSW_DIR/scripts/xcesp-swap.sh"
+info "  $BINDIR/xcesp-activate (and $MAINSW_DIR/scripts/)"
+info "  $BINDIR/xcesp-swap.sh  (and $MAINSW_DIR/scripts/)"
 
 # ---------------------------------------------------------------------------
 # systemd service

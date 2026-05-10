@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.1.47
+
+- CLI upgrade is now self-sufficient.  `xcesp-activate` (the
+  systemd `ExecStartPre=+` hook that runs as root) now also:
+  - **Self-updates** `/usr/bin/xcesp-activate` and
+    `/usr/bin/xcesp-swap.sh` from `$MAINSW/scripts/` whenever they
+    differ.  Without this, a CLI swap left the old activate script
+    in place forever and never picked up new install-time fixes
+  - **Enforces directory perms** on `/var/xcesp`, `mainsw`,
+    `backupsw` (mode 2775, group `xcesp`) — the same enforcement
+    install.sh does, so a customer who only upgrades via CLI gets
+    the 0.1.46 perms fix automatically on next boot
+- `install.sh`: also installs the management scripts under
+  `$MAINSW_DIR/scripts/` (in addition to `/usr/bin/`) so a CLI
+  swap brings them along.
+
+  **One-time bootstrap for existing 0.1.45 / 0.1.46 customers**:
+  the OLD `xcesp-activate` doesn't know about self-update, so
+  the first hop must still run `sudo bash install.sh` from the
+  0.1.47 tarball.  After that, every subsequent upgrade flows
+  through the CLI without manual steps
+
 ## 0.1.46
 
 - `install.sh`: give the `xcesp` group write permission on

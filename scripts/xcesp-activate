@@ -32,6 +32,40 @@ fi
 log "activating $(head -1 "$MAINSW/VERSION")"
 
 # ---------------------------------------------------------------------------
+# /var/xcesp directory ownership / permissions
+# ---------------------------------------------------------------------------
+# Keep these in sync with install.sh.  Re-applied on every boot so that a
+# CLI upgrade (copy sw → backup-sw → software-install) picks up perms
+# tightening / loosening from a newer release without requiring a rerun
+# of install.sh.  Specifically: xcesp group needs write on /var/xcesp/,
+# mainsw/, and backupsw/ for the swap rename and tarball extraction.
+for d in "$XCESP_BASE" "$MAINSW" "$XCESP_BASE/backupsw"; do
+    [ -d "$d" ] || continue
+    chown "root:$XCESP_GROUP" "$d"
+    chmod 2775 "$d"
+done
+
+# ---------------------------------------------------------------------------
+# Self-update of /usr/bin/xcesp-activate and /usr/bin/xcesp-swap.sh
+# ---------------------------------------------------------------------------
+# After a CLI swap, the new package's scripts live in mainsw/scripts/.
+# Copy them over /usr/bin/ so subsequent service starts run the new
+# logic (not the install.sh-vintage version that's still in /usr/bin).
+# Copy only when content differs — avoids a needless rewrite on every
+# start.
+if [ -d "$MAINSW/scripts" ]; then
+    for s in xcesp-activate xcesp-swap.sh; do
+        src="$MAINSW/scripts/$s"
+        dst="$BINDIR/$s"
+        [ -f "$src" ] || continue
+        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+            install -o root -g root -m 0755 "$src" "$dst"
+            log "  refreshed $dst"
+        fi
+    done
+fi
+
+# ---------------------------------------------------------------------------
 # Runtime directory
 # ---------------------------------------------------------------------------
 # /run is tmpfs — cleared on reboot. systemd RuntimeDirectory= handles this
