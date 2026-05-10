@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.1.51
+
+- Bundles xcespserver 0.1.20, xcespcli 0.1.13, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  Rolls 0.1.50 forward with
+  the streaming-cancel SIGKILL fallback in xcespserver 0.1.20 — so
+  Ctrl-C on a stuck transfer (firewall silently dropping, network
+  black-hole, etc.) can never re-block xcespserver
+
+## 0.1.50
+
+- Bundles xcespserver 0.1.19, xcespcli 0.1.13, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  `copy ... scp://` is now
+  a streaming action — xcespserver runs scp via a PTY in a child
+  process and forwards the progress bar to the CLI in real time, so
+  the event loop stays responsive even on slow ARM64 / LTE links.
+  Fixes the regression on ARM64 where every large-file transfer
+  drowned all client connections via heartbeat timeout (the
+  symptom that prompted this design)
+
 ## 0.1.49
 
 - Bundles xcespserver 0.1.18, xcespcli 0.1.12, xcespproc 0.1.17,
