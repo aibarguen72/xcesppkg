@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.1.48
+
+- Bundles xcespserver 0.1.17, xcespcli 0.1.11, xcespproc 0.1.17,
+  xcespwdog 0.1.1 (xcesp-on-rtr 0.0.141).  xcespserver 0.1.17 fixes
+  `show ssh ...` / `clear ssh ...` / `ssh-key ...` failing with
+  `error: missing ROUTER parameter` — the new SSH actions weren't
+  in the local-action allowlist in `XCespCtrlServer::relayActionExec`,
+  so the dispatcher tried to route them to a per-router xcespproc
+
 ## 0.1.47
 
 - CLI upgrade is now self-sufficient.  `xcesp-activate` (the
