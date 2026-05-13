@@ -133,6 +133,28 @@ else
     warn "Then run:  setcap $XCESPPROC_CAPS $BINDIR/xcespproc"
 fi
 
+# strongSwan / charon capabilities — required so the per-namespace charon
+# launched by xcespproc (under the unprivileged $XCESP_USER) can still
+# perform: bind UDP 500/4500 (cap_net_bind_service), manage XFRM/route
+# state (cap_net_admin), open raw sockets (cap_net_raw), and **read
+# /etc/strongswan.conf** even when shipped mode 0600 (cap_dac_read_search,
+# Ubuntu's default).  Without the DAC cap the include silently fails on
+# Ubuntu and IKE_SA_INIT dies with "no socket implementation registered".
+#
+# Probe every candidate path — distros put charon under different prefixes.
+if command -v setcap > /dev/null 2>&1; then
+    CHARON_CAPS="cap_net_admin,cap_net_raw,cap_net_bind_service,cap_dac_read_search=ep"
+    for charon_bin in /usr/libexec/strongswan/charon \
+                      /usr/lib/strongswan/charon \
+                      /usr/libexec/ipsec/charon \
+                      /usr/lib/ipsec/charon \
+                      /usr/local/libexec/strongswan/charon; do
+        [ -f "$charon_bin" ] || continue
+        setcap "$CHARON_CAPS" "$charon_bin"
+        info "  $CHARON_CAPS set on $charon_bin"
+    done
+fi
+
 # ---------------------------------------------------------------------------
 # FRR group integration — allow xcespproc to write to /etc/frr/<ns>/
 # ---------------------------------------------------------------------------

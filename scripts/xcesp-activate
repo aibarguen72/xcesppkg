@@ -104,6 +104,38 @@ if [ -d "$MAINSW/bin" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# strongSwan / charon capabilities
+#
+# xcespproc launches a per-namespace charon process for every router that
+# carries an `ipsec` block.  charon runs as the `xcesp` user via the file
+# capabilities applied below; CAP_DAC_READ_SEARCH lets it open the system
+# /etc/strongswan.conf even when the distro ships it mode 0600 (Ubuntu's
+# default — owned by __ipsec:__ipsec).  Without that cap the include
+# silently fails, no plugins load, and IKE_SA_INIT dies with `[NET]
+# no socket implementation registered`.
+#
+# Probe every candidate path — different distros ship charon under
+# different prefixes:
+#   /usr/libexec/strongswan/charon    Fedora / RHEL
+#   /usr/lib/strongswan/charon        Older layouts
+#   /usr/libexec/ipsec/charon         Ubuntu (recent strongswan-charon)
+#   /usr/lib/ipsec/charon             Ubuntu (older strongswan-charon)
+#   /usr/local/libexec/strongswan/charon  manual / from-source installs
+# ---------------------------------------------------------------------------
+if command -v setcap > /dev/null 2>&1; then
+    for charon_bin in /usr/libexec/strongswan/charon \
+                      /usr/lib/strongswan/charon \
+                      /usr/libexec/ipsec/charon \
+                      /usr/lib/ipsec/charon \
+                      /usr/local/libexec/strongswan/charon; do
+        [ -f "$charon_bin" ] || continue
+        setcap cap_net_admin,cap_net_raw,cap_net_bind_service,cap_dac_read_search=ep \
+               "$charon_bin"
+        log "  setcap applied to $charon_bin (cap_dac_read_search included for Ubuntu's mode-0600 strongswan.conf)"
+    done
+fi
+
+# ---------------------------------------------------------------------------
 # Schema
 # ---------------------------------------------------------------------------
 if [ -d "$MAINSW/schema" ]; then

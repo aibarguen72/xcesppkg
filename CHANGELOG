@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.1.67
+
+- `install.sh` and `scripts/xcesp-activate`: probe **`/usr/libexec/ipsec/`**
+  and **`/usr/lib/ipsec/`** in addition to the existing
+  `/usr/libexec/strongswan/` and `/usr/lib/strongswan/` paths when applying
+  file capabilities to charon.  Ubuntu's `strongswan-charon` package puts
+  the daemon under `/usr/libexec/ipsec/charon` — our older probe missed it
+  entirely, so the binary stayed cap-less and our per-namespace charon
+  silently failed to load any plugins.
+- Add **`cap_dac_read_search`** to the charon capability set.  On Ubuntu
+  `/etc/strongswan.conf` ships mode 0600 owned by `__ipsec:__ipsec`; the
+  per-namespace charon runs as the unprivileged `xcesp` user, so without
+  this cap the `include /etc/strongswan.conf` directive that 0.1.66 added
+  to `charon-ns.conf` silently fails the DAC check.  Result: no plugins
+  load, IKE_SA_INIT dies with `[NET] no socket implementation
+  registered` and 0 bytes leave the box.  With cap_dac_read_search,
+  charon can read the system config regardless of its mode, the include
+  chain expands (load_modular + per-plugin enablers), and IKE flows.
+- The fix is idempotent — install.sh applies it once at install time,
+  xcesp-activate re-applies it on every boot (via the systemd
+  ExecStartPre=+ hook) in case a strongSwan package upgrade replaces
+  the binary and drops its caps.
+
 ## 0.1.66
 
 - Per-namespace charon now inherits the system `strongswan.conf` wholesale,
