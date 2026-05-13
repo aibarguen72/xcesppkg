@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.69
+
+- Trim the per-ns charon bootstrap (`/var/xcesp/strongswan.conf` written
+  by `xcesp-activate`) down to the bare minimum: just `load_modular = yes`
+  and the per-plugin enabler include.  0.1.68's version pulled in
+  `/etc/strongswan.d/*.conf` at the top level — that directory contains
+  files for **other** strongSwan components (`charon-systemd.conf`,
+  `starter.conf`, `swanctl.conf`) whose settings conflict with our
+  plain per-namespace charon (systemd-only logging knobs, ipsec_starter
+  PID-file expectations, etc.).  Importing them made charon die silently
+  during init on Ubuntu arm64 — same exec-vanishes signature as the
+  cap_dac_read_search regression, different cause.
+- No xcesp-on-rtr or binary changes — pure shell-script fix.  Bundles
+  xcesp-on-rtr 0.0.157 unchanged.
+
 ## 0.1.68
 
 - **Revert `cap_dac_read_search` on charon.**  Adding it in 0.1.67 made
