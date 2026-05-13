@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.1.70
+
+- xcesp-on-rtr 0.0.158: `RtrStrongswanPObj::writeStrongswanConf` now
+  probes the strongSwan per-plugin enabler dir at write time and emits
+  `include <dir>/*.conf` only for directories that actually exist and
+  contain `.conf` files.  Required because Ubuntu's strongSwan fatals
+  on a glob include with zero matches (exit 66, charon never logs).
+  The per-namespace charon-ns.conf is now fully self-contained — no
+  bootstrap file, no host-file include, no DAC bypass.
+- `scripts/xcesp-activate`: stop generating `/var/xcesp/strongswan.conf`
+  (no longer used by xcespproc 0.0.158+) and clean up any stale copy
+  from earlier installs.
+
 ## 0.1.69
 
 - Trim the per-ns charon bootstrap (`/var/xcesp/strongswan.conf` written
