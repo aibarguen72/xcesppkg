@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.1.65
+
+- Per-namespace charon now loads its socket plugin on distros without a
+  compile-time default plugin set (Debian arm64).  xcesp-on-rtr 0.0.155
+  generates a `charon-ns.conf` with `load_modular = yes` plus an
+  `include` of the system per-plugin .conf directory (both
+  /etc/strongswan/strongswan.d/charon/ and /etc/strongswan.d/charon/).
+  Without this fix the per-ns charon came up — VICI worked, `show ipsec
+  sa` returned data — but `[NET] sending failed: no socket
+  implementation registered` blocked every IKE_SA_INIT.  Bundles
+  xcesp-on-rtr 0.0.155.
+
 ## 0.1.64
 
 - IGP redistribute UX: `static` and `kernel` are now operator-visible
