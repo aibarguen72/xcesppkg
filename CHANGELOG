@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.66
+
+- Per-namespace charon now inherits the system `strongswan.conf` wholesale,
+  then adds three overrides (vici socket path, stroke off, bypass-lan
+  off).  0.1.65's load_modular+include approach worked on Fedora but
+  broke on Debian arm64 where critical plugins (`nonce`, `sha1`) aren't
+  enumerated in `strongswan.d/charon/*.conf` — charon refused to start
+  with `failed to load 3 critical plugin features`.  Bundles
+  xcesp-on-rtr 0.0.156.
+
 ## 0.1.65
 
 - Per-namespace charon now loads its socket plugin on distros without a
