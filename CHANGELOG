@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.1.64
+
+- IGP redistribute UX: `static` and `kernel` are now operator-visible
+  aliases in OSPFv2, OSPFv3, RIPv2 and RIPng — same fix that has been
+  in place for BGP since 0.0.140.  xcespproc installs operator-typed
+  `static-route` entries directly into the Linux routing table
+  (bypassing FRR's `staticd`), so FRR sees them as `kernel` routes.
+  Without the translation `redistribute static` under an IGP was
+  silently a no-op.  Bundles xcesp-on-rtr 0.0.154; no other component
+  versions changed.
+
 ## 0.1.63
 
 - **Route-based IPsec (XFRM interface) tunnel mode.**  Third IPsec data-plane
