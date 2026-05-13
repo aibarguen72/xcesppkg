@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.1.68
+
+- **Revert `cap_dac_read_search` on charon.**  Adding it in 0.1.67 made
+  charon's exec die silently on Ubuntu arm64 — no log lines, no
+  AppArmor deny in dmesg, no kernel oops, just a vanished process.
+  The cap interaction wasn't fully characterised but the symptom
+  reproduces deterministically: revert the cap and exec works again.
+  Charon caps revert to the original
+  `cap_net_admin,cap_net_raw,cap_net_bind_service=ep`.
+- **New: per-namespace charon bootstrap file.**  `xcesp-activate` now
+  writes `/var/xcesp/strongswan.conf` (mode 0644, owned by xcesp)
+  containing the same plugin-loading structure as the system
+  `/etc/strongswan.conf` but with absolute include paths.  Generated
+  on every boot.  xcesp-on-rtr 0.0.157's `RtrStrongswanPObj` includes
+  this file from each per-namespace `charon-ns.conf`, sidestepping
+  Ubuntu's locked-down `/etc/strongswan.conf` (mode 0600 owned by
+  __ipsec) entirely.  Per-namespace charon now reads a config it owns
+  and can always open, the plugin set comes from the absolute-path
+  includes pointing at world-readable `*.conf` files in the system's
+  `strongswan.d/charon/`, and IKE_SA_INIT actually leaves the box.
+- Bundles xcesp-on-rtr 0.0.157.
+
 ## 0.1.67
 
 - `install.sh` and `scripts/xcesp-activate`: probe **`/usr/libexec/ipsec/`**
