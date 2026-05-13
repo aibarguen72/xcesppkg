@@ -132,6 +132,18 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp -r $(XCESPPY_SRC)/. $(PKG_NAME)/python/xcesppy/
 	find $(PKG_NAME)/python -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
+	# --- Documentation (mkdocs-built static site) ---
+	# Bundled only if ../doc/site/ exists — gracefully skipped if the doc
+	# tree has not been rebuilt locally (the doc subproject is authored
+	# separately; the operator may not have generated it yet).
+	@if [ -d ../doc/site ]; then \
+		mkdir -p $(PKG_NAME)/doc; \
+		cp -r ../doc/site/. $(PKG_NAME)/doc/; \
+		echo "  Bundled docs: ../doc/site → $(PKG_NAME)/doc"; \
+	else \
+		echo "  Skipping docs (../doc/site not found)"; \
+	fi
+
 	# --- Management scripts ---
 	mkdir -p $(PKG_NAME)/scripts
 	cp scripts/xcesp-activate $(PKG_NAME)/scripts/

@@ -14,6 +14,7 @@ CFG_DIR=$XCESP_BASE/cfg
 LOG_DIR=$XCESP_BASE/log
 SCHEMA_DIR=$XCESP_BASE/schema
 RULES_DIR=$XCESP_BASE/rules
+DOC_DIR=$XCESP_BASE/doc
 VENV_DIR=$XCESP_BASE/venv
 PYLIB_DIR=$XCESP_BASE/lib/python
 MAINSW_DIR=$XCESP_BASE/mainsw
@@ -88,6 +89,23 @@ for d in "$DSK_DIR/img" "$DSK_DIR/bcfg" "$DSK_DIR/log" "$DSK_DIR/cap"; do
     chmod 775 "$d"
 done
 info "  Created $DSK_DIR/{img,bcfg,log,cap}"
+
+# dsk/cert: X.509 certificate and private-key storage.  Subdirectory
+# layout — read by FileActionHandler (cert-* actions) and by charon when
+# strongSwan picks up the per-namespace creds:
+#   ca/   CA certificates (public material) — group-readable
+#   dev/  Device (own) certificates          — group-readable
+#   key/  Private keys                       — group-readable, NOT world
+# Files inside use mode 0640 (group-only); the dirs are 0750 so non-xcesp
+# users can't list private key names either.
+for d in "$DSK_DIR/cert/ca" "$DSK_DIR/cert/dev" "$DSK_DIR/cert/key"; do
+    mkdir -p "$d"
+    chown root:"$XCESP_GROUP" "$d"
+    chmod 0750 "$d"
+done
+chown root:"$XCESP_GROUP" "$DSK_DIR/cert"
+chmod 0750 "$DSK_DIR/cert"
+info "  Created $DSK_DIR/cert/{ca,dev,key} (mode 0750)"
 
 # ---------------------------------------------------------------------------
 # Binaries → /var/xcesp/mainsw/bin/  AND  /usr/bin/
@@ -293,6 +311,20 @@ info "Installing xcesppy source to $MAINSW_DIR/python ..."
 cp -rT "$INSTALL_DIR/python" "$MAINSW_DIR/python"
 
 # ---------------------------------------------------------------------------
+# Documentation → mainsw/doc/  (activated to /var/xcesp/doc/ below).
+# Only present when the package was built with ../doc/site/ available; the
+# doc-httpd server slot in xcespserver.ini gracefully no-ops if DOC_DIR is
+# missing.
+# ---------------------------------------------------------------------------
+if [ -d "$INSTALL_DIR/doc" ]; then
+    info "Installing documentation to $MAINSW_DIR/doc ..."
+    mkdir -p "$MAINSW_DIR/doc"
+    cp -rT "$INSTALL_DIR/doc" "$MAINSW_DIR/doc"
+else
+    info "  No documentation in this package (../doc/site was missing at build time)"
+fi
+
+# ---------------------------------------------------------------------------
 # VERSION → mainsw/VERSION
 # ---------------------------------------------------------------------------
 if [ -f "$INSTALL_DIR/VERSION" ]; then
@@ -301,22 +333,31 @@ if [ -f "$INSTALL_DIR/VERSION" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Activate mainsw → working locations (schema, rules)
+# Activate mainsw → working locations (schema, rules, doc)
 # ---------------------------------------------------------------------------
 info "Activating mainsw to working locations..."
 cp -rT "$MAINSW_DIR/schema" "$SCHEMA_DIR"
 cp -rT "$MAINSW_DIR/rules"  "$RULES_DIR"
+if [ -d "$MAINSW_DIR/doc" ]; then
+    mkdir -p "$DOC_DIR"
+    cp -rT "$MAINSW_DIR/doc" "$DOC_DIR"
+fi
 
 # ---------------------------------------------------------------------------
 # Fix ownership and permissions
 # ---------------------------------------------------------------------------
 chown -R "$XCESP_USER:$XCESP_GROUP" \
-    "$MAINSW_DIR" "$CFG_DIR" "$LOG_DIR" "$SCHEMA_DIR" "$RULES_DIR"
+    "$MAINSW_DIR" "$CFG_DIR" "$LOG_DIR" "$SCHEMA_DIR" "$RULES_DIR" \
+    $( [ -d "$DOC_DIR" ] && printf '%s ' "$DOC_DIR" )
 chmod 0750 "$CFG_DIR" "$LOG_DIR"
 find "$SCHEMA_DIR" -type d -exec chmod 0755 {} \;
 find "$SCHEMA_DIR" -type f -exec chmod 0644 {} \;
 find "$RULES_DIR"  -type d  -exec chmod 0755 {} \;
 find "$RULES_DIR"  -type f -name "*.py" -exec chmod 0755 {} \;
+if [ -d "$DOC_DIR" ]; then
+    find "$DOC_DIR" -type d -exec chmod 0755 {} \;
+    find "$DOC_DIR" -type f -exec chmod 0644 {} \;
+fi
 find "$MAINSW_DIR" -type d -exec chmod 0755 {} \;
 # Group-owned by xcesp with group-write so xcespserver can extract a new
 # tarball into mainsw/ on swap and so `software-install` (which renames

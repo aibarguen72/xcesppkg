@@ -265,6 +265,89 @@ log "  xcespwdog_proc.ini: $routing_count routing process(es)"
         proc_idx=$((proc_idx + 1))
     done
 } > "$WDOG_PROC_FILE"
+
+# ---------------------------------------------------------------------------
+# doc-httpd process slot — append to xcespwdog_proc.ini if enabled
+# ---------------------------------------------------------------------------
+# Reads [DOC_HTTPD] from xcespserver.ini (with safe defaults if the section
+# is absent — covers in-place upgrades whose existing INI predates the
+# feature).  Emits a python3 -m http.server process block that xcespwdog
+# supervises just like xcespproc; heartbeat polling disabled because
+# python's http.server doesn't speak SIGUSR1.
+SERVER_INI=$XCESP_BASE/cfg/xcespserver.ini
+
+# Inject the [DOC_HTTPD] section into xcespserver.ini if missing — same
+# idempotent pattern used for PROC_CONFIG_FILE in xcespwdog.ini below.
+# This keeps the operator's tunables visible in the standard place once
+# the upgrade has run.
+if [ -f "$SERVER_INI" ] && ! grep -q '^\[DOC_HTTPD\]' "$SERVER_INI"; then
+    cat >> "$SERVER_INI" <<'INI_EOF'
+
+[DOC_HTTPD]
+# Static user-manual HTTP server, supervised by xcespwdog.  When ENABLED,
+# xcesp-activate emits an extra [process.N] entry into xcespwdog_proc.ini
+# that launches `python3 -m http.server` against DOC_DIR.  Disable by
+# setting ENABLED = false.  BIND_ADDR defaults to 0.0.0.0 while this is
+# INI-only; a future schema/CLI layer will flip the default to 127.0.0.1.
+ENABLED   = true
+BIND_ADDR = 0.0.0.0
+PORT      = 8080
+DOC_DIR   = /var/xcesp/doc
+INI_EOF
+    log "  injected [DOC_HTTPD] defaults into $SERVER_INI"
+fi
+
+# Tiny ini-scalar reader: $1 = key, $2 = default.  Reads only inside
+# [DOC_HTTPD]; tolerates leading whitespace, blank lines, and `;` / `#`
+# inline comments.  POSIX-portable awk (works under mawk and gawk).
+read_doc_httpd() {
+    local key="$1" def="$2"
+    [ -f "$SERVER_INI" ] || { printf '%s' "$def"; return; }
+    awk -v key="$key" -v def="$def" '
+        BEGIN { in_sect = 0; found = 0 }
+        /^[[:space:]]*[;#]/                  { next }
+        /^\[DOC_HTTPD\][[:space:]]*$/        { in_sect = 1; next }
+        /^\[/                                 { in_sect = 0; next }
+        in_sect {
+            eq = index($0, "=")
+            if (eq == 0) next
+            k = substr($0, 1, eq - 1)
+            v = substr($0, eq + 1)
+            # trim key
+            sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k)
+            # trim value: leading ws, trailing inline comment, trailing ws
+            sub(/^[[:space:]]+/, "", v)
+            sub(/[[:space:]]*[;#].*$/, "", v)
+            sub(/[[:space:]]+$/, "", v)
+            if (k == key) { print v; found = 1; exit }
+        }
+        END { if (!found) print def }
+    ' "$SERVER_INI"
+}
+
+doc_enabled=$(read_doc_httpd ENABLED   true)
+doc_addr=$(read_doc_httpd    BIND_ADDR 0.0.0.0)
+doc_port=$(read_doc_httpd    PORT      8080)
+doc_dir=$(read_doc_httpd     DOC_DIR   /var/xcesp/doc)
+
+if [ "$doc_enabled" = "true" ] && [ -d "$doc_dir" ]; then
+    {
+        echo ""
+        echo "# doc-httpd — static user-manual server (python3 -m http.server)"
+        echo "[process.$proc_idx]"
+        echo "WDOG_LAUNCH             = python3 -m http.server --bind $doc_addr --directory $doc_dir $doc_port"
+        echo "WDOG_START_TIMER        = 0"
+        echo "WDOG_INTERVAL_TIMER     = 0"
+        echo "WDOG_RESPAWN            = true"
+        echo "WDOG_RESPAWN_MAXCOUNT   = 3"
+    } >> "$WDOG_PROC_FILE"
+    log "  doc-httpd enabled: $doc_addr:$doc_port → $doc_dir"
+elif [ "$doc_enabled" = "true" ]; then
+    log "  doc-httpd skipped: DOC_DIR $doc_dir does not exist"
+else
+    log "  doc-httpd disabled in xcespserver.ini"
+fi
+
 chown "$XCESP_USER:$XCESP_GROUP" "$WDOG_PROC_FILE"
 chmod 0640 "$WDOG_PROC_FILE"
 

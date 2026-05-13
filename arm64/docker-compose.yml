@@ -1,0 +1,8 @@
+services:
+  builder:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - /tmp/xcesp-src:/src
+    command: bash /src/xcesppkg/arm64/build.sh
