@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.81
+
+- **Hotfix for 0.1.80 dnsmasq config-parse failure** ("bad option
+  at line 9").  RtrDnsPObj emitted `log-file=<path>` but dnsmasq
+  has no `log-file` option — it uses `log-facility=<path>` with a
+  path argument.  Fixed in xcesp-on-rtr 0.0.166 / xcespproc 0.1.31.
+- The 0.0.165 diagnostic infrastructure (--test pre-flight + stderr
+  capture + replay) worked exactly as designed and pinpointed the
+  exact line of the problem.
+
 ## 0.1.80
 
 - **Hotfix for 0.1.79 dnsmasq respawn loop.**  On routers without an
