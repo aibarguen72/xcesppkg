@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.1.80
+
+- **Hotfix for 0.1.79 dnsmasq respawn loop.**  On routers without an
+  explicit `interface lo` block, `dns` configured, the new RtrDnsPObj
+  launched dnsmasq every 10 s without it ever staying up.  Three
+  fixes shipped in xcesp-on-rtr 0.0.165 / xcespproc 0.1.30:
+  - Bring `lo` up in the router namespace before launching dnsmasq
+    (required for bind-interfaces + listen-address=127.0.0.1).
+  - Pass `--user=<euid>` / `--group=<egid>` so dnsmasq stays as the
+    xcespproc user (the default privilege drop to `nobody` could not
+    write the pid-file under /run/xcesp/dns/<ns>/, which is 0755
+    owned by xcesp).
+  - Redirect dnsmasq's stderr to `/run/xcesp/dns/<ns>/dnsmasq.startup.log`
+    and replay on every respawn into xcesp.log at WARNING level —
+    operators now see the actual error message in the log without
+    having to SSH into the box.
+- Also adds a `dnsmasq --test -C <conf>` pre-flight to catch syntax
+  errors / missing files synchronously before the real launch.
+- All 0.1.79 installations should upgrade.
+
 ## 0.1.79
 
 - Rebuilds with xcesp-on-rtr 0.0.164 / xcespproc 0.1.29 /
