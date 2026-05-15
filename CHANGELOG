@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.1.85
+
+- **Hotfix for 0.1.84**: chronyd died at exec with "invalid option
+  -- 'g'" because RtrNtpPObj was passing `-g <group>` (a flag that
+  exists in dnsmasq but NOT in chronyd — chronyd takes only `-u`
+  and uses the user's primary GID).  Fixed in xcesp-on-rtr 0.0.170
+  / xcespproc 0.1.35.
+- All 0.1.84 installations should upgrade.
+
 ## 0.1.84
 
 - **New NTP feature** (xcesp-on-rtr 0.0.169 / xcespproc 0.1.34 /
