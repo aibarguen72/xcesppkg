@@ -123,7 +123,7 @@ done
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------
 info "Setting file capabilities on xcespproc..."
-XCESPPROC_CAPS="cap_net_admin,cap_sys_admin,cap_sys_module,cap_net_raw,cap_net_bind_service=ep"
+XCESPPROC_CAPS="cap_net_admin,cap_sys_admin,cap_sys_module,cap_net_raw,cap_net_bind_service,cap_sys_time=ep"
 if command -v setcap > /dev/null 2>&1; then
     setcap "$XCESPPROC_CAPS" "$BINDIR/xcespproc"
     setcap "$XCESPPROC_CAPS" "$MAINSW_DIR/bin/xcespproc"

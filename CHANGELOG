@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.86
+
+- **Hotfix for 0.1.85**: chronyd died with `Fatal error : Not
+  superuser` because it does a `geteuid()==0` startup check.
+  Fixes:
+  - xcesp-on-rtr 0.0.171 / xcespproc 0.1.36: chronyd is now
+    launched with `-U` to bypass the root check.
+  - **install.sh**: `cap_sys_time` added to the xcespproc
+    capability set (`XCESPPROC_CAPS`) so chronyd inherits the
+    ability to actually adjust the kernel clock when `settime
+    true` is configured.  Without this, settime=true configs
+    would silently fail to slew/step the clock.  Reinstalling
+    or rerunning `setcap` on the xcespproc binary is required
+    after upgrade.
+
 ## 0.1.85
 
 - **Hotfix for 0.1.84**: chronyd died at exec with "invalid option
