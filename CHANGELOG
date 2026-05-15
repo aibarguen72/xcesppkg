@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.1.79
+
+- Rebuilds with xcesp-on-rtr 0.0.164 / xcespproc 0.1.29 /
+  xcespcli 0.1.20.  Adds:
+  - New `unmanaged-address` boolean on device-type interfaces.
+    When true, xcesp must NOT add/remove IPs on this interface
+    (external manager owns the address list); `shutdown` still
+    drives link state.  Validator rejects the flag combined with
+    any `address` child block AND on pseudo-device types.
+  - New operator commands `show dns [router R]` and `show dns
+    statistics [router R]` — first renders dnsmasq state (running
+    pid, source binding, upstream priority order, listening
+    addresses + proxy interfaces); second triggers SIGUSR1 on
+    dnsmasq and parses the per-namespace log for cache counters
+    and per-upstream sent/failed totals.
+  - Per-namespace dnsmasq log-file emission so the statistics
+    command has a stable place to tail.
+
 ## 0.1.78
 
 - **Hotfix for 0.1.77**: rebuilds with xcesp-on-rtr 0.0.163 /
