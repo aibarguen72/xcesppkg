@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.1.78
+
+- **Hotfix for 0.1.77**: rebuilds with xcesp-on-rtr 0.0.163 /
+  xcespproc 0.1.28.  Fixes a node-type collision where the new DNS
+  feature's `server` child node silently overrode the wdog
+  top-level `server` schema, making xcespserver crash-loop with
+  `top-level node 'router' encountered while block 'l2tp' is still
+  open` and never create `/run/xcesp/ctrl.sock` — leaving xcespcli
+  unable to connect.  CLI syntax change: the keyword inside the
+  `dns` block is now `dns-server <ip>` instead of `server <ip>`.
+- All 0.1.77 installations should upgrade.  No config migration
+  needed unless an operator had already written a `dns` block with
+  the old `server <ip>` keyword (rename to `dns-server <ip>`).
+
 ## 0.1.77
 
 - Bundles xcespserver 0.1.25, xcespcli 0.1.19, xcespproc 0.1.27,
