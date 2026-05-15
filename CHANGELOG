@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.1.84
+
+- **New NTP feature** (xcesp-on-rtr 0.0.169 / xcespproc 0.1.34 /
+  xcespcli 0.1.22):
+  - `router/ntp` configuration section: prioritized upstream NTP
+    sources (IP or FQDN), optional NTP server mode for LAN
+    clients (bound per-interface), `settime` switch to enable
+    multi-router-on-one-box testing without clock contention,
+    `version` (3 or 4) and `port` per source.
+  - Per-router chronyd, launched in each router's netns with
+    --user/--group set to xcespproc's user (same priv-drop fix we
+    learned from dnsmasq), cmd socket bound to netns-local
+    127.0.0.1:323.
+  - `show ntp status [router R]` — chronyc tracking + sources
+    parsed and pretty-rendered (offsets in s/ms/µs as appropriate,
+    state column maps `*/+/-/?/x/~` to `selected/combine/not
+    used/unreach/falseticker/stale`).
+
 ## 0.1.83
 
 - `dnsquery` UX fixes (xcespcli 0.1.21 + xcesp-on-rtr 0.0.168 +
