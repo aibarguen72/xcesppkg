@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.1.83
+
+- `dnsquery` UX fixes (xcespcli 0.1.21 + xcesp-on-rtr 0.0.168 +
+  xcespproc 0.1.33):
+  - Parser now accepts keyword pairs in any order; if NAME is
+    forgotten, prints `NAME (DNS name to resolve) is required`
+    instead of silently treating the first arg as the name.
+  - Dig wait extended to 12s so dnsmasq has time to return SERVFAIL
+    on isolated networks where upstreams are unreachable
+    (otherwise dig prints a misleading "communications error ...
+    timed out").
+
 ## 0.1.82
 
 - **Hotfix for 0.1.81**: dnsmasq's `--user`/`--group` only accept
