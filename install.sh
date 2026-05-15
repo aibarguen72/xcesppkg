@@ -133,34 +133,51 @@ else
     warn "Then run:  setcap $XCESPPROC_CAPS $BINDIR/xcespproc"
 fi
 
-# strongSwan / charon capabilities — required so the per-namespace charon
-# launched by xcespproc (under the unprivileged $XCESP_USER) can bind
-# UDP 500/4500 (cap_net_bind_service), manage XFRM/route state
-# (cap_net_admin), and open raw sockets (cap_net_raw).
+# strongSwan / charon: setuid root, NO file capabilities.
 #
-# NOTE: cap_dac_read_search is intentionally NOT included.  Adding it
-# caused charon to exec silently (no log lines) on Ubuntu — likely a
-# kernel bounding-set or libcap edge case interacting with Ubuntu's
-# strongSwan build.  Instead of reading the mode-0600
-# /etc/strongswan.conf directly, xcesp-activate now generates
-# /var/xcesp/strongswan.conf (mode 0644, owned by xcesp) with absolute-
-# path includes — see the "per-namespace charon bootstrap" section
-# below.  Our per-ns charon-ns.conf includes that file, sidestepping
-# the DAC issue entirely.
+# Ubuntu's strongSwan charon ships without libcap (verified:
+# `ldd /usr/libexec/ipsec/charon | grep cap` is empty).  Its
+# CAP_NET_BIND_SERVICE check inside capabilities_t::keep() falls through
+# to a `geteuid()==0 ? TRUE : FALSE` fallback.  When xcespproc (running
+# as xcesp) execs charon with file caps, the caps are granted but euid
+# stays non-zero, so the check returns FALSE — socket-default refuses
+# to register and logs "socket-default plugin requires CAP_NET_BIND_SERVICE
+# capability".  IKE_SAs stay CONNECTING forever, no packets are sent.
+#
+# Fix: drop file caps and use setuid root.  charon then exec's as euid=0
+# inside the per-ns mount/net namespace and socket-default binds 500/4500
+# normally.  This matches the upstream Ubuntu strongswan systemd unit
+# (which also runs charon as root).
+#
+# Earlier (<=0.1.71) we relied on file caps — replaced because of the
+# libcap-less build above.  We explicitly strip any leftover file caps
+# here so upgrades from 0.1.71 land in a clean state.
 #
 # Probe every candidate path — distros put charon under different prefixes.
-if command -v setcap > /dev/null 2>&1; then
-    CHARON_CAPS="cap_net_admin,cap_net_raw,cap_net_bind_service=ep"
-    for charon_bin in /usr/libexec/strongswan/charon \
-                      /usr/lib/strongswan/charon \
-                      /usr/libexec/ipsec/charon \
-                      /usr/lib/ipsec/charon \
-                      /usr/local/libexec/strongswan/charon; do
-        [ -f "$charon_bin" ] || continue
-        setcap "$CHARON_CAPS" "$charon_bin"
-        info "  $CHARON_CAPS set on $charon_bin"
-    done
-fi
+for charon_bin in /usr/libexec/strongswan/charon \
+                  /usr/lib/strongswan/charon \
+                  /usr/libexec/ipsec/charon \
+                  /usr/lib/ipsec/charon \
+                  /usr/local/libexec/strongswan/charon; do
+    [ -f "$charon_bin" ] || continue
+    command -v setcap > /dev/null 2>&1 && setcap -r "$charon_bin" 2>/dev/null || true
+    chmod u+s "$charon_bin"
+    info "  setuid root applied to $charon_bin (file caps removed)"
+done
+
+# Ubuntu's strongswan-charon ships /etc/strongswan.d/charon/*.conf as
+# mode 0600 root:root.  Our per-namespace charon runs as xcesp; an
+# include that finds unreadable files is fatal on Ubuntu's strongSwan
+# (charon dies before syslog opens).  These files contain only plugin
+# enable/disable defaults — no secrets — so making them world-readable
+# is safe.  Both Fedora and Debian/Ubuntu candidate paths handled.
+for plugin_dir in /etc/strongswan/strongswan.d/charon \
+                  /etc/strongswan.d/charon; do
+    [ -d "$plugin_dir" ] || continue
+    chmod a+rx "$plugin_dir" 2>/dev/null || true
+    chmod a+r  "$plugin_dir"/*.conf 2>/dev/null || true
+    info "  relaxed perms on $plugin_dir/*.conf for xcesp readability"
+done
 
 # ---------------------------------------------------------------------------
 # FRR group integration — allow xcespproc to write to /etc/frr/<ns>/
@@ -554,6 +571,18 @@ echo "  xcespcli loads its schema automatically from xcespserver (CLI_ACK)."
 echo "  If TAB completion does not work, verify:"
 echo "    ls $SCHEMA_DIR/on-rtr/*.schema | wc -l   # should be ~55"
 echo "    xcespcli --schema-dir $SCHEMA_DIR         # check for 'schema load failed'"
+echo ""
+echo "---------------------------------------------------------------------"
+echo " Optional: physical-layer (ethtool) support"
+echo "---------------------------------------------------------------------"
+echo "  If you plan to use 'phy-managed true' on device-type interfaces"
+echo "  (to inspect/force speed-duplex-autoneg and read SFP+DDMI), install"
+echo "  the ethtool utility on this host:"
+echo "    apt install ethtool   (Debian/Ubuntu)"
+echo "    dnf install ethtool   (Fedora/RHEL)"
+echo "  Without it, 'show physical interface <name>' will report"
+echo "  'ethtool not installed' and per-namespace phy-managed objects"
+echo "  will surface an 'ethtool-missing' applyWarning."
 echo ""
 echo "To install a second version and swap:"
 echo "  1. Unpack a new package into $BACKUPSW_DIR/"

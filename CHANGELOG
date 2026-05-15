@@ -1,5 +1,97 @@
 # Changelog - xcesppkg
 
+## 0.1.77
+
+- Bundles xcespserver 0.1.25, xcespcli 0.1.19, xcespproc 0.1.27,
+  xcespwdog 0.1.1 with xcesp-on-rtr 0.0.162 and xcespconfig 0.1.2.
+- **New `router/dns` configuration section**: per-router `dnsmasq`
+  with prioritized upstream server list, optional DNS proxy on
+  flagged interfaces, source-address / source-interface egress
+  binding, and automatic `/etc/resolv.conf` redirect to `127.0.0.1`
+  when the `default` router has DNS configured (original backed up
+  and restored on shutdown).
+- **New `dnsquery` operator command**: tests DNS resolution from
+  inside a specific router's namespace via the streaming action
+  protocol; uses `dig` with a `getent` fallback for embedded images
+  that don't ship bind-utils.
+- Bundles the phy-managed feature wave (xcesp-on-rtr 0.0.159–0.0.161)
+  and canonical-ordering serialization (xcespconfig 0.1.2 /
+  xcespserver 0.1.25 / xcespcli 0.1.17–0.1.18).
+
+## 0.1.76
+
+- Rolls forward to xcesp-on-rtr 0.0.161: phy-managed DDMI polling
+  cadence relaxed from every monitor tick (~5 s) to every 6 monitor
+  ticks (~30 s).  Same readings, ~6× less fork+exec / I²C churn on
+  hosts with many SFP ports.
+
+## 0.1.75
+
+- Rolls forward to xcesp-on-rtr 0.0.160: **SFP DDMI optical readings
+  now work on Ubuntu 22.04 / ethtool 5.16 hosts**.  Previously
+  `show physical interface <name>` on a FIBRE port displayed only SFP
+  identity (vendor / PN / SN) because Ubuntu's ethtool refuses to
+  decode the A2 DDM page into text output.  xcespproc now reads the
+  raw 512-byte EEPROM via `ethtool -m <dev> hex on` and decodes the
+  optical readings (Rx/Tx dBm, temperature, voltage, bias) per SFF-8472
+  on the C++ side.  No-op on Fedora 41+ / Ubuntu 24.04+ (newer ethtool
+  decodes natively).
+
+## 0.1.74
+
+- Rolls forward to xcesp-on-rtr 0.0.159, xcespcli 0.1.18, xcespproc
+  0.1.26, xcesptest 0.1.45: **physical-port management**.  Opt-in
+  via `phy-managed true` on an interface of type=device.  Operator
+  controls speed/duplex/autoneg via a new `ethernet { … }` sub-block;
+  status pipeline carries kernel-reported speed/duplex/autoneg plus
+  SFP identity + DDMI optical readings for FIBRE ports.  New CLI
+  command `show physical interface <name>` renders all of it.  Kernel
+  rejection of an ethtool-s setting is logged + surfaced in
+  `show physical` rather than rolling back the commit.
+- `install.sh`: post-install summary now recommends installing
+  `ethtool` if any phy-managed interfaces are planned.  No package
+  manager invocation (matches existing precedent).
+
+## 0.1.73
+
+- Rolls forward to xcespconfig 0.1.2, xcespcli 0.1.17, xcespserver
+  0.1.25, xcesptest 0.1.44: **canonical config display**.  `show
+  running`, `show candidate`, and the on-disk `xcespserver.conf` now
+  emit children grouped by nodeType and naturally sorted by instance
+  at every level of the hierarchy.  Mixed-order operator input no
+  longer leaks through to readback.
+
+## 0.1.72
+
+- `scripts/xcesp-activate` and `install.sh`: switch charon from file
+  caps to **setuid root**, and strip any leftover file caps from
+  previous installs.  Reason: Ubuntu's strongSwan charon ships without
+  libcap, so its `capabilities_t::keep()` falls through to a
+  `geteuid()==0 ? TRUE : FALSE` fallback.  Running charon as `xcesp`
+  with file caps grants the caps in /proc/<pid>/status but the check
+  ignores them, returns FALSE, and socket-default refuses to register
+  ("socket-default plugin requires CAP_NET_BIND_SERVICE capability");
+  IKE_SAs stay CONNECTING forever.  Setuid root makes charon's euid 0
+  inside the per-ns mount/net namespace; the libcap-less fallback then
+  passes and socket-default binds 500/4500.  Verified end-to-end with
+  RA(x86 Debian)↔RB(ARM64 Ubuntu): IKE_SA HUB established, CHILD_SA
+  TUN with AES_GCM_16_128, MOBIKE working.
+
+## 0.1.71
+
+- `scripts/xcesp-activate` and `install.sh`: relax DAC on
+  `/etc/strongswan.d/charon/*.conf` (and the Fedora equivalent
+  `/etc/strongswan/strongswan.d/charon/*.conf`) by chmod'ing them
+  world-readable.  Ubuntu's strongswan-charon ships these files mode
+  0600 root:root.  Our per-namespace charon runs as `xcesp`, so the
+  glob include in charon-ns.conf finds the files but fails to open
+  them — and Ubuntu's strongSwan treats an unreadable include match
+  as fatal during init, before syslog opens (identical symptom to
+  the empty-glob case fixed in 0.1.70: charon vanishes silently).
+  The files contain only plugin enable/disable defaults — no secrets
+  — so widening read is safe.  Re-applied on every activate so an
+  `apt upgrade` that re-tightens perms is self-healed at next start.
+
 ## 0.1.70
 
 - xcesp-on-rtr 0.0.158: `RtrStrongswanPObj::writeStrongswanConf` now

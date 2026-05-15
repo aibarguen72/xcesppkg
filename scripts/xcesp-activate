@@ -104,20 +104,31 @@ if [ -d "$MAINSW/bin" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# strongSwan / charon capabilities + per-namespace bootstrap config
+# strongSwan / charon: setuid root, NO file capabilities
 #
 # xcespproc launches a per-namespace charon process for every router that
-# carries an `ipsec` block.  charon runs as the `xcesp` user via the file
-# capabilities applied below.
+# carries an `ipsec` block.  We need charon to bind UDP 500 (privileged
+# port), and inside the per-ns mount/net namespace charon's socket-default
+# plugin must be allowed to register listeners.
 #
-# We deliberately do NOT include cap_dac_read_search — testing on Ubuntu
-# arm64 showed that adding it made charon's exec die silently (no log
-# lines, no dmesg entry, no AppArmor deny).  The interaction wasn't
-# pinned down precisely, but the symptom went away when the cap was
-# dropped.  Instead of granting DAC bypass to read Ubuntu's mode-0600
-# /etc/strongswan.conf, we generate a sibling bootstrap config below
-# at /var/xcesp/strongswan.conf (mode 0644, owned by xcesp) that our
-# per-namespace charon can always read without any DAC tricks.
+# Subtle but critical: Ubuntu's strongSwan charon ships **without libcap**
+# (verified: `ldd /usr/libexec/ipsec/charon | grep cap` is empty), so its
+# CAP_NET_BIND_SERVICE check inside `capabilities_t::keep()` falls through
+# to the no-CAPABILITIES fallback:
+#
+#     if (geteuid() == 0) return TRUE;
+#     return FALSE;
+#
+# When xcespproc (running as xcesp) execs charon with file caps, the
+# kernel grants the caps but euid stays non-zero — so strongSwan's check
+# returns FALSE and socket-default refuses to register, logging
+# "socket-default plugin requires CAP_NET_BIND_SERVICE capability".
+# The IKE_SA stays CONNECTING forever, no packets are sent.
+#
+# Fix: drop file caps and use setuid root on the charon binary.  When
+# xcespproc execs it, euid becomes 0 → libcap-less check passes →
+# socket-default binds 500/4500 → IKE comes up.  This matches the
+# upstream Ubuntu strongswan systemd unit, which runs charon as root.
 #
 # Probe every candidate path — different distros ship charon under
 # different prefixes:
@@ -127,17 +138,17 @@ fi
 #   /usr/lib/ipsec/charon             Ubuntu (older strongswan-charon)
 #   /usr/local/libexec/strongswan/charon  manual / from-source installs
 # ---------------------------------------------------------------------------
-if command -v setcap > /dev/null 2>&1; then
-    for charon_bin in /usr/libexec/strongswan/charon \
-                      /usr/lib/strongswan/charon \
-                      /usr/libexec/ipsec/charon \
-                      /usr/lib/ipsec/charon \
-                      /usr/local/libexec/strongswan/charon; do
-        [ -f "$charon_bin" ] || continue
-        setcap cap_net_admin,cap_net_raw,cap_net_bind_service=ep "$charon_bin"
-        log "  setcap applied to $charon_bin"
-    done
-fi
+for charon_bin in /usr/libexec/strongswan/charon \
+                  /usr/lib/strongswan/charon \
+                  /usr/libexec/ipsec/charon \
+                  /usr/lib/ipsec/charon \
+                  /usr/local/libexec/strongswan/charon; do
+    [ -f "$charon_bin" ] || continue
+    # Strip any leftover file caps from prior xcesppkg installs (<=0.1.71).
+    command -v setcap > /dev/null 2>&1 && setcap -r "$charon_bin" 2>/dev/null || true
+    chmod u+s "$charon_bin"
+    log "  setuid root applied to $charon_bin (file caps removed)"
+done
 
 # NOTE: 0.1.69 wrote a per-namespace charon bootstrap at
 # /var/xcesp/strongswan.conf, but that approach hit two distro
@@ -151,6 +162,31 @@ fi
 # it so a future xcespproc that still tries to include it doesn't
 # read stale settings.
 rm -f /var/xcesp/strongswan.conf 2>/dev/null || true
+
+# ---------------------------------------------------------------------------
+# strongSwan plugin .conf files (Ubuntu DAC fix)
+#
+# Ubuntu's strongswan-charon package ships /etc/strongswan.d/charon/*.conf
+# as mode 0600 root:root.  Our per-namespace charon runs as user `xcesp`
+# (not root) with file capabilities, and on Ubuntu's strongSwan an
+# include glob that finds files it cannot read is FATAL during init,
+# before syslog is opened — charon dies with no log line, identical
+# symptom to the empty-glob case fixed in xcesp-on-rtr 0.0.158.
+#
+# These files only contain plugin enable/disable defaults (e.g.
+# `aes { load = yes }`) — no secrets — so making them world-readable
+# is safe.  Re-applied on every activate run so an `apt upgrade` that
+# re-tightens perms is self-healed at the next xcespproc start.
+# Both candidate paths (Fedora `/etc/strongswan/strongswan.d/charon`
+# and Debian/Ubuntu `/etc/strongswan.d/charon`) are handled.
+# ---------------------------------------------------------------------------
+for plugin_dir in /etc/strongswan/strongswan.d/charon \
+                  /etc/strongswan.d/charon; do
+    [ -d "$plugin_dir" ] || continue
+    chmod a+rx "$plugin_dir" 2>/dev/null || true
+    chmod a+r  "$plugin_dir"/*.conf 2>/dev/null || true
+    log "  relaxed perms on $plugin_dir/*.conf for xcesp readability"
+done
 
 # ---------------------------------------------------------------------------
 # Schema
