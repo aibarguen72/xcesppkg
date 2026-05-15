@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.1.82
+
+- **Hotfix for 0.1.81**: dnsmasq's `--user`/`--group` only accept
+  user/group NAMES, not numeric IDs.  Look up the current user's
+  name via `getpwuid(geteuid())` and pass that instead.  Fixed in
+  xcesp-on-rtr 0.0.167 / xcespproc 0.1.32.
+- All 0.1.81 installations should upgrade.
+
 ## 0.1.81
 
 - **Hotfix for 0.1.80 dnsmasq config-parse failure** ("bad option
