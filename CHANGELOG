@@ -1,5 +1,45 @@
 # Changelog - xcesppkg
 
+## 0.1.89
+
+- Bundles xcespserver 0.1.26, xcespcli 0.1.23, xcespproc 0.1.39,
+  xcespwdog 0.1.1 with the full 802.1X feature: vrf-level `dot1x`
+  RADIUS settings, per-interface `dot1x-authenticator` (RtrDot1xAuth
+  PObj — per-VRF hostapd manager) and `dot1x-supplicant`
+  (RtrDot1xSup PObj — per-iface wpa_supplicant).  Includes phase 1
+  (schema/mapper), phase 2 (RtrDot1xSup), phase 3 (RtrDot1xAuth).
+- Includes the xcesp-activate setcap fix from 0.1.88 (hostapd +
+  wpa_supplicant get `cap_net_admin,cap_net_raw=ep`).
+- xcesp-on-rtr 0.0.177 also pulls in earlier uncommitted work:
+  DHCP server/client/relay (0.0.172), QoS classifier + queue profiles
+  (0.0.173–174), router NTP / `show ntp status` (0.0.169 / referenced
+  by xcespcli 0.1.23).
+
+## 0.1.88
+
+- **xcesp-activate**: setcap `cap_net_admin,cap_net_raw=ep` on every
+  wpa_supplicant and hostapd binary found under standard paths.
+  Needed by xcesp-on-rtr 0.0.176's `RtrDot1xSupPObj` (and the upcoming
+  authenticator PObj) when launched inside a named netns via
+  `ip netns exec` — file caps on the final binary survive the exec
+  chain, where the ambient set otherwise gets washed (cf. the NAT
+  capability-wipe lesson from xcespproc 0.1.6).
+- `/run/wpa_supplicant` is created at activate-time (mode 0755) so
+  wpa_supplicant's default ctrl_interface path exists from boot.
+- Bumps xcesp-on-rtr 0.0.175 → 0.0.176, xcespproc 0.1.37 → 0.1.38.
+
+## 0.1.87
+
+- **DHCP feature** (see xcesp-on-rtr 0.0.172).  install.sh creates
+  persisted lease dirs under `/var/lib/xcesp/dhcp-client`,
+  `/var/lib/xcesp/dhcp4`, `/var/lib/xcesp/dhcp6` (mode 0750, owned by
+  xcesp).  `xcesp-activate` pre-creates the matching tmpfs runtime
+  dirs under `/run/xcesp/dhcp{-client,-relay,4,6}` on every boot.
+  No file capabilities are added — the new daemons (dhclient,
+  dhcrelay, dnsmasq DHCP-only, kea-dhcp6) inherit ambient
+  capabilities from xcespproc via `IpCmd::launch`.
+  Closing hint lists the recommended package installs per distro.
+
 ## 0.1.86
 
 - **Hotfix for 0.1.85**: chronyd died with `Fatal error : Not

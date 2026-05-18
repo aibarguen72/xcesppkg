@@ -21,6 +21,9 @@ MAINSW_DIR=$XCESP_BASE/mainsw
 BACKUPSW_DIR=$XCESP_BASE/backupsw
 DSK_DIR=$XCESP_BASE/dsk
 RUN_DIR=/run/xcesp
+# Persisted DHCP lease storage (survives reboot — /run is tmpfs)
+VAR_LIB_DIR=/var/lib/xcesp
+DHCP_LEASE_DIRS="$VAR_LIB_DIR/dhcp-client $VAR_LIB_DIR/dhcp4 $VAR_LIB_DIR/dhcp6"
 SYSTEMD_DIR=/etc/systemd/system
 XCESP_USER=xcesp
 XCESP_GROUP=xcesp
@@ -70,7 +73,8 @@ for d in "$CFG_DIR" "$LOG_DIR" "$SCHEMA_DIR" \
           "$MAINSW_DIR/bin" "$MAINSW_DIR/schema" \
           "$MAINSW_DIR/rules/config-to-objects" "$MAINSW_DIR/rules/status-to-global" \
           "$MAINSW_DIR/python" \
-          "$RUN_DIR"; do
+          "$RUN_DIR" \
+          $DHCP_LEASE_DIRS; do
     mkdir -p "$d"
 done
 
@@ -422,6 +426,17 @@ chmod 2775 "$XCESP_BASE"
 chown "$XCESP_USER:$XCESP_GROUP" "$RUN_DIR"
 chmod 0750 "$RUN_DIR"
 
+# Persisted DHCP lease dirs.  The PObjs create per-namespace/device subdirs
+# lazily; here we only need the top-level dirs to exist with the right
+# ownership.  /var/lib survives reboot so client and server leases remain
+# valid across xcesp restarts.
+for d in $DHCP_LEASE_DIRS; do
+    chown "$XCESP_USER:$XCESP_GROUP" "$d"
+    chmod 0750 "$d"
+done
+chown root:"$XCESP_GROUP" "$VAR_LIB_DIR"
+chmod 2775 "$VAR_LIB_DIR"
+
 # ---------------------------------------------------------------------------
 # Python environment — venv if available, direct install otherwise.
 # xcesppy uses only stdlib (json, socket) so no third-party packages are
@@ -583,6 +598,22 @@ echo "    dnf install ethtool   (Fedora/RHEL)"
 echo "  Without it, 'show physical interface <name>' will report"
 echo "  'ethtool not installed' and per-namespace phy-managed objects"
 echo "  will surface an 'ethtool-missing' applyWarning."
+echo ""
+echo "---------------------------------------------------------------------"
+echo " Optional: DHCP feature daemons"
+echo "---------------------------------------------------------------------"
+echo "  XCESP's DHCP support drives a small set of standard daemons inside"
+echo "  the router's netns.  Install them only for the modes you intend to"
+echo "  enable; each PObj logs a warning and is otherwise inert when its"
+echo "  binary is missing."
+echo "    Client / Relay (v4 + v6) :"
+echo "      apt install isc-dhcp-client isc-dhcp-relay    (Debian/Ubuntu)"
+echo "      dnf install dhcp-client dhcp-relay            (Fedora/RHEL)"
+echo "    Server, IPv4 (re-uses dnsmasq from the DNS feature; no extra pkg)"
+echo "    Server, IPv6 :"
+echo "      apt install kea-dhcp6-server                  (Debian/Ubuntu)"
+echo "      dnf install kea                               (Fedora/RHEL)"
+echo "  Persisted lease files live under $VAR_LIB_DIR/dhcp{-client,4,6}/."
 echo ""
 echo "To install a second version and swap:"
 echo "  1. Unpack a new package into $BACKUPSW_DIR/"

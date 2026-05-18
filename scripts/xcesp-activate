@@ -71,6 +71,20 @@ fi
 # /run is tmpfs — cleared on reboot. systemd RuntimeDirectory= handles this
 # for service starts, but manual invocations need this fallback.
 install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 /run/xcesp
+# DHCP feature runtime subdirs.  PObjs create per-namespace/device children
+# lazily; pre-creating the parents here keeps the first-tick mkdir chain
+# cheap and gives the operator a stable place to look for the pid/log files.
+for d in /run/xcesp/dhcp-client /run/xcesp/dhcp-relay /run/xcesp/dhcp4 /run/xcesp/dhcp6; do
+    install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 "$d"
+done
+# Persisted DHCP lease dirs live under /var/lib (survives reboot); install.sh
+# created them.  Re-stamp ownership here in case a manual chown drifted them.
+for d in /var/lib/xcesp/dhcp-client /var/lib/xcesp/dhcp4 /var/lib/xcesp/dhcp6; do
+    if [ -d "$d" ]; then
+        chown "$XCESP_USER:$XCESP_GROUP" "$d"
+        chmod 0750 "$d"
+    fi
+done
 # /run/netns must be owned by xcesp so xcespproc can create namespace bind-files
 # without needing to call mount --make-shared (which requires root even with caps)
 install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0755 /run/netns
@@ -187,6 +201,45 @@ for plugin_dir in /etc/strongswan/strongswan.d/charon \
     chmod a+r  "$plugin_dir"/*.conf 2>/dev/null || true
     log "  relaxed perms on $plugin_dir/*.conf for xcesp readability"
 done
+
+# ---------------------------------------------------------------------------
+# 802.1X supplicant / authenticator capabilities
+#
+# wpa_supplicant (per-interface) and hostapd (per-VRF, future) both need to
+# receive EAPOL frames at the link layer and bind PF_PACKET sockets.  When
+# xcespproc launches them inside a named netns, the kernel applies the
+# *file* caps on the binary at exec time — so we set both
+# CAP_NET_ADMIN (configure the iface) and CAP_NET_RAW (raw/packet sockets)
+# on the binaries themselves.  This survives `ip netns exec` losing the
+# ambient set (the NAT capability-wipe lesson from xcespproc 0.1.6).
+#
+# Re-applied on every activate run, idempotent.
+# ---------------------------------------------------------------------------
+if command -v setcap > /dev/null 2>&1; then
+    for wpa_bin in /usr/sbin/wpa_supplicant \
+                   /sbin/wpa_supplicant \
+                   /usr/local/sbin/wpa_supplicant \
+                   /usr/bin/wpa_supplicant; do
+        [ -f "$wpa_bin" ] || continue
+        setcap cap_net_admin,cap_net_raw=ep "$wpa_bin" 2>/dev/null || true
+        log "  setcap cap_net_admin,cap_net_raw applied to $wpa_bin"
+    done
+    for hostapd_bin in /usr/sbin/hostapd \
+                       /sbin/hostapd \
+                       /usr/local/sbin/hostapd \
+                       /usr/bin/hostapd; do
+        [ -f "$hostapd_bin" ] || continue
+        setcap cap_net_admin,cap_net_raw=ep "$hostapd_bin" 2>/dev/null || true
+        log "  setcap cap_net_admin,cap_net_raw applied to $hostapd_bin"
+    done
+fi
+
+# Runtime tmpfs dirs (recreated on every boot) for daemon PID + conf files.
+# wpa_supplicant's own ctrl_interface defaults to /run/wpa_supplicant; xcesp's
+# per-port conf and pid go under /run/xcesp/dot1x-sup/<ns>/<dev>/ — that
+# subtree is created by the PObj as needed, no static skeleton required.
+mkdir -p /run/wpa_supplicant 2>/dev/null || true
+chmod 0755 /run/wpa_supplicant 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # Schema
