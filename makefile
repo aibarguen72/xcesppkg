@@ -47,7 +47,7 @@ SCHEMA_DIRECT := ../xcesptest/schema/domain.schema \
 SCHEMA_ONRTR   := ../xcesp-on-rtr/schema
 SCHEMA_ONPW    := ../xcesp-on-pw/schema
 SCHEMA_ONXC    := ../xcesp-on-xc/schema
-SCHEMA_ONSERVER := ../xcesp-server/schema
+SCHEMA_ONSERVER := ../xcespserver/schema
 
 # Rules: direct files from xcesptest + each ON library's own rules directory.
 RULES_WORKER    := ../xcesptest/rules/worker.py
