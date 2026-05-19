@@ -242,6 +242,52 @@ mkdir -p /run/wpa_supplicant 2>/dev/null || true
 chmod 0755 /run/wpa_supplicant 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
+# AppArmor — local profile additions for distro-shipped daemons
+#
+# Debian (and derivatives) ships AppArmor profiles for several daemons that
+# xcespproc invokes — most notably dhclient.  The default profile confines
+# writes to /var/lib/dhcp/, /var/run/, etc., and refuses /var/lib/xcesp/**
+# or /run/xcesp/** that we use for per-iface conf/pid/leases.  When apparmor
+# is enforcing, dhclient logs "Permission denied" on the lease/pid files,
+# the PID file never lands, xcespproc's supervisor sees "not running" and
+# relaunches every tick — accumulating zombie processes and stale leases.
+#
+# Fix: drop xcesp path allowances into /etc/apparmor.d/local/<profile>,
+# which the upstream Debian profile already #includes.  Reload the profile
+# so the change takes effect without a reboot.  Idempotent.
+#
+# Adding more daemons: append a "local override" stanza per profile-name.
+# ---------------------------------------------------------------------------
+apply_apparmor_local() {
+    local profile_name="$1"      # e.g. "sbin.dhclient"
+    local profile_file="/etc/apparmor.d/$profile_name"
+    local local_file="/etc/apparmor.d/local/$profile_name"
+    [ -f "$profile_file" ] || return 0
+    mkdir -p /etc/apparmor.d/local
+    # Atomic write: only update if content differs.  Required allowances
+    # cover every xcesp runtime/persistent path; rw lets the daemon read its
+    # own state on relaunch, k lets it lock the file.
+    local desired='# managed by xcesp-activate — extends '"$profile_name"' for xcesp paths
+/var/lib/xcesp/** rwk,
+/run/xcesp/** rwk,
+'
+    if [ ! -f "$local_file" ] || ! diff -q <(printf %s "$desired") "$local_file" > /dev/null 2>&1; then
+        printf %s "$desired" > "$local_file"
+        log "  wrote AppArmor local override $local_file"
+    fi
+    # Reparse the profile so the kernel picks up the local include.  -r
+    # replaces the existing profile in-place; idempotent and safe.
+    if command -v apparmor_parser > /dev/null 2>&1; then
+        apparmor_parser -r "$profile_file" 2>/dev/null || true
+        log "  reloaded AppArmor profile $profile_name"
+    fi
+}
+
+if command -v apparmor_parser > /dev/null 2>&1 || [ -d /etc/apparmor.d ]; then
+    apply_apparmor_local sbin.dhclient
+fi
+
+# ---------------------------------------------------------------------------
 # Schema
 # ---------------------------------------------------------------------------
 if [ -d "$MAINSW/schema" ]; then

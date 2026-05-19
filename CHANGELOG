@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.1.90
+
+- Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.40,
+  xcespwdog 0.1.1.  Carries the daemon-supervisor launch-race fix
+  (xcesp-on-rtr 0.0.178) and the schema-driven singleton-delete fix
+  in xcespcli 0.1.24.
+- **xcesp-activate: AppArmor local override for dhclient.**  Drops
+  `/etc/apparmor.d/local/sbin.dhclient` extending the upstream
+  Debian profile with `/var/lib/xcesp/** rwk,` and `/run/xcesp/**
+  rwk,` allowances, then `apparmor_parser -r`'s the profile.  Closes
+  the silent-fail mode where dhclient logged `Permission denied` on
+  the per-iface PID and lease files, breaking the supervisor.
+  Idempotent — content-compared before each write, only rewritten
+  on diff.  Helper function `apply_apparmor_local` factored out so
+  other daemons (dnsmasq, kea-dhcp6, hostapd, …) can be added as
+  they hit similar issues.
+
 ## 0.1.89
 
 - Bundles xcespserver 0.1.26, xcespcli 0.1.23, xcespproc 0.1.39,

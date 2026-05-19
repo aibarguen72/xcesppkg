@@ -73,10 +73,10 @@ mkdir -p "$STAGING/schema/on-rtr" "$STAGING/schema/on-pw" "$STAGING/schema/on-xc
 cp -r "$XSRC/xcesp-on-rtr/schema/."    "$STAGING/schema/on-rtr/"
 cp -r "$XSRC/xcesp-on-pw/schema/."     "$STAGING/schema/on-pw/"
 cp -r "$XSRC/xcesp-on-xc/schema/."     "$STAGING/schema/on-xc/"
-cp -r "$XSRC/xcesp-server/schema/."    "$STAGING/schema/on-server/"
+cp -r "$XSRC/xcespserver/schema/."     "$STAGING/schema/on-server/"
 # Flatten validate hooks from plugin schemas to top-level schema dir
 find "$XSRC/xcesp-on-rtr/schema" "$XSRC/xcesp-on-pw/schema" \
-     "$XSRC/xcesp-on-xc/schema"  "$XSRC/xcesp-server/schema" \
+     "$XSRC/xcesp-on-xc/schema"  "$XSRC/xcespserver/schema" \
      -maxdepth 1 -name "*.validate.py" -exec cp {} "$STAGING/schema/" \; 2>/dev/null || true
 
 # --- Python rules ---
