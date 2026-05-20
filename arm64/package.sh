@@ -113,9 +113,12 @@ fi
 
 # --- Management scripts ---
 mkdir -p "$STAGING/scripts"
-cp "$PKGDIR/scripts/xcesp-activate" "$STAGING/scripts/"
-cp "$PKGDIR/scripts/xcesp-swap.sh"  "$STAGING/scripts/"
-chmod +x "$STAGING/scripts/xcesp-activate" "$STAGING/scripts/xcesp-swap.sh"
+cp "$PKGDIR/scripts/xcesp-activate"         "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-swap.sh"          "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-dhclient-script"  "$STAGING/scripts/"
+chmod +x "$STAGING/scripts/xcesp-activate" \
+         "$STAGING/scripts/xcesp-swap.sh" \
+         "$STAGING/scripts/xcesp-dhclient-script"
 
 # --- Systemd service ---
 mkdir -p "$STAGING/services"

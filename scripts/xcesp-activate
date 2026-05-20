@@ -216,6 +216,8 @@ done
 # Re-applied on every activate run, idempotent.
 # ---------------------------------------------------------------------------
 if command -v setcap > /dev/null 2>&1; then
+    # 802.1X daemons — need CAP_NET_ADMIN (configure iface) and CAP_NET_RAW
+    # (PF_PACKET sockets for EAPOL).
     for wpa_bin in /usr/sbin/wpa_supplicant \
                    /sbin/wpa_supplicant \
                    /usr/local/sbin/wpa_supplicant \
@@ -231,6 +233,23 @@ if command -v setcap > /dev/null 2>&1; then
         [ -f "$hostapd_bin" ] || continue
         setcap cap_net_admin,cap_net_raw=ep "$hostapd_bin" 2>/dev/null || true
         log "  setcap cap_net_admin,cap_net_raw applied to $hostapd_bin"
+    done
+    # DHCP daemons — need CAP_NET_BIND_SERVICE (privileged ports 67/68/546/547),
+    # CAP_NET_RAW (LPF/raw sockets for DHCP frames before an address is up),
+    # CAP_NET_ADMIN (set iface state, add/del addresses).  Fedora typically
+    # ships dhclient/dhcrelay with file caps already; Ubuntu and Debian's
+    # Bookworm .deb installed-on-Trixie do not.  Idempotent, additive.
+    for dhcp_bin in /usr/sbin/dhclient /sbin/dhclient \
+                    /usr/sbin/dhcrelay /sbin/dhcrelay \
+                    /usr/sbin/dnsmasq  /sbin/dnsmasq /usr/bin/dnsmasq \
+                    /usr/sbin/kea-dhcp6 /usr/sbin/kea-dhcp6-server \
+                    /usr/local/sbin/dhclient \
+                    /usr/local/sbin/dhcrelay \
+                    /usr/local/sbin/dnsmasq; do
+        [ -f "$dhcp_bin" ] || continue
+        setcap cap_net_bind_service,cap_net_raw,cap_net_admin=ep "$dhcp_bin" \
+            2>/dev/null || true
+        log "  setcap cap_net_bind_service,cap_net_raw,cap_net_admin applied to $dhcp_bin"
     done
 fi
 

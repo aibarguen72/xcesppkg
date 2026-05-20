@@ -1,0 +1,129 @@
+#!/bin/sh
+# xcesp-dhclient-script — minimal dhclient-script for xcesp-managed dhclient
+# instances.
+#
+# Invoked by ISC dhclient via the `-sf` flag.  Replaces the distro's stock
+# /sbin/dhclient-script so xcespproc does NOT inherit any host-level
+# customization (e.g. /etc/dhcp/dhclient-exit-hooks, resolvconf integration,
+# NetworkManager dispatch).  Each xcesp dhclient runs inside its router's
+# network namespace and we want deterministic, side-effect-free behavior:
+# set the address, optionally set a default gateway, done.
+#
+# dhclient sets these environment variables before invoking the script:
+#   $reason                  - one of MEDIUM/PREINIT/BOUND/RENEW/REBIND/REBOOT/
+#                              EXPIRE/FAIL/RELEASE/STOP/ARPCHECK/ARPSEND
+#   $interface               - device name (e.g. "rl-rd")
+#   $new_ip_address          - acquired/renewed IPv4 (BOUND/RENEW/REBIND/REBOOT)
+#   $new_subnet_mask         - dotted-quad mask
+#   $new_broadcast_address   - broadcast (optional)
+#   $new_routers             - default gateway(s), space-separated (optional)
+#   $old_ip_address          - address being released (EXPIRE/FAIL/RELEASE/STOP)
+#   $old_subnet_mask         - mask of the old address
+#
+# Exit code 0 means success; non-zero makes dhclient send DHCPDECLINE.
+# We unconditionally return 0 except on truly catastrophic failures so the
+# DHCP state machine keeps moving — the RtrDhcpClient supervisor and its
+# pre-launch flush already handle iface hygiene.
+
+IP=/sbin/ip
+[ -x "$IP" ] || IP=/usr/sbin/ip
+[ -x "$IP" ] || IP=$(command -v ip 2>/dev/null)
+
+dev="${interface:-unknown}"
+
+case "$reason" in
+
+    # ---------------------------------------------------------------------
+    # No-op reasons.  ARPCHECK returns 0 (skipping the standard arping -D
+    # DAD step) because xcespproc's startDhclient() runs
+    # `ip -4 addr flush dev <dev> scope global dynamic` before each launch.
+    # That guarantees a clean iface, so there is no in-subnet conflict for
+    # ARP to detect.
+    # ---------------------------------------------------------------------
+    MEDIUM|ARPCHECK|ARPSEND)
+        exit 0
+        ;;
+
+    PREINIT)
+        # dhclient asks us to ensure the iface is administratively up.
+        $IP link set dev "$dev" up >/dev/null 2>&1 || true
+        exit 0
+        ;;
+
+    BOUND|RENEW|REBIND|REBOOT)
+        if [ -z "$new_ip_address" ]; then
+            exit 0
+        fi
+        # Convert dotted-quad mask to prefix length.  Pure-shell, no python.
+        prefix=0
+        for octet in $(echo "${new_subnet_mask:-255.255.255.0}" | tr '.' ' '); do
+            case "$octet" in
+                255) prefix=$((prefix + 8)) ;;
+                254) prefix=$((prefix + 7)) ;;
+                252) prefix=$((prefix + 6)) ;;
+                248) prefix=$((prefix + 5)) ;;
+                240) prefix=$((prefix + 4)) ;;
+                224) prefix=$((prefix + 3)) ;;
+                192) prefix=$((prefix + 2)) ;;
+                128) prefix=$((prefix + 1)) ;;
+                0)   ;;
+                *)   prefix=24; break ;;   # malformed → safe default
+            esac
+        done
+        # Drop the old address if it changed (so we don't accumulate).
+        if [ -n "$old_ip_address" ] && \
+           [ "$old_ip_address" != "$new_ip_address" ]; then
+            $IP -4 addr del "$old_ip_address/$prefix" dev "$dev" 2>/dev/null \
+                || true
+        fi
+        # `ip addr replace` is idempotent — adds if missing, refreshes lease
+        # lifetimes if present.  We pass the broadcast only when dhclient
+        # supplied one.
+        if [ -n "$new_broadcast_address" ]; then
+            $IP -4 addr replace "$new_ip_address/$prefix" \
+                broadcast "$new_broadcast_address" dev "$dev" \
+                >/dev/null 2>&1 || true
+        else
+            $IP -4 addr replace "$new_ip_address/$prefix" dev "$dev" \
+                >/dev/null 2>&1 || true
+        fi
+        # Add the default gateway if dnsmasq / the DHCP server offered one
+        # (option 3).  Replace, not add, so a re-bind under a new gateway
+        # silently swaps the route instead of erroring on EEXIST.
+        if [ -n "$new_routers" ]; then
+            for gw in $new_routers; do
+                $IP -4 route replace default via "$gw" dev "$dev" \
+                    >/dev/null 2>&1 || true
+            done
+        fi
+        exit 0
+        ;;
+
+    EXPIRE|FAIL|RELEASE|STOP)
+        if [ -n "$old_ip_address" ]; then
+            prefix=0
+            for octet in $(echo "${old_subnet_mask:-255.255.255.0}" | tr '.' ' '); do
+                case "$octet" in
+                    255) prefix=$((prefix + 8)) ;;
+                    254) prefix=$((prefix + 7)) ;;
+                    252) prefix=$((prefix + 6)) ;;
+                    248) prefix=$((prefix + 5)) ;;
+                    240) prefix=$((prefix + 4)) ;;
+                    224) prefix=$((prefix + 3)) ;;
+                    192) prefix=$((prefix + 2)) ;;
+                    128) prefix=$((prefix + 1)) ;;
+                    0)   ;;
+                    *)   prefix=24; break ;;
+                esac
+            done
+            $IP -4 addr del "$old_ip_address/$prefix" dev "$dev" 2>/dev/null \
+                || true
+        fi
+        exit 0
+        ;;
+
+    *)
+        # Unknown reason — be permissive.
+        exit 0
+        ;;
+esac

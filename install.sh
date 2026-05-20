@@ -505,8 +505,14 @@ install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$BINDIR/xcesp-swap.sh"
 install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$MAINSW_DIR/scripts/xcesp-swap.sh"
-info "  $BINDIR/xcesp-activate (and $MAINSW_DIR/scripts/)"
-info "  $BINDIR/xcesp-swap.sh  (and $MAINSW_DIR/scripts/)"
+install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-dhclient-script" "$BINDIR/xcesp-dhclient-script"
+install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-dhclient-script" \
+    "$MAINSW_DIR/scripts/xcesp-dhclient-script"
+info "  $BINDIR/xcesp-activate         (and $MAINSW_DIR/scripts/)"
+info "  $BINDIR/xcesp-swap.sh          (and $MAINSW_DIR/scripts/)"
+info "  $BINDIR/xcesp-dhclient-script  (and $MAINSW_DIR/scripts/)"
 
 # ---------------------------------------------------------------------------
 # systemd service

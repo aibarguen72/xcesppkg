@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.1.92
+
+- Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.42,
+  xcespwdog 0.1.1.
+- **New management script `xcesp-dhclient-script`** — installed to
+  `/usr/bin/` (and `$MAINSW_DIR/scripts/` for CLI self-upgrade).
+  Minimal POSIX shell, no Bash dependencies.  RtrDhcpClient passes
+  `-sf` to dhclient so our per-netns instances use this script instead
+  of the distro's `/sbin/dhclient-script`.  Handles BOUND/RENEW/REBIND/
+  REBOOT (ip addr replace + default route), EXPIRE/FAIL/RELEASE/STOP
+  (ip addr del), and returns 0 unconditionally for ARPCHECK/ARPSEND
+  (the pre-launch flush in 0.0.179 already guarantees a clean iface).
+  Does NOT source `/etc/dhcp/dhclient-exit-hooks` or scan
+  `/etc/dhcp/dhclient-{enter,exit}-hooks.d/` — third-party hooks on the
+  default namespace stay intact.
+- **xcesp-activate setcap extended** — dhclient, dhcrelay, dnsmasq,
+  and kea-dhcp6 binaries get `cap_net_bind_service,cap_net_raw,
+  cap_net_admin=ep`.  Same loop pattern as the existing
+  wpa_supplicant/hostapd block.  Fixes silent-fail on Ubuntu where
+  the upstream packages ship without file caps, leaving dhclient with
+  "Operation not permitted" on the LPF socket and dnsmasq with
+  "failed to bind DHCP server socket: Permission denied".  Idempotent
+  and additive; doesn't change Fedora behaviour.
+
 ## 0.1.91
 
 - Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.41,
