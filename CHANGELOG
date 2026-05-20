@@ -1,5 +1,36 @@
 # Changelog - xcesppkg
 
+## 0.1.98
+
+Feature batch:
+
+- **DHCP server relay-served remote subnets** (xcesp-on-rtr 0.0.184) — a
+  single `dhcp-server-ipv4` block can now serve its local subnet
+  AND/OR any number of subnets reached via dhcrelay.  Schema:
+  new `dhcp-server-remote-subnet <prefix>` child carrying
+  `dhcp-remote-pool` (required) + `dhcp-remote-gateway` /
+  `lease-time` / `dhcp-remote-dns` (optional).  `dhcp-server-pool`
+  is now optional (server can be remote-only).  Validator enforces
+  "at least one of local pool or remote subnet" and that each remote
+  pool/gateway lies inside its declared prefix.
+- **`snat-interface` attribute on `nat-snat`** — alternative to
+  `snat-address`, mutually exclusive.  RtrNatSnatPObj polls the named
+  iface's first IPv4/IPv6 (family per the rule's match-src-address)
+  every tick and re-applies the SNAT rule when the address changes
+  (e.g. DHCP renew).
+- **Unmanaged device kept up on stop** — RtrInterfacePObj::remove() now
+  skips the link-set-down AND the address-flush-to-empty when the iface
+  is in the default namespace + default VRF and has
+  `unmanaged-address true`.  Stopping/restarting xcesp no longer knocks
+  the host's external-managed primary NIC offline.
+- **`show dhcp-server [router R] [vrf V]`** (xcespcli 0.1.25) — one row
+  per pool (local + each remote-subnet) and one row per active lease,
+  with VRF filter.
+
+Bundles xcespserver 0.1.26, xcespcli 0.1.25, xcespproc 0.1.46,
+xcespwdog 0.1.1, xcesp-on-rtr 0.0.184.  Same xcesp-ip wrapper and
+xcesp-dhclient-script as 0.1.97 (no DHCP-client-side changes here).
+
 ## 0.1.97
 
 - Ship a tiny privileged wrapper at `/usr/lib/xcesp/xcesp-ip` (compiled C,
