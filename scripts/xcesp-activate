@@ -259,10 +259,39 @@ chmod 0755 /run/wpa_supplicant 2>/dev/null || true
 # Adding more daemons: append a "local override" stanza per profile-name.
 # ---------------------------------------------------------------------------
 apply_apparmor_local() {
-    local profile_name="$1"      # e.g. "sbin.dhclient"
-    local profile_file="/etc/apparmor.d/$profile_name"
+    # Argument is the absolute path to the binary the profile confines,
+    # e.g. "/usr/sbin/dhclient".  We auto-detect the on-disk profile
+    # filename because distros disagree: Debian names the dhclient profile
+    # "usr.sbin.dhclient", others have used "sbin.dhclient".  Hardcoding
+    # the wrong name made the helper silently no-op on Debian 13.
+    local bin_path="$1"
+    [ -d /etc/apparmor.d ] || return 0
+    # Find a profile file under /etc/apparmor.d/ (top level only — local/
+    # files don't define profiles) that mentions this binary path.  Match
+    # both the literal path and the curly-brace glob form ("{,usr/}sbin/...")
+    # that Debian uses.
+    local bin_base
+    bin_base=$(basename "$bin_path")
+    local profile_file=""
+    local cand
+    # Top-level *<binbase>* files in /etc/apparmor.d/ are the candidate
+    # profile files.  Skip /etc/apparmor.d/local/* (those are includes, not
+    # standalone profiles) and skip any candidate that doesn't actually
+    # mention the binary name (defensive against unrelated files).
+    for cand in /etc/apparmor.d/*"$bin_base"*; do
+        [ -f "$cand" ] || continue
+        if grep -q "$bin_base" "$cand" 2>/dev/null; then
+            profile_file="$cand"
+            break
+        fi
+    done
+    if [ -z "$profile_file" ]; then
+        log "  AppArmor: no profile file found for $bin_path (skipping local override)"
+        return 0
+    fi
+    local profile_name
+    profile_name=$(basename "$profile_file")
     local local_file="/etc/apparmor.d/local/$profile_name"
-    [ -f "$profile_file" ] || return 0
     mkdir -p /etc/apparmor.d/local
     # Atomic write: only update if content differs.  Required allowances
     # cover every xcesp runtime/persistent path; rw lets the daemon read its
@@ -273,7 +302,7 @@ apply_apparmor_local() {
 '
     if [ ! -f "$local_file" ] || ! diff -q <(printf %s "$desired") "$local_file" > /dev/null 2>&1; then
         printf %s "$desired" > "$local_file"
-        log "  wrote AppArmor local override $local_file"
+        log "  wrote AppArmor local override $local_file (for $bin_path)"
     fi
     # Reparse the profile so the kernel picks up the local include.  -r
     # replaces the existing profile in-place; idempotent and safe.
@@ -284,7 +313,7 @@ apply_apparmor_local() {
 }
 
 if command -v apparmor_parser > /dev/null 2>&1 || [ -d /etc/apparmor.d ]; then
-    apply_apparmor_local sbin.dhclient
+    apply_apparmor_local /usr/sbin/dhclient
 fi
 
 # ---------------------------------------------------------------------------

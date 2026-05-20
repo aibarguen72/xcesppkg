@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.1.91
+
+- Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.41,
+  xcespwdog 0.1.1.  Carries the DHCP client ARPCHECK-loop fix
+  (xcesp-on-rtr 0.0.179) and the `show interfaces` double-row fix
+  (xcespproc 0.1.41).
+- **xcesp-activate AppArmor: auto-detect the profile filename by
+  binary path.**  The 0.1.90 helper hardcoded `sbin.dhclient`,
+  which matches Fedora but not Debian (where the file is
+  `usr.sbin.dhclient`).  The helper silently no-op'd on Debian and
+  dhclient kept hitting `Permission denied` on its lease/PID files.
+  `apply_apparmor_local()` now takes the binary path
+  (`/usr/sbin/dhclient`) and finds the profile file by globbing
+  `/etc/apparmor.d/*<basename>*` then grepping for the basename to
+  confirm.  Adding more daemons later is a one-liner:
+  `apply_apparmor_local /usr/sbin/dnsmasq`, etc.
+
 ## 0.1.90
 
 - Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.40,
