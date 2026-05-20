@@ -146,12 +146,9 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 
 	# --- Management scripts ---
 	mkdir -p $(PKG_NAME)/scripts
-	cp scripts/xcesp-activate         $(PKG_NAME)/scripts/
-	cp scripts/xcesp-swap.sh          $(PKG_NAME)/scripts/
-	cp scripts/xcesp-dhclient-script  $(PKG_NAME)/scripts/
-	chmod +x $(PKG_NAME)/scripts/xcesp-activate \
-	         $(PKG_NAME)/scripts/xcesp-swap.sh \
-	         $(PKG_NAME)/scripts/xcesp-dhclient-script
+	cp scripts/xcesp-activate $(PKG_NAME)/scripts/
+	cp scripts/xcesp-swap.sh  $(PKG_NAME)/scripts/
+	chmod +x $(PKG_NAME)/scripts/xcesp-activate $(PKG_NAME)/scripts/xcesp-swap.sh
 
 	# --- Systemd service ---
 	mkdir -p $(PKG_NAME)/services

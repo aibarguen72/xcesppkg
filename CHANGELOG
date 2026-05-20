@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.1.93
+
+- Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.43,
+  xcespwdog 0.1.1.  Carries xcesp-on-rtr 0.0.181 (revert of the
+  dhclient `-sf` flag) — DHCP works on Fedora, Debian and Ubuntu
+  again.
+- **`xcesp-activate` setcap loops are now non-destructive.**  Each
+  loop checks `getcap "$bin"` first and only writes file caps when
+  the binary currently has NONE.  Distros that ship caps tuned for
+  their package (Fedora's dhcp-client, Debian Bookworm's
+  isc-dhcp-client) keep their working setup; distros that don't
+  (Ubuntu's stock packages) get our baseline.  This applies to all
+  daemons in the loops: wpa_supplicant, hostapd, dhclient, dhcrelay,
+  dnsmasq, kea-dhcp6.
+- Rationale: 0.1.92 unconditionally set
+  `cap_net_bind_service,cap_net_raw,cap_net_admin=ep` on every DHCP
+  daemon, which on Fedora and Debian *replaced* the package-shipped
+  caps with a strict subset and broke DHCP on install.
+- `xcesp-dhclient-script` is no longer bundled.  RtrDhcpClient in
+  xcesp-on-rtr 0.0.181 doesn't reference it.  `install.sh` removes
+  any leftover copy from 0.1.92 so a partial upgrade doesn't leave
+  the file in `$BINDIR` or `$MAINSW_DIR/scripts/`.
+
 ## 0.1.92
 
 - Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.42,

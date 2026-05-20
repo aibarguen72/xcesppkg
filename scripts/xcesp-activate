@@ -216,6 +216,17 @@ done
 # Re-applied on every activate run, idempotent.
 # ---------------------------------------------------------------------------
 if command -v setcap > /dev/null 2>&1; then
+    # Non-destructive setcap: only fills in caps when the binary currently has
+    # NONE.  Distros that ship caps on these daemons (Fedora's dhcp-client RPM,
+    # Debian Bookworm's isc-dhcp-client deb) keep their carefully-tuned set.
+    # Distros that don't (Ubuntu's stock packages, fresh Debian 13) get our
+    # baseline so the binary works under xcespproc's launch chain.
+    #
+    # Previously (xcesppkg 0.1.92) we unconditionally setcap'd these
+    # binaries, which on Fedora/Debian REPLACED the package-shipped caps
+    # with a strict subset and broke DHCP on every install.  Hence the
+    # gating check below.
+    #
     # 802.1X daemons — need CAP_NET_ADMIN (configure iface) and CAP_NET_RAW
     # (PF_PACKET sockets for EAPOL).
     for wpa_bin in /usr/sbin/wpa_supplicant \
@@ -223,22 +234,28 @@ if command -v setcap > /dev/null 2>&1; then
                    /usr/local/sbin/wpa_supplicant \
                    /usr/bin/wpa_supplicant; do
         [ -f "$wpa_bin" ] || continue
-        setcap cap_net_admin,cap_net_raw=ep "$wpa_bin" 2>/dev/null || true
-        log "  setcap cap_net_admin,cap_net_raw applied to $wpa_bin"
+        if [ -z "$(getcap "$wpa_bin" 2>/dev/null)" ]; then
+            setcap cap_net_admin,cap_net_raw=ep "$wpa_bin" 2>/dev/null || true
+            log "  setcap cap_net_admin,cap_net_raw applied to $wpa_bin (was empty)"
+        else
+            log "  $wpa_bin already has file caps; leaving alone"
+        fi
     done
     for hostapd_bin in /usr/sbin/hostapd \
                        /sbin/hostapd \
                        /usr/local/sbin/hostapd \
                        /usr/bin/hostapd; do
         [ -f "$hostapd_bin" ] || continue
-        setcap cap_net_admin,cap_net_raw=ep "$hostapd_bin" 2>/dev/null || true
-        log "  setcap cap_net_admin,cap_net_raw applied to $hostapd_bin"
+        if [ -z "$(getcap "$hostapd_bin" 2>/dev/null)" ]; then
+            setcap cap_net_admin,cap_net_raw=ep "$hostapd_bin" 2>/dev/null || true
+            log "  setcap cap_net_admin,cap_net_raw applied to $hostapd_bin (was empty)"
+        else
+            log "  $hostapd_bin already has file caps; leaving alone"
+        fi
     done
     # DHCP daemons — need CAP_NET_BIND_SERVICE (privileged ports 67/68/546/547),
     # CAP_NET_RAW (LPF/raw sockets for DHCP frames before an address is up),
-    # CAP_NET_ADMIN (set iface state, add/del addresses).  Fedora typically
-    # ships dhclient/dhcrelay with file caps already; Ubuntu and Debian's
-    # Bookworm .deb installed-on-Trixie do not.  Idempotent, additive.
+    # CAP_NET_ADMIN (set iface state, add/del addresses).
     for dhcp_bin in /usr/sbin/dhclient /sbin/dhclient \
                     /usr/sbin/dhcrelay /sbin/dhcrelay \
                     /usr/sbin/dnsmasq  /sbin/dnsmasq /usr/bin/dnsmasq \
@@ -247,9 +264,13 @@ if command -v setcap > /dev/null 2>&1; then
                     /usr/local/sbin/dhcrelay \
                     /usr/local/sbin/dnsmasq; do
         [ -f "$dhcp_bin" ] || continue
-        setcap cap_net_bind_service,cap_net_raw,cap_net_admin=ep "$dhcp_bin" \
-            2>/dev/null || true
-        log "  setcap cap_net_bind_service,cap_net_raw,cap_net_admin applied to $dhcp_bin"
+        if [ -z "$(getcap "$dhcp_bin" 2>/dev/null)" ]; then
+            setcap cap_net_bind_service,cap_net_raw,cap_net_admin=ep "$dhcp_bin" \
+                2>/dev/null || true
+            log "  setcap cap_net_bind_service,cap_net_raw,cap_net_admin applied to $dhcp_bin (was empty)"
+        else
+            log "  $dhcp_bin already has file caps; leaving alone"
+        fi
     done
 fi
 

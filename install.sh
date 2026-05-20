@@ -505,14 +505,12 @@ install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$BINDIR/xcesp-swap.sh"
 install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$MAINSW_DIR/scripts/xcesp-swap.sh"
-install -o root -g root -m 0755 \
-    "$INSTALL_DIR/scripts/xcesp-dhclient-script" "$BINDIR/xcesp-dhclient-script"
-install -o root -g root -m 0755 \
-    "$INSTALL_DIR/scripts/xcesp-dhclient-script" \
-    "$MAINSW_DIR/scripts/xcesp-dhclient-script"
-info "  $BINDIR/xcesp-activate         (and $MAINSW_DIR/scripts/)"
-info "  $BINDIR/xcesp-swap.sh          (and $MAINSW_DIR/scripts/)"
-info "  $BINDIR/xcesp-dhclient-script  (and $MAINSW_DIR/scripts/)"
+# Remove an older xcesp-dhclient-script if it was deployed by 0.1.92 — it's
+# no longer referenced by RtrDhcpClient as of xcesp-on-rtr 0.0.181 and would
+# otherwise be picked up by any older xcespproc binary that's still on the box.
+rm -f "$BINDIR/xcesp-dhclient-script" "$MAINSW_DIR/scripts/xcesp-dhclient-script"
+info "  $BINDIR/xcesp-activate (and $MAINSW_DIR/scripts/)"
+info "  $BINDIR/xcesp-swap.sh  (and $MAINSW_DIR/scripts/)"
 
 # ---------------------------------------------------------------------------
 # systemd service
