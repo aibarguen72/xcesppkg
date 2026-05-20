@@ -1,5 +1,80 @@
 # Changelog - xcesppkg
 
+## 0.1.97
+
+- Ship a tiny privileged wrapper at `/usr/lib/xcesp/xcesp-ip` (compiled C,
+  ~30 lines) with file caps `cap_net_admin,cap_net_raw=ep` applied by
+  xcesp-activate.  The wrapper raises ambient caps and re-execs
+  `/usr/bin/ip`, so xcesp-dhclient-script's `ip addr add` works even when
+  ISC dhclient drops the script to a non-root uid with no caps (the
+  default behavior on Debian/Fedora — observed at BOUND with CapInh=0
+  and uid=xcesp).  Path is intentionally OFF the regular PATH so normal
+  users on the box don't gain any privileges; only our script's code path
+  benefits.
+- xcesp-dhclient-script: route address operations through `$IP` (set to
+  the wrapper if present, else plain `ip` — preserves the ARM64-Ubuntu
+  path where `/usr/bin/ip` already ships with the right caps and the
+  wrapper is therefore unnecessary).
+- xcesp-activate: setcap on the wrapper (non-destructive) and SELinux
+  fcontext rule labeling it `ifconfig_exec_t` (so Fedora's dhcpc_t domain
+  can exec it and the resulting process gets the cap_net_admin policy
+  allow rules `ifconfig_t` already has).
+- install.sh: deploy the wrapper to `/usr/lib/xcesp/xcesp-ip` AND
+  `$MAINSW_DIR/lib/xcesp/` (the latter for CLI self-update consistency
+  with management scripts).
+- makefile / arm64/build.sh / arm64/package.sh: compile the wrapper
+  per-architecture (host gcc for x86, in-Docker gcc for aarch64) and
+  bundle it in the matching tarball.
+- Same C++ binaries as 0.1.96 (xcespproc 0.1.45 / xcesp-on-rtr 0.0.183).
+
+## 0.1.96
+
+- xcesp-activate: make dhclient setuid root (and strip its file caps) instead
+  of granting it file caps.  Same charon-style pattern from 0.1.72.  When
+  xcespproc (running as xcesp uid) execs dhclient, the setuid bit elevates to
+  root; dhclient's fork-exec of `xcesp-dhclient-script` then runs as root too,
+  so `/sbin/ip addr` calls don't depend on file caps on `ip` (Debian ships ip
+  cap-less).  Non-destructive: only acts when caps are present or setuid bit
+  is missing, leaves stable installs alone.
+- xcesp-activate: SELinux fcontext rule + restorecon for
+  `/usr/bin/xcesp-dhclient-script` → `dhcpc_exec_t`.  Without this, Fedora's
+  dhcpc_t SELinux domain denies the exec silently (targeted policy
+  dontaudit's that class of denial).  Falls back to `chcon` if semanage isn't
+  installed.
+- xcesp-activate: `mkdir -p /var/lib/dhcp` so dhclient's lease file dir
+  exists on minimal images that don't ship the isc-dhcp-client package's
+  default tree.
+- Bundles xcespproc 0.1.45 (xcesp-on-rtr 0.0.183), which moves the dhclient
+  pid/lease paths to `/run/dhclient-xcesp-*.pid` and
+  `/var/lib/dhcp/dhclient-xcesp-*.leases` — paths the upstream apparmor
+  profile already permits.
+
+## 0.1.95
+
+- xcesp-activate: `apply_apparmor_local` now injects
+  `/usr/bin/xcesp-dhclient-script rUx,` into the dhclient profile's local
+  override (`/etc/apparmor.d/local/<profile>`).  Without this rule, AppArmor
+  on Debian/Ubuntu denies dhclient's `execv()` of the script we ship via
+  `-sf`; dhclient logs "bound" on DHCPACK but the script never runs, so the
+  iface never gets an IP.  `rUx` = read + unconfined-execute, so the script
+  (and its `/sbin/ip` calls) run without AppArmor confinement.  Empty extras
+  for any other binary, so the rule is only added where applicable.
+- Same binaries as 0.1.94 (xcespproc 0.1.44, xcesp-on-rtr 0.0.182).
+
+## 0.1.94
+
+- Ships `/usr/bin/xcesp-dhclient-script`: a minimal POSIX callback script
+  for ISC dhclient.  Only manages the iface address (via `/sbin/ip`); does
+  not touch `/etc/resolv.conf`, the default route, hostname, NIS, or NTP —
+  those are xcesp's job at higher layers.  Skips the ARPCHECK step (which
+  was causing DHCPDECLINE loops on Debian) and avoids dependencies on
+  `arping`, `ipcalc`, or `vtysh` (which the dnfv ARM64 Ubuntu
+  `/sbin/dhclient-script` requires and silently fails without).
+- Bundles xcespproc 0.1.44 (which carries xcesp-on-rtr 0.0.182), which
+  passes `-sf /usr/bin/xcesp-dhclient-script` to dhclient.
+- install.sh: deploys the new script to `/usr/bin/` AND
+  `$MAINSW_DIR/scripts/` so CLI self-update can refresh it on upgrades.
+
 ## 0.1.93
 
 - Bundles xcespserver 0.1.26, xcespcli 0.1.24, xcespproc 0.1.43,

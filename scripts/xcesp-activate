@@ -253,14 +253,41 @@ if command -v setcap > /dev/null 2>&1; then
             log "  $hostapd_bin already has file caps; leaving alone"
         fi
     done
-    # DHCP daemons — need CAP_NET_BIND_SERVICE (privileged ports 67/68/546/547),
-    # CAP_NET_RAW (LPF/raw sockets for DHCP frames before an address is up),
-    # CAP_NET_ADMIN (set iface state, add/del addresses).
-    for dhcp_bin in /usr/sbin/dhclient /sbin/dhclient \
-                    /usr/sbin/dhcrelay /sbin/dhcrelay \
+    # dhclient is special — we make it setuid root and strip file caps.  When
+    # xcespproc (running as xcesp uid) forks dhclient, the setuid bit elevates
+    # to root, and dhclient's fork-exec of /usr/bin/xcesp-dhclient-script runs
+    # the script as root too.  As root, the script's `/sbin/ip` calls have all
+    # the caps they need without depending on file caps on `ip` (which Debian
+    # ships cap-less).  Same pattern we use for charon (xcesppkg 0.1.72).
+    #
+    # Why not just file caps on dhclient?  We tried (0.1.95).  Worked on ARM64
+    # Ubuntu but failed on Debian: dhclient running as xcesp uid with file caps
+    # got `bound to X.X.X.X` but the lease-file write got EACCES through some
+    # interaction we couldn't pin down — apparmor profile in complain mode,
+    # local override granting /var/lib/xcesp/** rwk, no obvious denial, yet the
+    # write failed.  Setuid-root sidesteps the entire issue.
+    for dh in /usr/sbin/dhclient /sbin/dhclient /usr/local/sbin/dhclient; do
+        [ -f "$dh" ] || continue
+        # Only act when it isn't already setuid root with no caps.  Avoid
+        # repeatedly toggling on every service restart.
+        cur_caps="$(getcap "$dh" 2>/dev/null)"
+        cur_mode="$(stat -c %a "$dh" 2>/dev/null)"
+        if [ -n "$cur_caps" ]; then
+            setcap -r "$dh" 2>/dev/null || true
+            log "  setcap -r applied to $dh (had: $cur_caps)"
+        fi
+        case "$cur_mode" in
+            4*) log "  $dh already setuid; leaving alone" ;;
+            *)  chmod u+s "$dh" 2>/dev/null && log "  chmod u+s applied to $dh" ;;
+        esac
+    done
+
+    # dhcrelay, dnsmasq, kea — still use the file-caps pattern.  They run their
+    # own daemons that need raw sockets / privileged ports but don't spawn a
+    # script chain that re-elevates, so caps in pE are enough.
+    for dhcp_bin in /usr/sbin/dhcrelay /sbin/dhcrelay \
                     /usr/sbin/dnsmasq  /sbin/dnsmasq /usr/bin/dnsmasq \
                     /usr/sbin/kea-dhcp6 /usr/sbin/kea-dhcp6-server \
-                    /usr/local/sbin/dhclient \
                     /usr/local/sbin/dhcrelay \
                     /usr/local/sbin/dnsmasq; do
         [ -f "$dhcp_bin" ] || continue
@@ -272,6 +299,48 @@ if command -v setcap > /dev/null 2>&1; then
             log "  $dhcp_bin already has file caps; leaving alone"
         fi
     done
+
+    # xcesp-ip — privileged wrapper used by xcesp-dhclient-script when the
+    # script runs as the xcesp uid with no caps (which happens because ISC
+    # dhclient drops privileges before invoking the script).  The wrapper
+    # carries `cap_net_admin,cap_net_raw=ep` and re-execs /usr/bin/ip with
+    # ambient raised, so the script's `ip addr add` works without giving
+    # /usr/bin/ip itself host-wide caps.  Apply non-destructively.
+    if [ -f /usr/lib/xcesp/xcesp-ip ]; then
+        cur="$(getcap /usr/lib/xcesp/xcesp-ip 2>/dev/null)"
+        if [ -z "$cur" ]; then
+            setcap cap_net_admin,cap_net_raw=ep /usr/lib/xcesp/xcesp-ip 2>/dev/null || true
+            log "  setcap cap_net_admin,cap_net_raw=ep applied to /usr/lib/xcesp/xcesp-ip"
+        else
+            log "  /usr/lib/xcesp/xcesp-ip already has file caps; leaving alone"
+        fi
+    fi
+fi
+
+# Ensure /var/lib/dhcp exists for dhclient lease files (some minimal images
+# lack the isc-dhcp-client package's default /var/lib/dhcp).  We write lease
+# files there because the path matches the upstream apparmor profile's
+# existing `/var/lib/dhcp{,3}/dhclient* lrw,` rule.
+mkdir -p /var/lib/dhcp 2>/dev/null || true
+chmod 0755 /var/lib/dhcp 2>/dev/null || true
+
+# SELinux: label xcesp-ip as ifconfig_exec_t so dhcpc_t (the xcesp-dhclient
+# -script domain) can exec it and the resulting process gets a domain that's
+# already allowed cap_net_admin in Fedora's targeted policy.  Without this,
+# the wrapper would default to `lib_t` and dhcpc_t couldn't exec it, OR it
+# would stay in dhcpc_t which doesn't have all the caps Linux gave it.
+if [ -x /usr/lib/xcesp/xcesp-ip ] && command -v getenforce > /dev/null 2>&1 \
+        && [ "$(getenforce 2>/dev/null)" != "Disabled" ]; then
+    if command -v semanage > /dev/null 2>&1; then
+        semanage fcontext -a -t ifconfig_exec_t "/usr/lib/xcesp/xcesp-ip" 2>/dev/null \
+        || semanage fcontext -m -t ifconfig_exec_t "/usr/lib/xcesp/xcesp-ip" 2>/dev/null \
+        || true
+        restorecon -v /usr/lib/xcesp/xcesp-ip 2>/dev/null || true
+        log "  SELinux fcontext: /usr/lib/xcesp/xcesp-ip → ifconfig_exec_t (persistent)"
+    elif command -v chcon > /dev/null 2>&1; then
+        chcon -t ifconfig_exec_t /usr/lib/xcesp/xcesp-ip 2>/dev/null || true
+        log "  SELinux chcon: /usr/lib/xcesp/xcesp-ip → ifconfig_exec_t (non-persistent)"
+    fi
 fi
 
 # Runtime tmpfs dirs (recreated on every boot) for daemon PID + conf files.
@@ -336,10 +405,22 @@ apply_apparmor_local() {
     # Atomic write: only update if content differs.  Required allowances
     # cover every xcesp runtime/persistent path; rw lets the daemon read its
     # own state on relaunch, k lets it lock the file.
+    #
+    # Per-binary extras:
+    #   /usr/sbin/dhclient — needs to exec /usr/bin/xcesp-dhclient-script
+    #     (passed via `-sf`).  Without this rule AppArmor denies the execv;
+    #     dhclient logs "bound" on DHCPACK but the script never runs, so
+    #     the iface never gets an IP.  `rUx` = read + unconfined-execute,
+    #     so the script (and the /sbin/ip calls it makes) run without
+    #     AppArmor confinement.
+    local extras=""
+    case "$bin_path" in
+        */dhclient) extras='/usr/bin/xcesp-dhclient-script rUx,'$'\n' ;;
+    esac
     local desired='# managed by xcesp-activate — extends '"$profile_name"' for xcesp paths
 /var/lib/xcesp/** rwk,
 /run/xcesp/** rwk,
-'
+'"$extras"
     if [ ! -f "$local_file" ] || ! diff -q <(printf %s "$desired") "$local_file" > /dev/null 2>&1; then
         printf %s "$desired" > "$local_file"
         log "  wrote AppArmor local override $local_file (for $bin_path)"
@@ -354,6 +435,32 @@ apply_apparmor_local() {
 
 if command -v apparmor_parser > /dev/null 2>&1 || [ -d /etc/apparmor.d ]; then
     apply_apparmor_local /usr/sbin/dhclient
+fi
+
+# ---------------------------------------------------------------------------
+# SELinux — relabel xcesp-dhclient-script so dhclient can exec it
+#
+# Fedora/RHEL ship dhclient confined to the `dhcpc_t` domain, which is only
+# allowed to `execute_no_trans` files labeled `dhcpc_exec_t` (or a few other
+# specific types).  Our script at /usr/bin/xcesp-dhclient-script defaults to
+# `bin_t` after install → dhclient's exec fails silently (the targeted policy
+# ships a `dontaudit` rule for this class of denial, so no AVC entry appears).
+#
+# Persistent fix: add an fcontext rule and restorecon.  Falls back to chcon
+# if semanage isn't available (semanage lives in policycoreutils-python-utils
+# on Fedora; not always installed).
+if [ -x /usr/bin/xcesp-dhclient-script ] && command -v getenforce > /dev/null 2>&1 \
+        && [ "$(getenforce 2>/dev/null)" != "Disabled" ]; then
+    if command -v semanage > /dev/null 2>&1; then
+        semanage fcontext -a -t dhcpc_exec_t "/usr/bin/xcesp-dhclient-script" 2>/dev/null \
+        || semanage fcontext -m -t dhcpc_exec_t "/usr/bin/xcesp-dhclient-script" 2>/dev/null \
+        || true
+        restorecon -v /usr/bin/xcesp-dhclient-script 2>/dev/null || true
+        log "  SELinux fcontext: /usr/bin/xcesp-dhclient-script → dhcpc_exec_t (persistent)"
+    elif command -v chcon > /dev/null 2>&1; then
+        chcon -t dhcpc_exec_t /usr/bin/xcesp-dhclient-script 2>/dev/null || true
+        log "  SELinux chcon: /usr/bin/xcesp-dhclient-script → dhcpc_exec_t (non-persistent)"
+    fi
 fi
 
 # ---------------------------------------------------------------------------

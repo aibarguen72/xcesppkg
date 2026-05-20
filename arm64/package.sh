@@ -36,7 +36,7 @@ echo "Building $TARBALL ..."
 ver() { grep PRJVERSION "$XSRC/$1/PROJECT" 2>/dev/null | awk -F':=' '{gsub(/ /,"",$2); print $2}'; }
 
 # --- Verify input binaries ---
-for b in xcespserver xcespcli xcespproc xcespwdog; do
+for b in xcespserver xcespcli xcespproc xcespwdog xcesp-ip; do
     if [ ! -f "$BINDIR/$b" ]; then
         echo "ERROR: $BINDIR/$b not found" >&2
         exit 1
@@ -54,6 +54,7 @@ cp "$BINDIR/xcespserver" "$STAGING/bin/xcespserver"
 cp "$BINDIR/xcespcli"    "$STAGING/bin/xcespcli"
 cp "$BINDIR/xcespproc"   "$STAGING/bin/xcespproc"
 cp "$BINDIR/xcespwdog"   "$STAGING/bin/xcespwdog"
+cp "$BINDIR/xcesp-ip"    "$STAGING/bin/xcesp-ip"
 
 # --- Config templates ---
 mkdir -p "$STAGING/cfg"
@@ -113,9 +114,12 @@ fi
 
 # --- Management scripts ---
 mkdir -p "$STAGING/scripts"
-cp "$PKGDIR/scripts/xcesp-activate" "$STAGING/scripts/"
-cp "$PKGDIR/scripts/xcesp-swap.sh"  "$STAGING/scripts/"
-chmod +x "$STAGING/scripts/xcesp-activate" "$STAGING/scripts/xcesp-swap.sh"
+cp "$PKGDIR/scripts/xcesp-activate"         "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-swap.sh"          "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-dhclient-script"  "$STAGING/scripts/"
+chmod +x "$STAGING/scripts/xcesp-activate" \
+         "$STAGING/scripts/xcesp-swap.sh"  \
+         "$STAGING/scripts/xcesp-dhclient-script"
 
 # --- Systemd service ---
 mkdir -p "$STAGING/services"

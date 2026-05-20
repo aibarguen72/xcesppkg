@@ -123,6 +123,22 @@ for bin in xcespserver xcespcli xcespproc xcespwdog; do
     info "  $BINDIR/$bin"
 done
 
+# xcesp-ip → /usr/lib/xcesp/ (NOT on PATH).  This is a privileged wrapper
+# only invoked by xcesp-dhclient-script.  Keeping it off PATH means normal
+# users can't discover it; its file caps (applied by xcesp-activate) only
+# help our script's code path.
+info "Installing xcesp-ip wrapper..."
+src="$INSTALL_DIR/bin/xcesp-ip"
+if [ -f "$src" ]; then
+    install -d -o root -g root -m 0755 "$MAINSW_DIR/lib/xcesp"
+    install -d -o root -g root -m 0755 /usr/lib/xcesp
+    install -o root -g root -m 0755 "$src" "$MAINSW_DIR/lib/xcesp/xcesp-ip"
+    install -o root -g root -m 0755 "$src" /usr/lib/xcesp/xcesp-ip
+    info "  /usr/lib/xcesp/xcesp-ip (and $MAINSW_DIR/lib/xcesp/)"
+else
+    warn "xcesp-ip wrapper not in package — DHCP client may fail on Debian/Fedora"
+fi
+
 # ---------------------------------------------------------------------------
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------
@@ -505,12 +521,17 @@ install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$BINDIR/xcesp-swap.sh"
 install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-swap.sh"  "$MAINSW_DIR/scripts/xcesp-swap.sh"
-# Remove an older xcesp-dhclient-script if it was deployed by 0.1.92 — it's
-# no longer referenced by RtrDhcpClient as of xcesp-on-rtr 0.0.181 and would
-# otherwise be picked up by any older xcespproc binary that's still on the box.
-rm -f "$BINDIR/xcesp-dhclient-script" "$MAINSW_DIR/scripts/xcesp-dhclient-script"
-info "  $BINDIR/xcesp-activate (and $MAINSW_DIR/scripts/)"
-info "  $BINDIR/xcesp-swap.sh  (and $MAINSW_DIR/scripts/)"
+# dhclient callback script — referenced by RtrDhcpClient via `-sf`.  Shipping
+# our own avoids depending on distro-customized /sbin/dhclient-script (e.g.
+# the "dnfv" ARM64 Ubuntu variant uses vtysh + arping and silently fails when
+# those aren't installed, leaving dhclient bound but no address on the iface).
+install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-dhclient-script" "$BINDIR/xcesp-dhclient-script"
+install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-dhclient-script" "$MAINSW_DIR/scripts/xcesp-dhclient-script"
+info "  $BINDIR/xcesp-activate         (and $MAINSW_DIR/scripts/)"
+info "  $BINDIR/xcesp-swap.sh          (and $MAINSW_DIR/scripts/)"
+info "  $BINDIR/xcesp-dhclient-script  (and $MAINSW_DIR/scripts/)"
 
 # ---------------------------------------------------------------------------
 # systemd service

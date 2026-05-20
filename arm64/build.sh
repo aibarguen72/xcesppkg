@@ -51,6 +51,15 @@ for proj in xcespserver xcespcli xcespproc xcespwdog; do
 done
 
 echo ""
+echo "=== Compiling xcesp-ip wrapper (privileged ip-helper for dhclient script) ==="
+# Tiny C wrapper with cap_net_admin,cap_net_raw=ep (applied at install time).
+# Re-execs /usr/bin/ip with ambient raised so the script's `ip addr add`
+# works even when dhclient drops the script to an unprivileged uid.
+mkdir -p "$SRCROOT/xcesppkg/bin"
+gcc -O2 -Wall -Wextra -o "$SRCROOT/xcesppkg/bin/xcesp-ip" \
+    "$SRCROOT/xcesppkg/scripts/xcesp-ip.c"
+
+echo ""
 echo "=== All ARM64 builds complete ==="
 echo "Binaries:"
 for proj in xcespserver xcespcli xcespproc xcespwdog; do
@@ -62,3 +71,4 @@ for proj in xcespserver xcespcli xcespproc xcespwdog; do
         exit 1
     fi
 done
+echo "  $SRCROOT/xcesppkg/bin/xcesp-ip ($(du -sh "$SRCROOT/xcesppkg/bin/xcesp-ip" | cut -f1))"

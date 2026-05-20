@@ -74,6 +74,7 @@ check-bins:
 
 $(TARBALL): check-bins install.sh services/xcesp.service \
             scripts/xcesp-activate scripts/xcesp-swap.sh \
+            scripts/xcesp-dhclient-script scripts/xcesp-ip.c \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
             cfg/xcespserver.conf python/pyproject.toml
 	@echo "Building package $(TARBALL) ..."
@@ -85,6 +86,10 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp $(XCESPCLI)    $(PKG_NAME)/bin/xcespcli
 	cp $(XCESPPROC)   $(PKG_NAME)/bin/xcespproc
 	cp $(XCESPWDOG)   $(PKG_NAME)/bin/xcespwdog
+
+	# --- xcesp-ip wrapper (compiled here so the binary's arch matches the
+	# host packaging; ARM64 is built separately via xcesppkg/arm64/build.sh)
+	gcc -O2 -Wall -Wextra -o $(PKG_NAME)/bin/xcesp-ip scripts/xcesp-ip.c
 
 	# --- Config templates ---
 	mkdir -p $(PKG_NAME)/cfg
@@ -146,9 +151,12 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 
 	# --- Management scripts ---
 	mkdir -p $(PKG_NAME)/scripts
-	cp scripts/xcesp-activate $(PKG_NAME)/scripts/
-	cp scripts/xcesp-swap.sh  $(PKG_NAME)/scripts/
-	chmod +x $(PKG_NAME)/scripts/xcesp-activate $(PKG_NAME)/scripts/xcesp-swap.sh
+	cp scripts/xcesp-activate         $(PKG_NAME)/scripts/
+	cp scripts/xcesp-swap.sh          $(PKG_NAME)/scripts/
+	cp scripts/xcesp-dhclient-script  $(PKG_NAME)/scripts/
+	chmod +x $(PKG_NAME)/scripts/xcesp-activate \
+	         $(PKG_NAME)/scripts/xcesp-swap.sh  \
+	         $(PKG_NAME)/scripts/xcesp-dhclient-script
 
 	# --- Systemd service ---
 	mkdir -p $(PKG_NAME)/services
