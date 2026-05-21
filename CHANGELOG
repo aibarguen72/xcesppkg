@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.101
+
+- **Fix: `copy sw <url> backup-sw` silently failed to update backup-sw**
+  (xcespserver 0.1.27).  The async streaming download landed the tarball
+  in `$DSK_DIR/img/` but never ran the install step that extracts it
+  into `$XCESP_BASE/backupsw/` — the sync copy path did this inline but
+  the async one was missing the call.  CLI showed `starting transfer
+  ... -> img/...` and returned silently; `show server` kept reporting
+  the previous BackupSW version.  Now `finalizeCopyAsync` calls
+  `installToBackupSw()` after the download succeeds and surfaces its
+  result to the operator.
+
+Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.48,
+xcespwdog 0.1.1, xcesp-on-rtr 0.0.186.
+
 ## 0.1.100
 
 - **Fix: DHCP relay (`dhcrelay`) didn't get restarted after dying on
