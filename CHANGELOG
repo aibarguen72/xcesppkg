@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.100
+
+- **Fix: DHCP relay (`dhcrelay`) didn't get restarted after dying on
+  its first launch** (xcesp-on-rtr 0.0.186 / xcespproc 0.1.48).
+  Common path: iface not ready when dhcrelay launched → dhcrelay logs
+  "No such device" + "exiting" → supervisor's `isRunning()` got a
+  false positive because dhcrelay's dead PID had been recycled by
+  another short-lived xcespproc child (ip / sysctl / etc.) →
+  supervisor saw "alive" and never relaunched.  isRunning() now
+  verifies `/proc/<pid>/comm` is "dhcrelay" before believing the
+  signal-based liveness check.
+
+Bundles xcespserver 0.1.26, xcespcli 0.1.25, xcespproc 0.1.48,
+xcespwdog 0.1.1, xcesp-on-rtr 0.0.186.
+
 ## 0.1.99
 
 - **Critical fix: per-namespace sysctl writes were silently failing
