@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.1.102
+
+- **DHCP relay: operator no longer needs to configure `dhcp-relay-ipv4`
+  on the upstream iface separately** (xcesp-on-rtr 0.0.187).  RtrDhcpRelay
+  now runs `ip route get <server-address>` per unique upstream server
+  and auto-adds the resulting egress iface as a synthetic `-i` binding
+  on dhcrelay.  Background: ISC dhcrelay's UDP socket is `SO_BINDTODEVICE`-
+  filtered per `-i`, so a two-arm relay configured only on the LAN side
+  forwarded client DISCOVERs but never saw the server's OFFER reply
+  (arrived through the upstream iface that wasn't in the bound list).
+  Pre-0.1.102 workaround: explicitly add a second `dhcp-relay-ipv4`
+  block on the upstream iface.
+
+Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.49,
+xcespwdog 0.1.1, xcesp-on-rtr 0.0.187.
+
 ## 0.1.101
 
 - **Fix: `copy sw <url> backup-sw` silently failed to update backup-sw**
