@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.1.99
+
+- **Critical fix: per-namespace sysctl writes were silently failing
+  with `permission denied`** (xcesp-on-rtr 0.0.185 / xcespproc 0.1.47).
+  Affected `net.ipv4.ip_forward`, `net.ipv6.conf.all.forwarding`,
+  `net.mpls.platform_labels`, `net.mpls.conf.<dev>.input`, and the
+  neighbour GC thresholds (`gc_thresh1/2/3`).  Most topologies kept
+  working because the sysctls had already been written as root by an
+  earlier boot's xcesp-activate, but fresh Fedora namespaces reliably
+  hit it — symptom: DHCP relay test where the central server's
+  OFFER/ACK reached the relay router but the relay router couldn't
+  forward back to the client because `ip_forward=0` in its namespace.
+
+Bundles xcespserver 0.1.26, xcespcli 0.1.25, xcespproc 0.1.47,
+xcespwdog 0.1.1, xcesp-on-rtr 0.0.185.  Same xcesp-ip / xcesp-dhclient
+-script as 0.1.97.
+
 ## 0.1.98
 
 Feature batch:
