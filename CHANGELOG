@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.1.105
+
+- Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.52,
+  xcespwdog 0.1.1 — picks up xcesp-on-rtr 0.0.190.
+- **DHCP client now learns the default gateway from option 3.**
+  `xcesp-dhclient-script` was previously a "address-only" callback by
+  design — the default route was left to the (non-existent) RtrRoute
+  hand-off path.  On BOUND/RENEW/REBIND/REBOOT it now installs
+  `default via <gw> dev <iface> proto dhcp` from `new_routers`, and
+  on EXPIRE/FAIL/RELEASE/STOP/TIMEOUT flushes only proto-dhcp routes
+  through the iface — operator-static defaults are not touched.
+  Limitation: DHCP option 6 (DNS) is still **not** applied, since
+  dhclient drops the script to a non-root uid and `/etc/resolv.conf`
+  needs a separate setuid helper (deferred — see the limitation
+  callout in the router-guide and router-ref DHCP pages).
+- **DHCP client wipes stale lease files on first launch each xcesp
+  run** (xcesp-on-rtr 0.0.190).  Forces a clean DISCOVER cycle every
+  boot; eliminates the INIT-REBOOT silent-stall window where dhclient
+  retries DHCPREQUEST against a moved/reset server for up to 60s
+  before falling back to DISCOVER.
+
 ## 0.1.104
 
 - Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.51,

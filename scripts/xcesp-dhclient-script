@@ -5,11 +5,13 @@
 #   dhclient ... -sf /usr/bin/xcesp-dhclient-script ...
 #
 # Scope:
-#   This script ONLY manages the iface address (add/remove via `ip addr`).
-#   It deliberately does NOT touch:
+#   This script manages the iface address AND the default gateway derived
+#   from DHCP option 3 (new_routers).  It deliberately does NOT touch:
 #     - /etc/resolv.conf      → xcesp manages DNS via RtrDnsProxy
-#     - the default route     → xcesp manages routes via RtrRoute
 #     - hostname / NIS / NTP  → out of scope for our use case
+#   The default route is tagged `proto dhcp` so we can flush just that
+#   one on lease teardown without disturbing operator-static defaults
+#   the user added via `static-route 0.0.0.0/0`.
 #   This keeps the script tiny and robust against distro-specific quirks
 #   (the "dnfv" /sbin/dhclient-script on ARM64 Ubuntu uses vtysh and arping
 #    and breaks silently when those aren't present — that's the bug this
@@ -88,8 +90,26 @@ install_v4() {
     "$IP" -4 addr add "$@" dev "$interface"
 }
 
+install_default_route_v4() {
+    # Install default route from DHCP option 3 (Router).  new_routers is a
+    # space-separated list; we use the first entry.  Tagged `proto dhcp`
+    # so operator-static defaults (proto boot/static) remain untouched on
+    # tear-down, and so a repeated BOUND replaces the entry idempotently
+    # instead of accumulating duplicates.
+    routers="${new_routers:-}"
+    [ -z "$routers" ] && return 0
+    # shellcheck disable=SC2086
+    set -- $routers
+    gw="$1"
+    # Clear any prior dhcp-tagged default via this iface, then install fresh.
+    "$IP" -4 route flush proto dhcp dev "$interface" 2>/dev/null || true
+    "$IP" -4 route replace default via "$gw" dev "$interface" proto dhcp 2>/dev/null \
+        || true
+}
+
 remove_v4() {
-    "$IP" -4 addr flush dev "$interface" scope global dynamic 2>/dev/null || true
+    "$IP" -4 addr  flush dev "$interface" scope global dynamic 2>/dev/null || true
+    "$IP" -4 route flush dev "$interface" proto dhcp           2>/dev/null || true
 }
 
 case "${reason:-}" in
@@ -114,6 +134,7 @@ case "${reason:-}" in
         if [ -n "${new_ip_address:-}" ] && [ -n "${new_subnet_mask:-}" ]; then
             install_v4 "$new_ip_address" "$new_subnet_mask" \
                        "${new_broadcast_address:-}" "${new_dhcp_lease_time:-}"
+            install_default_route_v4
         fi
         ;;
     EXPIRE|FAIL|RELEASE|STOP|TIMEOUT)
