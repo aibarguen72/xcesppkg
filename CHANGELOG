@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.104
+
+- Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.51,
+  xcespwdog 0.1.1 — picks up xcesp-on-rtr 0.0.189.
+- **DHCP-client end-to-end fix.**  RtrInterface's address-sync routine
+  used `IpCmd::parseAddrList()` which included DHCP/SLAAC-managed
+  dynamic addresses.  On every tick after dhclient bound a lease,
+  RtrInterface saw the leased IP as "not in config" and `ip addr
+  del`'d it.  Visible symptom: DHCP server logs the lease ACTIVE for
+  the client's MAC and the relay forwards the OFFER cleanly, but the
+  client iface stays without an IPv4 address indefinitely.  Now
+  `parseAddrList()` filters lines tagged ` dynamic`, so the
+  syncAddresses comparison only operates on the static-address subset
+  xcesp itself owns.
+
 ## 0.1.103
 
 - Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.50,
