@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.1.103
+
+- Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.50,
+  xcespwdog 0.1.1 — picks up xcesp-on-rtr 0.0.188.
+- **SNAT now works for TCP/UDP, not just ICMP.**  PAT-mode iptables
+  rules previously emitted `--to-source IP:LO:HI` (colon between LO
+  and HI), but iptables expects `IP:LO-HI`.  TCP and UDP SNAT rules
+  silently failed with "Bad argument 1024:65535" while ICMP (no port
+  range) worked, producing the confusing "ping out passes, DNS/HTTP
+  out fails" pattern.  Fixed in RtrNatSnat's `buildRules()`.
+- **Validators are now indent-style agnostic.**  Eight `*.validate.py`
+  hooks hard-coded a 2-space indent stride between nesting levels.
+  A config rendered or hand-edited with 4-space or tab indents had its
+  attribute checks silently skipped — most visibly, the `nat-snat`
+  mutex between `snat-address` and `snat-interface` never fired on
+  non-2-space configs.  Each hook now pins the opener's exact leading-
+  whitespace string for closer matching and discovers any deeper-block
+  indent from the first body line.
+- **DHCP-relay auto-upstream log noise removed.**  The 0.1.102
+  upstream-iface auto-detect ran inside every supervisor tick and
+  logged "auto-added upstream iface ..." each pass.  Now logs only
+  on first add and on actual change (route flip / HA failover).
+
 ## 0.1.102
 
 - **DHCP relay: operator no longer needs to configure `dhcp-relay-ipv4`
