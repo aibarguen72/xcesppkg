@@ -1,5 +1,30 @@
 # Changelog - xcesppkg
 
+## 0.1.106
+
+- Bundles xcespserver 0.1.28, xcespcli 0.1.26, xcespproc 0.1.52,
+  xcespwdog 0.1.1 — picks up xcespconfig 0.1.3 (nested-node
+  validator recursion).
+- **Per-nested-node `*.validate.py` hooks now actually run.**  Since
+  the hooks framework was first introduced, `XCespConfig::validateHooks()`
+  iterated only top-level nodes — so the `<nodetype>.validate.py`
+  scripts for `interface`, `nat-snat`, `nat-dnat`, `qos-dscp-to-cos`,
+  `qos-8021p-to-cos`, `qos-exp-to-cos`, `qos-queue-profile` were dead
+  code on real configs (none of those types are ever top-level).  In
+  practice this meant cross-attribute checks the schema couldn't
+  express were silently ignored.  Examples now enforced at commit:
+  * DHCP-server pool must fall inside one of the iface's configured
+    IPv4 prefixes (and remote-subnet pools must lie inside their
+    declared prefix).
+  * SNAT `snat-address` and `snat-interface` are mutually exclusive.
+  * QoS queue `cos-list` entries cannot overlap across queues; `wrr`
+    requires `scheduler-weight`; queue ids must be contiguous 0..N-1.
+  * Interface `phy-managed=true` and `unmanaged-address=true` require
+    `type=device`.
+  Dry-run against the IPsec, NAT, and DHCP scenario configs confirmed
+  no realistic existing config is wrongly rejected by the newly-
+  enabled scripts.
+
 ## 0.1.105
 
 - Bundles xcespserver 0.1.27, xcespcli 0.1.25, xcespproc 0.1.52,
