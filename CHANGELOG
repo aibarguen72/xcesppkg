@@ -1,5 +1,39 @@
 # Changelog - xcesppkg
 
+## 0.1.107
+
+- Same binaries as 0.1.106 (xcespserver 0.1.28, xcespcli 0.1.26,
+  xcespproc 0.1.52, xcespwdog 0.1.1; xcesp-on-rtr 0.0.190).  Two
+  `xcesp-activate` fixes only.
+
+- **SELinux: relabel `/var/lib/dhcp` as `dhcpc_state_t`.**  ISC
+  dhclient runs in `dhcpc_t` on Fedora and must write its lease file
+  (`/var/lib/dhcp/dhclient-xcesp-<ns>-<dev>-v4.leases`) into a
+  `dhcpc_state_t`-labeled directory.  The distro default for that
+  path is `dhcp_state_t` (server-side); `mkdir -p` without
+  `restorecon` leaves it `var_lib_t`.  Either label denies `dhcpc_t`
+  from creating files there → dhclient logs `can't create
+  ...leases: Permission denied`, binds the lease in memory (functional
+  DHCP still works), but the on-disk record never persists.  `xcesp-
+  activate` now runs `semanage fcontext -a -t dhcpc_state_t` on the
+  whole subtree and `restorecon -R` so subsequent writes succeed.
+  No-op on AppArmor / SELinux-disabled systems.
+
+- **Bootstrap xcespwdog_proc.ini timers match the xcespserver formula.**
+  Previously the bootstrap (written before xcespserver gets a chance
+  to regenerate it) used `-s 30` heartbeat with `WDOG_START_TIMER=60000`.
+  Production xcespserver computes timers as `heartbeatS * 1500` for
+  start and `* 2` for interval.  When the initial CtrlLink DEPLOY
+  callback at stack-start runs long, xcespproc's main event loop can
+  delay the first SIGUSR1 past the tight 60s deadline → wdog kills
+  xcespproc → dhcrelay/dhclient supervised by xcespproc lose ~25s of
+  supervisor cycle.  Bootstrap now uses `-s 60` with `WDOG_START_TIMER
+  =90000` and `WDOG_INTERVAL_TIMER=180000` — the same values
+  xcespserver later writes to the generated proc.ini.
+
+- ARM64 tarball deferred — build host still offline.  Will publish
+  as a follow-up release asset.
+
 ## 0.1.106
 
 - Bundles xcespserver 0.1.28, xcespcli 0.1.26, xcespproc 0.1.52,

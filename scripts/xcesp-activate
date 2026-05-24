@@ -324,6 +324,29 @@ fi
 mkdir -p /var/lib/dhcp 2>/dev/null || true
 chmod 0755 /var/lib/dhcp 2>/dev/null || true
 
+# SELinux: ISC dhclient on Fedora runs in dhcpc_t and must write its lease
+# file (/var/lib/dhcp/dhclient-xcesp-<ns>-<dev>-v4.leases) into a
+# dhcpc_state_t-labeled directory.  Fedora's distro default for /var/lib/dhcp
+# is dhcp_state_t (server-side); mkdir without restorecon leaves it var_lib_t.
+# Either label denies dhcpc_t from creating files in there → dhclient logs
+# "can't create ...leases: Permission denied", binds the lease in memory
+# (functional DHCP still works), but the on-disk lease never persists.
+# Override the fcontext entry for the whole subtree and restorecon so the
+# write path lands cleanly.  No-op when SELinux is Disabled.
+if command -v getenforce > /dev/null 2>&1 \
+        && [ "$(getenforce 2>/dev/null)" != "Disabled" ]; then
+    if command -v semanage > /dev/null 2>&1; then
+        semanage fcontext -a -t dhcpc_state_t '/var/lib/dhcp(/.*)?' 2>/dev/null \
+        || semanage fcontext -m -t dhcpc_state_t '/var/lib/dhcp(/.*)?' 2>/dev/null \
+        || true
+        restorecon -R /var/lib/dhcp 2>/dev/null || true
+        log "  SELinux fcontext: /var/lib/dhcp → dhcpc_state_t (persistent)"
+    elif command -v chcon > /dev/null 2>&1; then
+        chcon -R -t dhcpc_state_t /var/lib/dhcp 2>/dev/null || true
+        log "  SELinux chcon: /var/lib/dhcp → dhcpc_state_t (non-persistent)"
+    fi
+fi
+
 # SELinux: label xcesp-ip as ifconfig_exec_t so dhcpc_t (the xcesp-dhclient
 # -script domain) can exec it and the resulting process gets a domain that's
 # already allowed cap_net_admin in Fedora's targeted policy.  Without this,
@@ -613,11 +636,20 @@ log "  xcespwdog_proc.ini: $routing_count routing process(es)"
     echo "WDOG_RESPAWN_MAXCOUNT   = 3"
     echo ""
     proc_idx=2
+    # Timers below match xcespserver's WdogConfigWriter formula
+    # (start = heartbeatS * 1500, interval = start * 2).  With heartbeatS=60s
+    # → start=90s, interval=180s.  Previously this bootstrap used a 30s
+    # heartbeat with a 60s start deadline; xcespproc's main event loop can
+    # be starved during the initial CtrlLink DEPLOY callback long enough to
+    # miss that 60s deadline → wdog kills xcespproc, cascading dhcrelay/
+    # dhclient through their next supervisor cycle.  Matching the
+    # heartbeatS / formula across the bootstrap and the xcespserver-
+    # generated proc.ini avoids the cliff.
     for i in $(seq 1 "$routing_count"); do
         echo "# xcespproc-$i: affinity $i"
         echo "[process.$proc_idx]"
-        echo "WDOG_LAUNCH             = /usr/bin/xcespproc --config /var/xcesp/cfg/xcespproc.ini -i $i -s 30 -p 1514"
-        echo "WDOG_START_TIMER        = 60000"
+        echo "WDOG_LAUNCH             = /usr/bin/xcespproc --config /var/xcesp/cfg/xcespproc.ini -i $i -s 60 -p 1514"
+        echo "WDOG_START_TIMER        = 90000"
         echo "WDOG_INTERVAL_TIMER     = 180000"
         echo "WDOG_RESPAWN            = true"
         echo "WDOG_RESPAWN_MAXCOUNT   = 3"
