@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.1.108
+
+- Same binaries as 0.1.106 / 0.1.107.  Single `xcesp-activate` fix.
+
+- **chown `/var/lib/dhcp` to the xcesp uid.**  Without this, the
+  directory stays `root:root 755` from `mkdir -p`.  xcespproc runs as
+  the xcesp uid and the `firstLaunch_` lease wipe in
+  `RtrDhcpClient::startDhclient()` silently `unlink()`'s with EACCES.
+  dhclient then launches with a stale lease, enters INIT-REBOOT,
+  unicasts DHCPREQUEST to the cached server-id — which after a
+  netns recreate no longer answers — and stays bound to a dead
+  lease in memory.  Visible symptom: in Fedora/Debian production
+  VMs, RE never sends a fresh DISCOVER through the relay even
+  though all the daemons are running.  dhclient is setuid root so
+  it still creates files in the directory after the chown.  ARM64
+  dnfv was unaffected because xcespproc runs as root there.
+
 ## 0.1.107
 
 - Same binaries as 0.1.106 (xcespserver 0.1.28, xcespcli 0.1.26,

@@ -323,6 +323,15 @@ fi
 # existing `/var/lib/dhcp{,3}/dhclient* lrw,` rule.
 mkdir -p /var/lib/dhcp 2>/dev/null || true
 chmod 0755 /var/lib/dhcp 2>/dev/null || true
+# Chown the directory to the xcesp uid so xcespproc can unlink the
+# stale lease file on first startDhclient() launch
+# (RtrDhcpClient::firstLaunch_ wipe).  Without this, the directory
+# stays root:root 755, the unlink silently EACCES's, and dhclient
+# starts in INIT-REBOOT against a lease whose server no longer
+# exists — never sending a fresh DISCOVER through the relay.
+# dhclient is setuid root and still creates files here even after
+# we change the directory owner.
+chown "$XCESP_USER:$XCESP_GROUP" /var/lib/dhcp 2>/dev/null || true
 
 # SELinux: ISC dhclient on Fedora runs in dhcpc_t and must write its lease
 # file (/var/lib/dhcp/dhclient-xcesp-<ns>-<dev>-v4.leases) into a
