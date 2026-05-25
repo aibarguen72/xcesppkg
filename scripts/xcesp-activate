@@ -487,6 +487,15 @@ apply_apparmor_local() {
 
 if command -v apparmor_parser > /dev/null 2>&1 || [ -d /etc/apparmor.d ]; then
     apply_apparmor_local /usr/sbin/dhclient
+    # chronyd on Debian/Ubuntu ships with an AppArmor profile that allows
+    # reading /etc/chrony/* and writing /var/lib/chrony/* but knows nothing
+    # about our per-namespace runtime path /run/xcesp/ntp/<ns>/chrony.conf.
+    # Without a local override chronyd dies with `Fatal error : Could not
+    # open /run/xcesp/ntp/<ns>/chrony.conf : Permission denied` and the
+    # supervisor respawn-loops.  The xcesp paths grant from
+    # apply_apparmor_local (/var/lib/xcesp/** + /run/xcesp/** rwk) covers
+    # everything chronyd needs.
+    apply_apparmor_local /usr/sbin/chronyd
 fi
 
 # ---------------------------------------------------------------------------

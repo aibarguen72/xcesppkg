@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.112
+
+- Same binaries as 0.1.110 / 0.1.111.  Single `xcesp-activate` fix.
+
+- **AppArmor local override for chronyd (Debian/Ubuntu).**  The
+  distro-shipped chronyd profile allows reading `/etc/chrony/*` and
+  writing `/var/lib/chrony/*` but knows nothing about our per-
+  namespace runtime path `/run/xcesp/ntp/<ns>/chrony.conf`.  Without
+  a local override, chronyd dies at startup with `Fatal error: Could
+  not open /run/xcesp/ntp/<ns>/chrony.conf : Permission denied` and
+  the supervisor respawn-loops indefinitely.  We now call
+  `apply_apparmor_local /usr/sbin/chronyd` so the same `/var/lib/xcesp/**
+  rwk, /run/xcesp/** rwk,` lines we drop for dhclient also extend the
+  chronyd profile.  No-op on SELinux-only / no-AppArmor systems.
+
 ## 0.1.111
 
 - Same binaries as 0.1.110.  Single `xcesp-activate` fix.
