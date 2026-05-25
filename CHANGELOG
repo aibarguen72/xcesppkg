@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.1.110
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.54,
+  xcespwdog 0.1.1 with xcesp-on-rtr 0.0.192.
+
+- **RtrNtp: pure NTP-server routers now actually launch chronyd.**
+  The 0.1.109 `wantRunning` gate required at least one upstream
+  `ntp-source`, so server-only topologies (`ntp-server true` plus
+  interface bindings, no upstream sources) silently nopped — chronyd
+  never started, no bindaddress emitted, LAN clients got no
+  responses.  Was caught by the new Ch06 NTP QA chapter.
+
 ## 0.1.109
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.53,
