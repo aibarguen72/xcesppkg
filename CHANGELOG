@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.1.109
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.53,
+  xcespwdog 0.1.1 with xcesp-on-rtr 0.0.191.
+
+- **NTP symmetric-key authentication (optional).**  Three new attrs on
+  the `ntp` parent and three on each `ntp-source` enable HMAC-based
+  authentication between an xcesp NTP server and its clients, or
+  between an xcesp NTP client and its upstreams.  Plain operation
+  remains the default; existing configs are unaffected.
+  - Downstream key is router-wide (one key id+secret offered to all
+    LAN clients).
+  - Per-upstream key allows the same router to authenticate against
+    multiple servers under different credentials.
+  - Algorithm enum: `MD5`, `SHA1`, `SHA256`, `SHA384`, `SHA512`,
+    `AES128`, `AES256`. Default `SHA256`.
+  - Secrets are encoded at rest in `show running-config` (`${enc:v1:…}`
+    marker, same mechanism as IPsec PSK).  Chrony's keyfile on disk is
+    written with the plaintext form (mode 0600).
+  - All-or-none triple validation at commit.
+
+- xcespproc diagnostic logs (DEBUG/WARNING) for main-loop drift and
+  slow callbacks — see xcespproc 0.1.53 CHANGELOG.
+
 ## 0.1.108
 
 - Same binaries as 0.1.106 / 0.1.107.  Single `xcesp-activate` fix.
