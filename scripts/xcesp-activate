@@ -300,6 +300,26 @@ if command -v setcap > /dev/null 2>&1; then
         fi
     done
 
+    # chronyd needs cap_net_bind_service to bind NTP port 123 plus its
+    # command-socket port 323 (both privileged).  xcespproc raises
+    # cap_net_bind_service via ambient before exec, but chronyd calls
+    # setuid(chrony) at startup, and on some distros (Fedora 41 / chrony
+    # 4.6.1 seen in the wild) the cap path is lost across that setuid —
+    # chronyd logs "Could not open NTP socket on X.X.X.X:123" /
+    # "Could not open command socket on 127.0.0.1:323".  Granting the
+    # cap on the binary directly is portable across distros.
+    for chronyd_bin in /usr/sbin/chronyd /sbin/chronyd \
+                       /usr/local/sbin/chronyd; do
+        [ -f "$chronyd_bin" ] || continue
+        if [ -z "$(getcap "$chronyd_bin" 2>/dev/null)" ]; then
+            setcap cap_net_bind_service,cap_net_raw=ep "$chronyd_bin" \
+                2>/dev/null || true
+            log "  setcap cap_net_bind_service,cap_net_raw applied to $chronyd_bin (was empty)"
+        else
+            log "  $chronyd_bin already has file caps; leaving alone"
+        fi
+    done
+
     # xcesp-ip — privileged wrapper used by xcesp-dhclient-script when the
     # script runs as the xcesp uid with no caps (which happens because ISC
     # dhclient drops privileges before invoking the script).  The wrapper

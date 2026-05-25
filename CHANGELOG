@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.1.111
+
+- Same binaries as 0.1.110.  Single `xcesp-activate` fix.
+
+- **chronyd file caps**: `setcap cap_net_bind_service,cap_net_raw=ep
+  /usr/sbin/chronyd` (and the other distro paths).  xcespproc raises
+  `cap_net_bind_service` via ambient before exec, but chronyd does
+  `setuid(chrony)` early in startup and on some distros the cap path
+  is lost across that setuid — chronyd then logs `Could not open NTP
+  socket on X.X.X.X:123` / `Could not open command socket on
+  127.0.0.1:323` and the daemon runs broken (no NTP service, no
+  control socket for chronyc).  Seen in production on Fedora 41 with
+  chrony 4.6.1.  File caps on the binary always work.  Apply non-
+  destructively (skip if already capped).
+
 ## 0.1.110
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.54,
