@@ -112,14 +112,41 @@ remove_v4() {
     "$IP" -4 route flush dev "$interface" proto dhcp           2>/dev/null || true
 }
 
+# DHCPv6 install: dhclient -6 exports `new_ip6_address` plus
+# `new_preferred_life` / `new_max_life`.  There is no subnet mask in v6
+# DHCP — leased addresses are conventionally /128.  Per RFC 8415 the
+# link prefix arrives via Router Advertisement (SLAAC), not DHCP; we
+# leave RA-driven prefix routing untouched and only install the leased
+# /128 here.  Existing dynamic v6 globals are flushed first so
+# repeated BOUND6 callbacks don't accumulate.
+install_v6() {
+    new_ip="$1"
+    pref="${2:-}"
+    max="${3:-}"
+    "$IP" -6 addr flush dev "$interface" scope global dynamic 2>/dev/null || true
+    set -- "${new_ip}/128"
+    if [ -n "$max" ] && [ "$max" != "infinite" ] && [ "$max" -gt 0 ] 2>/dev/null; then
+        set -- "$@" valid_lft "$max"
+    fi
+    if [ -n "$pref" ] && [ "$pref" != "infinite" ] && [ "$pref" -gt 0 ] 2>/dev/null; then
+        set -- "$@" preferred_lft "$pref"
+    fi
+    "$IP" -6 addr add "$@" dev "$interface"
+}
+
+remove_v6() {
+    "$IP" -6 addr flush dev "$interface" scope global dynamic 2>/dev/null || true
+}
+
 case "${reason:-}" in
     MEDIUM)
         # Link-layer / media-type set.  We don't manage media; no-op.
         :
         ;;
-    PREINIT)
-        # Bring iface up so dhclient can send DISCOVER.  RtrInterface should
-        # already have done this, but it's cheap and idempotent.
+    PREINIT|PREINIT6)
+        # Bring iface up so dhclient can send DISCOVER / SOLICIT.
+        # RtrInterface should already have done this, but it's cheap and
+        # idempotent.
         "$IP" link set dev "$interface" up 2>/dev/null || true
         ;;
     ARPCHECK|ARPSEND)
@@ -137,8 +164,17 @@ case "${reason:-}" in
             install_default_route_v4
         fi
         ;;
+    BOUND6|RENEW6|REBIND6)
+        if [ -n "${new_ip6_address:-}" ]; then
+            install_v6 "$new_ip6_address" \
+                       "${new_preferred_life:-}" "${new_max_life:-}"
+        fi
+        ;;
     EXPIRE|FAIL|RELEASE|STOP|TIMEOUT)
         remove_v4
+        ;;
+    EXPIRE6|RELEASE6|STOP6|DEPREF6)
+        remove_v6
         ;;
     *)
         # Anything else (NBI, etc.) — no-op.  Exiting 0 here is what dhclient

@@ -1,5 +1,41 @@
 # Changelog - xcesppkg
 
+## 0.1.113
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.63,
+  xcespwdog 0.1.1.
+- **DHCPv6 (server + relay) end-to-end on Kea 2.6.4.**  xcesp-on-rtr
+  0.0.193..0.0.201 closes every gap that XCESPQA Ch03 (DHCPv6 server)
+  and Ch04 (DHCPv6 relay) surfaced against the kea-dhcp6-server
+  shipping on Fedora 41.  Includes: KEA_* env-var overrides for the
+  build-time "supported paths" restrictions; chmod 0750 on the
+  control-socket directory; subnet `"interface"` attribute for direct
+  (non-relayed) DHCPv6; remote/relay-served pools; bit-math
+  containment for the pool-in-iface classifier; dhcrelay -6 upstream
+  iface scope via route lookup; iface UP + fe80:: non-tentative gates
+  before the kea exec (kea 2.6's own retry knob doesn't actually
+  retry); and explicit "<dev>/<global>" entry in `interfaces-config`
+  so kea binds the iface's global unicast and accepts relay-forward.
+- **IPv6 static routes.**  `static-route next-hop` now uses the new
+  `ip-host` (any-family) builtin; the PObj's `routeExists` lookup
+  picks `ip -6 -j route show` for v6 networks.
+- **`/usr/bin/xcesp-dhclient-script` learns IPv6.**  Adds BOUND6 /
+  RENEW6 / REBIND6 / PREINIT6 / EXPIRE6 / RELEASE6 / STOP6 / DEPREF6
+  cases; an `install_v6 ${new_ip6_address}/128 ... valid_lft ... preferred_lft ...`
+  helper paired with a `remove_v6` flusher.  Previously every v6
+  reason fell through to the catch-all no-op, so the leased address
+  was never plumbed onto the iface and Ch03's "client has IPv6 in
+  pool" check always failed.
+- **`scripts/chrony-install.sh` (new)** — extract chronyd + chronyc
+  from a Debian .deb without running maintainer scripts, registering
+  with dpkg, or installing the systemd unit / user account that
+  collide with our appliance packaging.  Drops the binaries into
+  /usr/sbin and /usr/bin, applies cap_net_bind_service + cap_net_raw=ep,
+  and emits ldd diagnostics for missing shared libraries.  Idempotent.
+- **NOTE: ARM64 build deferred.**  The remote arm64 build machine is
+  unreachable today; the matching xcespkg-arm64-*.tgz will be cut
+  separately when the device is back online.
+
 ## 0.1.112
 
 - Same binaries as 0.1.110 / 0.1.111.  Single `xcesp-activate` fix.

@@ -74,7 +74,8 @@ check-bins:
 
 $(TARBALL): check-bins install.sh services/xcesp.service \
             scripts/xcesp-activate scripts/xcesp-swap.sh \
-            scripts/xcesp-dhclient-script scripts/xcesp-ip.c \
+            scripts/xcesp-dhclient-script scripts/chrony-install.sh \
+            scripts/xcesp-ip.c \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
             cfg/xcespserver.conf python/pyproject.toml
 	@echo "Building package $(TARBALL) ..."
@@ -154,9 +155,11 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp scripts/xcesp-activate         $(PKG_NAME)/scripts/
 	cp scripts/xcesp-swap.sh          $(PKG_NAME)/scripts/
 	cp scripts/xcesp-dhclient-script  $(PKG_NAME)/scripts/
+	cp scripts/chrony-install.sh      $(PKG_NAME)/scripts/
 	chmod +x $(PKG_NAME)/scripts/xcesp-activate \
 	         $(PKG_NAME)/scripts/xcesp-swap.sh  \
-	         $(PKG_NAME)/scripts/xcesp-dhclient-script
+	         $(PKG_NAME)/scripts/xcesp-dhclient-script \
+	         $(PKG_NAME)/scripts/chrony-install.sh
 
 	# --- Systemd service ---
 	mkdir -p $(PKG_NAME)/services
