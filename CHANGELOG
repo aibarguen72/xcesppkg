@@ -1,5 +1,42 @@
 # Changelog - xcesppkg
 
+## 0.1.114
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.65,
+  xcespwdog 0.1.1.
+- **DHCPv6 server gains symmetric `dhcp-server-remote-subnet`
+  (xcesp-on-rtr 0.0.202).**  v6 now mirrors the v4 server's relay-
+  served subnet structure: explicit, multi-instance
+  `dhcp-server-remote-subnet <prefix>` child blocks under
+  `dhcp-server-ipv6`, each with its own `dhcp-remote-pool` /
+  `dhcp-remote-dns` / `lease-time`.  A single server can serve a local
+  subnet AND any number of remote subnets in one block.  Replaces the
+  implicit auto-classifier mode added in 0.0.197; operators now
+  declare local vs relay-served explicitly.
+  ```
+  dhcp-server-ipv6
+    dhcp-server-pool 2001:db8:1::100-2001:db8:1::199   # local
+    !
+    dhcp-server-remote-subnet 2001:db8:2::/64          # relay-served
+      dhcp-remote-pool 2001:db8:2::100-2001:db8:2::199
+      dhcp-remote-dns  2001:4860:4860::8888
+    !
+    dhcp-server-remote-subnet 2001:db8:3::/64          # another relay-served
+      dhcp-remote-pool 2001:db8:3::50-2001:db8:3::200
+    !
+  !
+  ```
+- **`dhcrelay -6` defers launch when upstream iface unresolvable
+  (xcesp-on-rtr 0.0.203).**  Previously `buildCommand` fell back to
+  the downstream iface for the `-u` scope when the route to the
+  upstream server wasn't yet installed; dhcrelay then died at startup
+  with `parse_upstream: Interface '<dev>' is both down and up` and
+  the supervisor burned ~90 s of relaunch loops before the
+  static-route caught up.  `buildCommand` now returns empty in that
+  case; supervisor retries next tick.  First successful launch is the
+  only launch.
+- **NOTE: ARM64 build cut from the same release.**
+
 ## 0.1.113
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.63,
