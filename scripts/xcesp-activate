@@ -496,6 +496,16 @@ if command -v apparmor_parser > /dev/null 2>&1 || [ -d /etc/apparmor.d ]; then
     # apply_apparmor_local (/var/lib/xcesp/** + /run/xcesp/** rwk) covers
     # everything chronyd needs.
     apply_apparmor_local /usr/sbin/chronyd
+    # kea-dhcp6 on Debian/Ubuntu ships an AppArmor profile that locks
+    # writes to /var/lib/kea, /var/log/kea, /run/kea.  Our RtrDhcpServerV6
+    # PObj uses KEA_* env-var overrides to point kea at /run/xcesp/dhcp6/
+    # and /var/lib/xcesp/dhcp6/ instead — kea honours the env vars, but
+    # the kernel still applies AppArmor.  Without the override kea bails
+    # at startup with `Unable to use interprocess sync lockfile
+    # (Permission denied): /run/xcesp/dhcp6/.../logger_lockfile` even
+    # though the dir is xcesp-owned mode 0750.  The xcesp paths grant
+    # from apply_apparmor_local covers everything kea needs.
+    apply_apparmor_local /usr/sbin/kea-dhcp6
 fi
 
 # ---------------------------------------------------------------------------

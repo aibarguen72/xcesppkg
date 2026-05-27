@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.1.115
+
+- Bundles the same xcespserver 0.1.29 / xcespcli 0.1.26 /
+  xcespproc 0.1.65 / xcespwdog 0.1.1 as 0.1.114.
+- **AppArmor override for kea-dhcp6 on Debian/Ubuntu.**  The Debian
+  `kea-dhcp6-server` package installs an AppArmor profile that
+  restricts file writes to `/var/lib/kea`, `/var/log/kea`,
+  `/run/kea`.  Our RtrDhcpServerV6 PObj uses the `KEA_*` env-var
+  overrides to point kea at `/run/xcesp/dhcp6/.../` and
+  `/var/lib/xcesp/dhcp6/.../` instead — kea honours the env vars,
+  but the kernel still applies AppArmor.  Without the override
+  kea bails at startup with `Unable to use interprocess sync
+  lockfile (Permission denied): /run/xcesp/dhcp6/.../logger_lockfile`
+  even though the dir is xcesp-owned mode 0750.  Fix:
+  `xcesp-activate` now calls `apply_apparmor_local
+  /usr/sbin/kea-dhcp6` so a local override drops `/var/lib/xcesp/**
+  rwk,` + `/run/xcesp/** rwk,` into
+  `/etc/apparmor.d/local/usr.sbin.kea-dhcp6` and reloads the profile.
+  Fedora is unaffected (no AppArmor; SELinux only).
+
 ## 0.1.114
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.65,
