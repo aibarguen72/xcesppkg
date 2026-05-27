@@ -117,9 +117,11 @@ mkdir -p "$STAGING/scripts"
 cp "$PKGDIR/scripts/xcesp-activate"         "$STAGING/scripts/"
 cp "$PKGDIR/scripts/xcesp-swap.sh"          "$STAGING/scripts/"
 cp "$PKGDIR/scripts/xcesp-dhclient-script"  "$STAGING/scripts/"
+cp "$PKGDIR/scripts/chrony-install.sh"      "$STAGING/scripts/"
 chmod +x "$STAGING/scripts/xcesp-activate" \
          "$STAGING/scripts/xcesp-swap.sh"  \
-         "$STAGING/scripts/xcesp-dhclient-script"
+         "$STAGING/scripts/xcesp-dhclient-script" \
+         "$STAGING/scripts/chrony-install.sh"
 
 # --- Systemd service ---
 mkdir -p "$STAGING/services"
