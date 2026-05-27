@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.1.116
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.66,
+  xcespwdog 0.1.1.
+- **dhclient launch is now gated on iface readiness + 2 min unbound
+  watchdog (xcesp-on-rtr 0.0.204).**  Pre-0.0.204 the supervisor
+  spawned dhclient the moment its PObj loaded, often before the
+  rlink peer had brought the device up.  ISC dhclient's first
+  DHCP-DISCOVER / SOLICIT went out on a tentative / no-carrier link,
+  got no answer, and entered exponential backoff (up to 512 s for v4,
+  SOL_MAX_RT=3600 s for v6).  Once the link came up the daemon was
+  sitting in a multi-minute retransmit window — operators observed
+  ~5 minute waits between link-up and lease-bound on Debian.  Fix:
+  probe `IpCmd::parseOperstate()` before each (re)start and skip the
+  spawn until the iface is UP; track per-AF launch time and SIGTERM
+  + relaunch any dhclient alive >120 s without a lease.  Caps the
+  recovery time at 2 minutes; on a clean cold-start the lease lands
+  in a few seconds.
+
 ## 0.1.115
 
 - Bundles the same xcespserver 0.1.29 / xcespcli 0.1.26 /
