@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.1.117
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.27, xcespproc 0.1.67,
+  xcespwdog 0.1.1.
+- **Router monitoring + actions (feature) — xcesp-on-rtr 0.0.205.**
+  Per-vrf `monitor` container with `probe <NAME>` children
+  (router-scoped uniqueness).  Four probe types: `icmp` (periodic
+  ping bursts with consecutive-bad LOSS/DELAY counters; ping runs in
+  a detached worker thread so the 100 ms heartbeat is never blocked),
+  `vrrp` (vtysh poll), `interface` (operstate poll), `bfd` (vtysh
+  poll).  Three action consumers: `static-route` (metric delta),
+  `interface` (admin-state force up/down), VRRP group (priority
+  delta).  Action override is runtime-only: `show running-config`
+  always reflects the operator's config; the kernel/FRR state
+  reflects config ± delta when the action's probe condition is met.
+  On commit reload the consumer recomputes from current probe state,
+  so a still-active action keeps its effect.
+- **CLI**: `show probes [router R] [vrf V]` and `show actions
+  [router R]` shipped in xcespcli 0.1.27.
+- **NOTE: ARM64 build deferred** — remote arm64 build machine was
+  offline at last attempt; `xcespkg-arm64-0.1.117.tgz` will be cut
+  separately when reachable.
+
 ## 0.1.116
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.26, xcespproc 0.1.66,
