@@ -1,5 +1,35 @@
 # Changelog - xcesppkg
 
+## 0.1.118
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.27, xcespproc 0.1.68,
+  xcespwdog 0.1.1.
+- **Three fixes for the 0.1.117 monitor+actions feature** (xcesp-on-rtr
+  0.0.206) — verified end-to-end via xcespqa Ch17:
+  - **icmp probe ping now uses `IpCmd::execInNs`** (setns + ambient
+    caps) instead of `popen("ip netns exec ... ping ...")`.  The
+    popen path went through `/bin/sh` which wipes file-cap-derived
+    permitted bits, so ping was silently failing every burst — the
+    probe would flip ON within seconds (false-LOSS) and never flip
+    back OFF.  Symptom in 0.1.117: Ch17 17.5/17.6 reported "probe
+    still active" 40 s after path restore.
+  - **wall-clock pacing for probe intervals.**  Old code counted
+    heartbeat ticks assuming the 100 ms supervisor heartbeat; the QA
+    stack runs at 1 s, so `icmp-interval 5` was actually 50 s
+    between bursts.  Switched to `std::time(nullptr)` snapshots.
+  - **`installedMetric_` tracked separately from `appliedMetric_`** in
+    RtrStaticRoutePObj.  When a probe-driven flip moved
+    appliedMetric_ from 50 to 150 we'd issue `ip route del ... metric
+    150` (matching nothing) then `add ... metric 150`, leaving the
+    kernel with TWO routes for the prefix.  The del now uses the
+    actually-installed metric.
+- **xcesptest 0.1.58** ships the missing mapper + validator symlinks
+  (probe.py / dot1x.py / probe.validate.py / action.validate.py) that
+  0.1.57 forgot; without them the new probe sections were silently
+  dropped at config-apply time so no RtrProbe ever got created.  These
+  do not ride in the xcesppkg tarball (xcesptest is dev-stack only),
+  but they're listed here for traceability.
+
 ## 0.1.117
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.27, xcespproc 0.1.67,
