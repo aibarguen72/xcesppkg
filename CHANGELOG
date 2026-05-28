@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.1.119
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.28, xcespproc 0.1.68,
+  xcespwdog 0.1.1.
+- **xcespcli 0.1.28**: `show probes` and `show actions` now render as
+  proper tables (Name | Type | VRF | State | Reason for probes;
+  Entity | VRF | Kind | Applied for actions) instead of the raw JSON
+  body 0.1.27 was dumping.  Both subcommands also appear in TAB / `?`
+  completion under `show`, with `router`/`vrf` keyword completion.
+
 ## 0.1.118
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.27, xcespproc 0.1.68,
