@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.1.120
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.29, xcespproc 0.1.69,
+  xcespwdog 0.1.1.
+- `show probes` Reason column now shows the actual flag names as plain
+  text (space-separated when several are set) instead of `0x0` / a
+  hex bitmask.  Verified: empty → `-`, single flag → `LOSS`, multi →
+  `LOSS DELAY`.
+
 ## 0.1.119
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.28, xcespproc 0.1.68,
