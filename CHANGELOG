@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.1.123
+
+- Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.71,
+  xcespwdog 0.1.2.
+- **Fedora hostapd `bind: Permission denied` fixed** (xcesp-on-rtr
+  0.0.209).  Root cause: launching hostapd via `ip netns exec`
+  chained through `/bin/sh → ip → hostapd`, and `ip` carries
+  file caps, which clears the ambient cap set per capabilities(7).
+  hostapd then bound PF_PACKET with no caps → EPERM.  Fixed by
+  doing `setns()` in xcespproc's grandchild directly and exec'ing
+  hostapd / wpa_supplicant without the `ip netns exec` prefix —
+  ambient survives end-to-end.  Same idiom as the existing
+  `execInNs` / `launchCharonInNs` paths.
+- `xcespwdog` 0.1.2: kill / respawn / exit log lines now include
+  the full child argv (`-i 8` etc.) so operators can see *which*
+  xcespproc instance got killed.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.122
 
 - Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.70,
