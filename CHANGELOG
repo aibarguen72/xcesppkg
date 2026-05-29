@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.1.122
+
+- Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.70,
+  xcespwdog 0.1.1.
+- `show server` now lists `dot1x` in both the Config Features and
+  Licensed Features sections (xcespcli 0.1.30).
+- xcespserver 0.1.30 ships an updated `scripts/genlic.py` that knows
+  about `--feature dot1x` — the script itself is NOT bundled here
+  (internal mint helper, lives in xcespserver only).
+- x86_64 only — ARM64 will be cut separately when the build host is
+  back.
+
 ## 0.1.121
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.29, xcespproc 0.1.70,
