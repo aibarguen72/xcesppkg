@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.1.121
+
+- Bundles xcespserver 0.1.29, xcespcli 0.1.29, xcespproc 0.1.70,
+  xcespwdog 0.1.1.
+- **802.1X first-time-real fixes** (xcesp-on-rtr 0.0.208), driven by
+  the new xcespqa Ch07 (RA-authenticator + RB-supplicant against a
+  live FreeRADIUS):
+  - `interface.validate.py` understands `no <attr>` IOS-style
+    serialisation; the `no shutdown` + `dot1x-*` combination was
+    being rejected at commit-time.
+  - hostapd + wpa_supplicant `ctrl_interface=` now point inside
+    each PObj's per-instance `/run/xcesp/...` dir instead of the
+    root-owned `/run/hostapd` / `/run/wpa_supplicant`.  Otherwise
+    both daemons died with "mkdir: Permission denied" before the
+    EAP exchange could start.
+- Ch07 in xcespqa 0.0.63 verifies the end-to-end exchange via
+  `wpa_cli status` (wpa_state=COMPLETED) and `hostapd_cli all_sta`
+  (flags=[AUTHORIZED]).
+- **No ARM64 tarball this round** — build host offline; arm64 will
+  be cut separately when the box is reachable.
+
 ## 0.1.120
 
 - Bundles xcespserver 0.1.29, xcespcli 0.1.29, xcespproc 0.1.69,
