@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.1.126
+
+- Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.72,
+  xcespwdog 0.1.3.
+- **xcespwdog 0.1.3 diagnostic logging** for the random-instance kill
+  investigation on the Fedora VM: `Launched: …` now reports the
+  applied timer values (`start=Nms interval=Nms`), and the
+  `Watchdog killed …` line appends the exact timer state at kill
+  time (`[pid=… now=… lastHB=… startMs=… startTimeout=…
+  intervalTimeout=… deadline=…]`).  This will tell us in one line
+  whether `lastHB` is being updated by SIGUSR1 from the child or
+  not, and which deadline-arithmetic branch fired.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.125
 
 - Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.72,
