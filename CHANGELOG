@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.1.125
+
+- Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.72,
+  xcespwdog 0.1.2.
+- **`xcesp-activate`: hostapd + wpa_supplicant now setuid-root**, not
+  file-caps.  Same fix we applied to charon in 0.1.72.  Symptom on
+  Fedora: `bind: Permission denied` from PF_PACKET even with all the
+  right boxes ticked — `cap_net_admin,cap_net_raw=ep` on the
+  binary (verified via `getcap`), `NoNewPrivs: 0` (verified via
+  `/proc/self/status`), SELinux Permissive, no AVCs, no cgroup-BPF
+  filters.  Confirmed by running the exact same command as root —
+  works.  Conclusion: Fedora's kernel silently refuses to activate
+  non-root file-caps on these daemons.  Setuid-root sidesteps the
+  whole question — uid elevates on exec, kernel grants full caps
+  unconditionally, hostapd/wpa_supplicant drop privileges internally
+  once their wired driver opens the PF_PACKET socket.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.124
 
 - Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.72,

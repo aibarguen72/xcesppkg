@@ -227,31 +227,49 @@ if command -v setcap > /dev/null 2>&1; then
     # with a strict subset and broke DHCP on every install.  Hence the
     # gating check below.
     #
-    # 802.1X daemons — need CAP_NET_ADMIN (configure iface) and CAP_NET_RAW
-    # (PF_PACKET sockets for EAPOL).
+    # 802.1X daemons — need PF_PACKET sockets for EAPOL.  We tried the
+    # file-caps approach first (cap_net_admin,cap_net_raw=ep on both bins),
+    # and it works on the dev box but Fedora silently refuses to activate
+    # those caps when xcespproc execs the daemons as the xcesp uid: getcap
+    # shows them, NoNewPrivs is 0, getenforce is Permissive, no AVCs, and
+    # cgroup-BPF is empty — yet PF_PACKET bind() returns EPERM.  Identical
+    # symptom to Ubuntu's libcap-less charon (xcesppkg 0.1.72), and the
+    # same fix works: strip the file caps and setuid-root the binary
+    # instead.  setuid elevates uid→0 on exec → kernel grants full caps
+    # without depending on file-cap activation.  hostapd / wpa_supplicant
+    # drop privileges internally once the wired driver is up, so the
+    # privilege window is short.
     for wpa_bin in /usr/sbin/wpa_supplicant \
                    /sbin/wpa_supplicant \
                    /usr/local/sbin/wpa_supplicant \
                    /usr/bin/wpa_supplicant; do
         [ -f "$wpa_bin" ] || continue
-        if [ -z "$(getcap "$wpa_bin" 2>/dev/null)" ]; then
-            setcap cap_net_admin,cap_net_raw=ep "$wpa_bin" 2>/dev/null || true
-            log "  setcap cap_net_admin,cap_net_raw applied to $wpa_bin (was empty)"
-        else
-            log "  $wpa_bin already has file caps; leaving alone"
+        cur_caps="$(getcap "$wpa_bin" 2>/dev/null)"
+        cur_mode="$(stat -c %a "$wpa_bin" 2>/dev/null)"
+        if [ -n "$cur_caps" ]; then
+            setcap -r "$wpa_bin" 2>/dev/null || true
+            log "  setcap -r applied to $wpa_bin (had: $cur_caps)"
         fi
+        case "$cur_mode" in
+            4*) log "  $wpa_bin already setuid; leaving alone" ;;
+            *)  chmod u+s "$wpa_bin" 2>/dev/null && log "  chmod u+s applied to $wpa_bin" ;;
+        esac
     done
     for hostapd_bin in /usr/sbin/hostapd \
                        /sbin/hostapd \
                        /usr/local/sbin/hostapd \
                        /usr/bin/hostapd; do
         [ -f "$hostapd_bin" ] || continue
-        if [ -z "$(getcap "$hostapd_bin" 2>/dev/null)" ]; then
-            setcap cap_net_admin,cap_net_raw=ep "$hostapd_bin" 2>/dev/null || true
-            log "  setcap cap_net_admin,cap_net_raw applied to $hostapd_bin (was empty)"
-        else
-            log "  $hostapd_bin already has file caps; leaving alone"
+        cur_caps="$(getcap "$hostapd_bin" 2>/dev/null)"
+        cur_mode="$(stat -c %a "$hostapd_bin" 2>/dev/null)"
+        if [ -n "$cur_caps" ]; then
+            setcap -r "$hostapd_bin" 2>/dev/null || true
+            log "  setcap -r applied to $hostapd_bin (had: $cur_caps)"
         fi
+        case "$cur_mode" in
+            4*) log "  $hostapd_bin already setuid; leaving alone" ;;
+            *)  chmod u+s "$hostapd_bin" 2>/dev/null && log "  chmod u+s applied to $hostapd_bin" ;;
+        esac
     done
     # dhclient is special — we make it setuid root and strip file caps.  When
     # xcespproc (running as xcesp uid) forks dhclient, the setuid bit elevates
