@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.1.127
+
+- Bundles xcespserver 0.1.31, xcespcli 0.1.30, xcespproc 0.1.73,
+  xcespwdog 0.1.4.
+- **Random xcespproc kills root-caused and fixed.**  Diagnostic
+  output in 0.1.126 confirmed: each killed xcesproc received exactly
+  ONE SIGUSR1 (the very first one, at +10s), then never another
+  before the `lastHB + 180s` deadline fired.  Root cause: SIGUSR1 is
+  a STANDARD signal — when eight xcesproc children all hit their
+  first `checkWatchdogs()` tick within microseconds of each other
+  and all `kill(getppid(), SIGUSR1)`, Linux coalesces the pending
+  signal and only ONE delivery reaches the wdog per storm.  The
+  unlucky seven xcesprocs' `lastHB` is never updated, the wdog
+  thinks they're hung, and SIGKILLs them when the deadline expires.
+  Fix: parent heartbeat now uses **SIGRTMIN+1** (real-time signal,
+  queued per-sender, never coalesced) — every child's heartbeat
+  reaches the wdog regardless of arrival order.  evapplication 0.0.9.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.126
 
 - Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.72,
