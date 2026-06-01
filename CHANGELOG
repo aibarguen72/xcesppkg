@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.1.124
+
+- Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.72,
+  xcespwdog 0.1.2.
+- **dot1x launch-race fix** (xcesp-on-rtr 0.0.210): RtrDot1xAuth +
+  RtrDot1xSup now wait for their bound iface to reach operstate
+  UP/UNKNOWN before spawning hostapd/wpa_supplicant.  Without it,
+  both daemons launched in the same tick the rlink veth pair was
+  being created, the wired driver got `SIOCGIFINDEX: No such device`
+  and exited, and the supervisor's retry never caught up because
+  every subsequent tick hit the same window on the Fedora VM.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.123
 
 - Bundles xcespserver 0.1.30, xcespcli 0.1.30, xcespproc 0.1.71,
