@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.1.128
+
+- Bundles xcespserver 0.1.32, xcespcli 0.1.31, xcespproc 0.1.73,
+  xcespwdog 0.1.4.
+- **`reboot` / `reboot light` / `software-install` actually work
+  now**.  Three issues stacked on top of each other:
+  - The CLI completer never offered `reboot light` because the
+    branch was guarded by `typedTokens.empty()` (always false here).
+    Fixed in xcespcli 0.1.31.
+  - `xcesp-activate` did not write a sudoers rule for the
+    `systemctl restart xcesp` / `systemctl reboot` commands that
+    `doReboot()` invokes — sudo silently refused, the action
+    completed "successfully" with no follow-through.  Added a new
+    `/etc/sudoers.d/xcesp-reboot` granting xcesp NOPASSWD for those
+    exact commands.
+  - `FileActionHandler::doReboot()` now surfaces sudo failures
+    instead of returning a misleading "restart initiated" (xcespserver
+    0.1.32) — so a future missing-sudo regression fails loudly.
+  - `software-install` was already swapping mainsw ↔ backupsw
+    correctly; what looked like "installation does nothing" was
+    actually the *follow-up* reboot failing.  With the reboot path
+    fixed, the swap-then-reboot flow completes end-to-end.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.127
 
 - Bundles xcespserver 0.1.31, xcespcli 0.1.30, xcespproc 0.1.73,

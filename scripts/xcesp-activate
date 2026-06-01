@@ -625,6 +625,30 @@ if getent group frr > /dev/null 2>&1 && [ -d /etc/frr ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Reboot / xcesp-service-restart sudoers rule — refresh on every activation
+# ---------------------------------------------------------------------------
+# `reboot`, `reboot light`, and `software-install` ultimately need to call
+# either `systemctl reboot` or `systemctl restart xcesp` as root.  xcespserver
+# (running as xcesp uid) invokes those via `sudo -n`.  Without this rule the
+# operator's `reboot` command silently no-ops because `sudo -n` returns 1
+# with "a password is required" buried in stderr that we never see.
+REBOOT_SUDOERS=/etc/sudoers.d/xcesp-reboot
+SYSTEMCTL_BIN="$(command -v systemctl 2>/dev/null || echo /usr/bin/systemctl)"
+if [ -x "$SYSTEMCTL_BIN" ]; then
+    cat > "$REBOOT_SUDOERS" <<SUDOERS
+# Allow xcespserver to restart the xcesp stack and to reboot the host.
+# Both flows ride through FileActionHandler::doReboot().
+$XCESP_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN restart xcesp, \\
+                                  $SYSTEMCTL_BIN restart xcesp.service, \\
+                                  $SYSTEMCTL_BIN restart xcespwdog, \\
+                                  $SYSTEMCTL_BIN restart xcespwdog.service, \\
+                                  $SYSTEMCTL_BIN reboot
+SUDOERS
+    chmod 0440 "$REBOOT_SUDOERS"
+    log "  $REBOOT_SUDOERS refreshed"
+fi
+
+# ---------------------------------------------------------------------------
 # IPsec config directory sudoers rule — refresh on every activation
 # ---------------------------------------------------------------------------
 # xcespproc uses "sudo -n mkdir -p" to create per-namespace swanctl conf dirs
