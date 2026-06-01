@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.1.130
+
+- Bundles xcespserver 0.1.34, xcespcli 0.1.32, xcespproc 0.1.73,
+  xcespwdog 0.1.4.
+- **New CLI command: `show log [pre N] [filter STRING]`.**  Streams
+  `tail -n N -F /var/xcesp/log/xcesp.log` (optionally piped through
+  `grep -F --line-buffered -e FILTER`) to the operator's terminal
+  until Ctrl+C.  Server-mediated streaming — works the same way
+  over Unix-socket and TCP, even when the operator's host has no
+  read access to `/var/xcesp/log/`.  Reuses the PTY-based async
+  plumbing built for `file-copy STREAMING=1`.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.129
 
 - Bundles xcespserver 0.1.33, xcespcli 0.1.31, xcespproc 0.1.73,
