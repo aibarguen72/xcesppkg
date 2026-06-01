@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.1.129
+
+- Bundles xcespserver 0.1.33, xcespcli 0.1.31, xcespproc 0.1.73,
+  xcespwdog 0.1.4.
+- **IPsec PSK encryption-at-rest re-enabled** (xcespserver 0.1.33).
+  The SecretEncryptor rule for `ipsec / secret <NAME> / secret <VAL>`
+  was written when `ipsec` was a top-level node; after the schema
+  refactor put `ipsec` under `router`, the matcher's greedy
+  router-push for the other router-prefixed rules (dot1x, ntp)
+  consumed the stack before ipsec could be pushed.  Result: PSKs
+  silently stored as plaintext.  Rule path updated to
+  `[router, ipsec, secret]`.
+- x86_64 only — ARM64 to follow when the build host is back.
+
 ## 0.1.128
 
 - Bundles xcespserver 0.1.32, xcespcli 0.1.31, xcespproc 0.1.73,
