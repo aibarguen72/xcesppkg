@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.1.131
+
+- Bundles xcespserver 0.1.34, xcespcli 0.1.32, xcespproc 0.1.74, xcespwdog
+  unchanged.  Pulls in xcesp-on-rtr 0.0.211 (dhcrelay iface-ready gate +
+  shorter post-launch grace) via xcespproc.
+- **scripts/xcesp-activate: chmod /var/lib/dhcp to 0775 (was 0755).**
+  ISC dhclient runs in the SELinux `dhcpc_t` domain on Fedora, which is
+  denied `CAP_DAC_OVERRIDE`.  With 0755 the euid=0 process cannot bypass
+  the directory-perm check when neither uid nor gid matches the owner;
+  fsgid is inherited from xcespproc (the xcesp user), so group-writable
+  lets dhclient create the lease via group perms with no dac_override
+  needed.  Symptom of 0755 on Fedora: dhclient logs "can't create
+  /var/lib/dhcp/...: Permission denied", binds the lease in memory (DHCP
+  still functions), but the on-disk lease file never appears — which
+  surfaced as XCESPQA NETSVC chapter 1 tests 1.3 / 1.6 and chapter 4
+  tests 4.1 / 4.2 failing.
+
 ## 0.1.130
 
 - Bundles xcespserver 0.1.34, xcespcli 0.1.32, xcespproc 0.1.73,

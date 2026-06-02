@@ -360,7 +360,15 @@ fi
 # files there because the path matches the upstream apparmor profile's
 # existing `/var/lib/dhcp{,3}/dhclient* lrw,` rule.
 mkdir -p /var/lib/dhcp 2>/dev/null || true
-chmod 0755 /var/lib/dhcp 2>/dev/null || true
+# Mode 0775 (group-writable), NOT 0755. dhclient running in the SELinux
+# dhcpc_t domain is denied CAP_DAC_OVERRIDE on Fedora; with 0755 the
+# euid=0 process cannot bypass the dir-perm check when neither uid nor
+# gid matches the owner. fsgid is inherited as xcesp from the launcher,
+# so group-writable lets dhclient create the lease via group perms
+# without needing dac_override. Symptom of 0755: dhclient logs
+# "can't create /var/lib/dhcp/...: Permission denied", binds the lease
+# in memory (DHCP still works), but the on-disk lease never persists.
+chmod 0775 /var/lib/dhcp 2>/dev/null || true
 # Chown the directory to the xcesp uid so xcespproc can unlink the
 # stale lease file on first startDhclient() launch
 # (RtrDhcpClient::firstLaunch_ wipe).  Without this, the directory
