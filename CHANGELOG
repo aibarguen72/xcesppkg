@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.2.3
+
+- **Fix: typing `management` in the CLI no longer errors with
+  `<name> is missing`.**  Bundles xcespschema 0.2.1 (new
+  `node <name> multi=true|false` qualifier on the node
+  declaration line), xcespserver 0.2.3 (declares `node
+  management multi=false` in management.schema), and xcespcli
+  0.2.3 (honours `SchemaNode::isMulti()` at depth 0 in the
+  interactive entry path).
+- No xcesp-activate / install.sh / xcesp-login changes; this
+  release is a pure binary refresh + schema metadata fix.
+- Bundled component versions:
+  - xcespserver  0.2.3 (was 0.2.2)
+  - xcespcli     0.2.3 (was 0.2.2)
+  - xcespschema  0.2.1 (was 0.2.0)
+  - xcespproc    0.2.0 (unchanged)
+  - xcespwdog    0.2.0 (unchanged)
+  - xcesp-on-rtr 0.2.0 (unchanged)
+  - xcesp-on-pw  0.2.0 (unchanged)
+  - xcesp-on-xc  0.2.0 (unchanged)
+  - xcespconfig  0.2.0 (unchanged)
+  - xcespmap     0.2.0 (unchanged)
+  - xcesppy      0.2.0 (unchanged)
+
 ## 0.2.2
 
 - **AAA / local users feature.**  Bundles xcespserver 0.2.2 and
