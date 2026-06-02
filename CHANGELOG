@@ -1,5 +1,32 @@
 # Changelog - xcesppkg
 
+## 0.2.1
+
+- **First feature release on the 0.2.x management line.**  Bundles
+  xcespserver 0.2.1 and xcespcli 0.2.1, which add the new top-level
+  `management` config section (system identity attributes:
+  system-name / description / location, falling back to the server
+  hostname when system-name is unset) and the corresponding
+  `show management` CLI command.  The new `schema/on-server/management.schema`
+  is included in the bundle so on-router installs pick it up
+  automatically; no install.sh changes were needed.
+- Bundled component versions:
+  - xcespserver  0.2.1 (was 0.2.0)
+  - xcespcli     0.2.1 (was 0.2.0)
+  - xcespproc    0.2.0 (unchanged)
+  - xcespwdog    0.2.0 (unchanged)
+  - xcesp-on-rtr 0.2.0 (unchanged)
+  - xcesp-on-pw  0.2.0 (unchanged)
+  - xcesp-on-xc  0.2.0 (unchanged)
+  - xcespschema  0.2.0 (unchanged)
+  - xcespconfig  0.2.0 (unchanged)
+  - xcespmap     0.2.0 (unchanged)
+  - xcesppy      0.2.0 (unchanged)
+- First step of the 0.2.x roadmap: management, AAA, audit, SNMP.
+  Subsequent 0.2.x releases will add local users + XCESPG1..XCESPG4
+  groups + optional sshd integration (0.2.2), TACACS + RADIUS + audit
+  log (0.2.3), and the SNMP AgentX subagent (0.2.4).
+
 ## 0.2.0
 
 - **Baseline release opening the 0.2.x line.**  Code is byte-identical
