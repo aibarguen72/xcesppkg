@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.2.0
+
+- **Baseline release opening the 0.2.x line.**  Code is byte-identical
+  to 0.1.131 — no functional change.  Every XCESP subproject's
+  major.minor is realigned to 0.2 so the platform versioning is
+  consistent going forward.  Bundled component versions:
+  - xcespserver 0.2.0 (was 0.1.34)
+  - xcespcli    0.2.0 (was 0.1.32)
+  - xcespproc   0.2.0 (was 0.1.74)
+  - xcespwdog   0.2.0 (was 0.1.4)
+  - xcesp-on-rtr 0.2.0 (was 0.0.211)
+  - xcesp-on-pw  0.2.0 (was 0.0.2)
+  - xcesp-on-xc  0.2.0 (was 0.0.2)
+  - xcespmap    0.2.0 (was 0.1.1)
+  - xcespschema 0.2.0 (was 0.1.1)
+  - xcespconfig 0.2.0 (was 0.1.3)
+  - xcesppy     0.2.0 (was 0.0.4)
+- The 0.2.x line will focus on **XCESP management** and the
+  **Northbound Interface (NBI)** — feature topics will land on top of
+  this stable baseline.
+- Full 451-test XCESPQA regression on the underlying 0.1.131 code:
+  451 PASS, 0 FAIL (1h 02m 36s wall-clock).
+
 ## 0.1.131
 
 - Bundles xcespserver 0.1.34, xcespcli 0.1.32, xcespproc 0.1.74, xcespwdog
