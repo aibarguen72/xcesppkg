@@ -529,9 +529,22 @@ install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-dhclient-script" "$BINDIR/xcesp-dhclient-script"
 install -o root -g root -m 0755 \
     "$INSTALL_DIR/scripts/xcesp-dhclient-script" "$MAINSW_DIR/scripts/xcesp-dhclient-script"
+
+# 0.2.2: xcesp-login — login shell for management/aaa/user accounts.  Lives
+# in /usr/lib/xcesp/ (off PATH) so it cannot be invoked as a user-typed
+# command; sshd_config's ForceCommand and the user's account shell point at
+# this absolute path.  Mirrored into mainsw/ so a CLI upgrade picks up
+# changes (xcesp-activate self-refreshes /usr/lib/xcesp/ from mainsw).
+mkdir -p /usr/lib/xcesp "$MAINSW_DIR/scripts"
+install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-login" /usr/lib/xcesp/xcesp-login
+install -o root -g root -m 0755 \
+    "$INSTALL_DIR/scripts/xcesp-login" "$MAINSW_DIR/scripts/xcesp-login"
+
 info "  $BINDIR/xcesp-activate         (and $MAINSW_DIR/scripts/)"
 info "  $BINDIR/xcesp-swap.sh          (and $MAINSW_DIR/scripts/)"
 info "  $BINDIR/xcesp-dhclient-script  (and $MAINSW_DIR/scripts/)"
+info "  /usr/lib/xcesp/xcesp-login     (and $MAINSW_DIR/scripts/)"
 
 # ---------------------------------------------------------------------------
 # systemd service

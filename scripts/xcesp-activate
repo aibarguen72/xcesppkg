@@ -63,6 +63,17 @@ if [ -d "$MAINSW/scripts" ]; then
             log "  refreshed $dst"
         fi
     done
+    # 0.2.2: xcesp-login lives under /usr/lib/xcesp/ (off PATH).  Refresh
+    # it from mainsw/scripts/ via the same content-compare pattern.
+    if [ -f "$MAINSW/scripts/xcesp-login" ]; then
+        mkdir -p /usr/lib/xcesp
+        src="$MAINSW/scripts/xcesp-login"
+        dst="/usr/lib/xcesp/xcesp-login"
+        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+            install -o root -g root -m 0755 "$src" "$dst"
+            log "  refreshed $dst"
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -864,6 +875,164 @@ if [ -f "$WDOG_INI" ]; then
         echo "$cleaned" > "$WDOG_INI"
         log "  removed static xcespproc entries from $WDOG_INI (now managed by PROC_CONFIG_FILE)"
     fi
+fi
+
+# ---------------------------------------------------------------------------
+# AAA — sync local POSIX users from /var/lib/xcesp/managed-users.state
+# ---------------------------------------------------------------------------
+# Format of MANAGED_USERS_FILE (written by xcespserver):
+#
+#   # xcesp managed-users v1
+#   # fields: username:role:sshd-integration:password-hash:full-name
+#   alice:1:true:$6$salt$hash:Alice Admin
+#   bob:3:true::Bob Operator
+#
+# Behaviour:
+#   * groupadd xcespg1..xcespg4 (idempotent).
+#   * For each user in the state file: ensure a POSIX account exists with
+#     primary group xcespg<role>, login shell /usr/lib/xcesp/xcesp-login,
+#     and (if password hash given) the hash applied via `chpasswd -e`.
+#   * Users previously created by this script but no longer in the state
+#     file are REMOVED (tracked via /var/lib/xcesp/managed-users.tracked
+#     — we never touch accounts we didn't create).
+#   * When sshd-integration is true, install a managed
+#     /etc/ssh/sshd_config.d/50-xcesp.conf that ForceCommand's xcesp-login
+#     for members of xcespg1..xcespg4.  When false, remove that file.
+#
+# A boot with no state file (first install, or no `management/aaa` block
+# in the running config) does NOTHING — neither creates groups nor
+# rewrites sshd_config.
+
+MANAGED_USERS_FILE=${MANAGED_USERS_FILE:-/var/lib/xcesp/managed-users.state}
+MANAGED_USERS_TRACKED=/var/lib/xcesp/managed-users.tracked
+XCESP_LOGIN_BIN=/usr/lib/xcesp/xcesp-login
+SSHD_DROPIN=/etc/ssh/sshd_config.d/50-xcesp.conf
+
+if [ -f "$MANAGED_USERS_FILE" ]; then
+    log "AAA: syncing local users from $MANAGED_USERS_FILE"
+
+    # Validate magic header so we never operate on an unexpected file.
+    head_line=$(head -1 "$MANAGED_USERS_FILE")
+    if [ "$head_line" != "# xcesp managed-users v1" ]; then
+        log "AAA: refusing to process $MANAGED_USERS_FILE — bad magic header"
+    else
+        # 1. Ensure the four role groups exist.
+        for g in xcespg1 xcespg2 xcespg3 xcespg4; do
+            if ! getent group "$g" >/dev/null; then
+                groupadd -r "$g"
+                log "  created group $g"
+            fi
+        done
+
+        # 2. Read sshd-integration flag from the first data line (same on every line).
+        first_data=$(grep -v '^#' "$MANAGED_USERS_FILE" | head -1)
+        sshd_integration=$(echo "$first_data" | awk -F: '{print $3}')
+
+        # 3. Build list of users present in the state file.
+        new_users=$(grep -v '^#' "$MANAGED_USERS_FILE" | awk -F: 'NF>=2 {print $1}')
+        # ...and the previously-tracked list (may be empty / nonexistent).
+        old_users=""
+        if [ -f "$MANAGED_USERS_TRACKED" ]; then
+            old_users=$(cat "$MANAGED_USERS_TRACKED" 2>/dev/null || true)
+        fi
+
+        # 4. Process each user in the new state.
+        while IFS=: read -r u_name u_role u_sshd u_pw u_full; do
+            [ -z "$u_name" ] && continue
+            [ "${u_name:0:1}" = "#" ] && continue
+
+            # Safety: never touch root, xcesp, or any system reserved account.
+            case "$u_name" in
+                root|xcesp|daemon|bin|sys|nobody) log "  skipping reserved name '$u_name'"; continue ;;
+            esac
+
+            grp="xcespg${u_role}"
+            shell="$XCESP_LOGIN_BIN"
+
+            if id "$u_name" >/dev/null 2>&1; then
+                # Existing account — adjust primary group + shell, but leave
+                # other attributes (home dir, UID) alone.
+                current_gid=$(id -g "$u_name")
+                desired_gid=$(getent group "$grp" | awk -F: '{print $3}')
+                if [ "$current_gid" != "$desired_gid" ]; then
+                    usermod -g "$grp" "$u_name"
+                    log "  $u_name: primary group → $grp"
+                fi
+                current_shell=$(getent passwd "$u_name" | awk -F: '{print $7}')
+                if [ "$current_shell" != "$shell" ]; then
+                    usermod -s "$shell" "$u_name"
+                    log "  $u_name: shell → $shell"
+                fi
+                # Always refresh GECOS if it differs (cheap, harmless).
+                current_gecos=$(getent passwd "$u_name" | awk -F: '{print $5}')
+                if [ "$current_gecos" != "$u_full" ]; then
+                    usermod -c "$u_full" "$u_name"
+                fi
+            else
+                useradd --create-home --shell "$shell" -g "$grp" \
+                        --comment "$u_full" "$u_name"
+                log "  created user $u_name (group=$grp shell=$shell)"
+            fi
+
+            # 5. Password: apply if a hash is given.
+            if [ -n "$u_pw" ]; then
+                echo "$u_name:$u_pw" | chpasswd -e
+            else
+                # Empty hash → lock the account (defence in depth; an account
+                # with no password is otherwise login-disabled by sshd anyway).
+                passwd -l "$u_name" >/dev/null
+            fi
+        done < "$MANAGED_USERS_FILE"
+
+        # 6. Remove users that were tracked previously but are no longer in
+        #    the state file.
+        for u in $old_users; do
+            if ! echo "$new_users" | grep -qx "$u"; then
+                case "$u" in
+                    root|xcesp|daemon|bin|sys|nobody) continue ;;
+                esac
+                if id "$u" >/dev/null 2>&1; then
+                    userdel -r "$u" 2>/dev/null || userdel "$u" 2>/dev/null || true
+                    log "  removed user $u (no longer in state file)"
+                fi
+            fi
+        done
+
+        # 7. Update the tracked list so future activations know what we own.
+        echo "$new_users" > "$MANAGED_USERS_TRACKED"
+        chmod 0600 "$MANAGED_USERS_TRACKED"
+
+        # 8. sshd integration drop-in.
+        if [ "$sshd_integration" = "true" ]; then
+            mkdir -p /etc/ssh/sshd_config.d
+            cat > "$SSHD_DROPIN" <<'SSHEOF'
+# BEGIN xcesp — managed by xcesp-activate, do not edit
+#
+# Route members of xcespg1..xcespg4 directly into xcespcli on login.
+# Removing or commenting `Match Group ...` would let these users access
+# a normal shell, which is not what the AAA model intends.
+
+Match Group xcespg1,xcespg2,xcespg3,xcespg4
+    ForceCommand /usr/lib/xcesp/xcesp-login
+    PermitTTY yes
+    X11Forwarding no
+    AllowTcpForwarding no
+    PermitTunnel no
+# END xcesp
+SSHEOF
+            chmod 0644 "$SSHD_DROPIN"
+            log "  installed $SSHD_DROPIN (sshd-integration=true)"
+            systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+        else
+            if [ -f "$SSHD_DROPIN" ]; then
+                rm -f "$SSHD_DROPIN"
+                log "  removed $SSHD_DROPIN (sshd-integration=false)"
+                systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+            fi
+        fi
+    fi
+else
+    log "AAA: $MANAGED_USERS_FILE not present — skipping local-user sync"
 fi
 
 log "activation complete"

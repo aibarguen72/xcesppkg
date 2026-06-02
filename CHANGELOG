@@ -1,5 +1,47 @@
 # Changelog - xcesppkg
 
+## 0.2.2
+
+- **AAA / local users feature.**  Bundles xcespserver 0.2.2 and
+  xcespcli 0.2.2 (new `management/aaa/user <name>` schema with
+  role 1..4 + crypt(5) password hash, `show management`
+  user-table output).
+- **New `scripts/xcesp-login`** — installed to
+  `/usr/lib/xcesp/xcesp-login` (off PATH).  Maps the user's
+  primary group (xcespg1..xcespg4) to a CliRole and exec's
+  xcespcli with `--role` and the system control socket.  Also
+  mirrored into `mainsw/scripts/` so CLI upgrades self-refresh
+  it via xcesp-activate.
+- **xcesp-activate AAA section.**  When
+  `/var/lib/xcesp/managed-users.state` is present:
+  - groupadd xcespg1..xcespg4 (idempotent)
+  - useradd / usermod each configured user (primary group
+    xcespg<role>, login shell /usr/lib/xcesp/xcesp-login,
+    password applied via `chpasswd -e` for already-hashed
+    inputs, or `passwd -l` to lock the account when no hash)
+  - userdel users that were managed previously but no longer
+    appear in the state file (tracked via
+    /var/lib/xcesp/managed-users.tracked)
+  - install or remove /etc/ssh/sshd_config.d/50-xcesp.conf based
+    on the `sshd-integration` flag; reload sshd when it changes
+  - reserved names (root, xcesp, daemon, bin, sys, nobody) are
+    never touched
+- **xcespserver.ini** — new `MANAGED_USERS_FILE` key in
+  `[SERVER]`, default `/var/lib/xcesp/managed-users.state`.
+  Commenting it out disables the feature entirely.
+- Bundled component versions:
+  - xcespserver  0.2.2 (was 0.2.1)
+  - xcespcli     0.2.2 (was 0.2.1)
+  - xcespproc    0.2.0 (unchanged)
+  - xcespwdog    0.2.0 (unchanged)
+  - xcesp-on-rtr 0.2.0 (unchanged)
+  - xcesp-on-pw  0.2.0 (unchanged)
+  - xcesp-on-xc  0.2.0 (unchanged)
+  - xcespschema  0.2.0 (unchanged)
+  - xcespconfig  0.2.0 (unchanged)
+  - xcespmap     0.2.0 (unchanged)
+  - xcesppy      0.2.0 (unchanged)
+
 ## 0.2.1
 
 - **First feature release on the 0.2.x management line.**  Bundles

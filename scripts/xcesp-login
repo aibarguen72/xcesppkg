@@ -1,0 +1,59 @@
+#!/bin/bash
+# xcesp-login — login shell for XCESP-managed local users (xcespg1..xcespg4)
+#
+# Installed at /usr/lib/xcesp/xcesp-login by install.sh and set as the login
+# shell for every user in `management/aaa/user N` blocks (xcesp-activate
+# writes this via `useradd -s` / `usermod -s`).
+#
+# sshd_config integration (gated by `aaa sshd-integration true` in the
+# running config) adds a Match Group block that ForceCommand's this script
+# for members of xcespg1..xcespg4 — including users whose login shell was
+# manually changed (e.g. /bin/bash) by an operator who shouldn't have.
+#
+# The script's job is to:
+#   1. Read the user's primary group (xcespg1..xcespg4)
+#   2. Map it to a CliRole 1..4
+#   3. Exec xcespcli with --role and the system control socket
+#
+# Anything weird (no matching group, missing xcespcli binary) → exit 1.
+# We never fall back to a shell, even on error — that would defeat the AAA.
+
+set -eu
+
+XCESPCLI=${XCESPCLI:-/usr/bin/xcespcli}
+XCESP_SOCKET=${XCESP_SOCKET:-/var/run/xcesp/ctrl.sock}
+
+if [ ! -x "$XCESPCLI" ]; then
+    echo "xcesp-login: $XCESPCLI not executable" >&2
+    exit 1
+fi
+
+# Resolve role from user's primary group.
+primary_group=$(id -gn 2>/dev/null || true)
+case "$primary_group" in
+    xcespg1) role=1 ;;
+    xcespg2) role=2 ;;
+    xcespg3) role=3 ;;
+    xcespg4) role=4 ;;
+    *)
+        # Fallback: scan supplementary groups in case the primary is wrong.
+        role=""
+        for g in $(id -Gn 2>/dev/null); do
+            case "$g" in
+                xcespg1) role=1; break ;;
+                xcespg2) role=2; break ;;
+                xcespg3) role=3; break ;;
+                xcespg4) role=4; break ;;
+            esac
+        done
+        if [ -z "$role" ]; then
+            echo "xcesp-login: $(id -un) is not a member of any xcespg1..xcespg4 group — refusing" >&2
+            exit 1
+        fi
+        ;;
+esac
+
+# Build the xcespcli invocation.  We pass --socket explicitly (the operator's
+# user may not be able to read the default INI to discover it) and --role
+# so xcespcli applies the matching command gating.
+exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role"
