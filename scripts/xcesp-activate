@@ -1125,9 +1125,25 @@ SSHEOF
                 usermod -c "$u_full" "$u_name"
             fi
         else
-            useradd --create-home --shell "$shell" -g "$grp" \
+            # New account.  Primary group is xcespg<role> (drives CliRole);
+            # supplementary "xcesp" lets the account traverse
+            # /var/run/xcesp/ and read ctrl.sock — without it the
+            # ForceCommand xcesp-login → xcespcli connection fails with
+            # "Connection failed" because the socket dir is mode 0750
+            # xcesp:xcesp.
+            useradd --create-home --shell "$shell" \
+                    -g "$grp" -G "$XCESP_USER" \
                     --comment "$u_full" "$u_name"
-            log "  created user $u_name (group=$grp shell=$shell)"
+            log "  created user $u_name (group=$grp +$XCESP_USER shell=$shell)"
+        fi
+
+        # Always re-assert membership in the `xcesp` supplementary group —
+        # `usermod -aG` is additive and idempotent.  Covers both freshly
+        # created accounts (where useradd -G already set it) and existing
+        # accounts that pre-date the 0.2.6 fix.
+        if ! id -nG "$u_name" 2>/dev/null | tr ' ' '\n' | grep -qx "$XCESP_USER"; then
+            usermod -aG "$XCESP_USER" "$u_name"
+            log "  $u_name: + supplementary group $XCESP_USER"
         fi
 
         if [ -n "$u_pw" ]; then

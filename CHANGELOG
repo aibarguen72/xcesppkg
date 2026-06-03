@@ -1,5 +1,44 @@
 # Changelog - xcesppkg
 
+## 0.2.6
+
+- **Fix: managed users couldn't connect to the control socket.**
+  POSIX accounts created by xcesp-activate had primary group
+  xcespg<role> but no membership in the `xcesp` group, so they
+  could neither traverse `/var/run/xcesp/` (mode 0750 xcesp:xcesp)
+  nor read `ctrl.sock` (0660 xcesp:xcesp).  The shell wrapper
+  `xcesp-login` exec'd `xcespcli` immediately on ssh login and
+  the operator saw "Connection failed" loop.
+  - `useradd` now passes `-G $XCESP_USER` (supplementary group
+    "xcesp") on first creation.
+  - For accounts that pre-date this fix, an idempotent
+    `usermod -aG xcesp <user>` runs every activation if the
+    membership is missing.
+- **Bundles xcespserver 0.2.5** — the new password-hash UX:
+  operators type `password mypass` and xcespserver rewrites the
+  attribute to `password-hash $6$<salt>$<crypt-sha512>` on
+  commit.  `show running-config` and the saved file only ever
+  carry the hash.
+  - Replaces the 0.2.2..0.2.4 workflow where operators had to
+    pre-hash via `openssl passwd -6` and paste the result.
+  - Existing configs with `password $6$...` (already a hash)
+    are renamed to `password-hash` verbatim on first commit —
+    no re-hashing.
+- No changes to install.sh, the systemd unit, or any other
+  binary in the bundle.
+- Bundled component versions:
+  - xcespserver  0.2.5 (was 0.2.4)
+  - xcespcli     0.2.4 (unchanged)
+  - xcespschema  0.2.1 (unchanged)
+  - xcespproc    0.2.0 (unchanged)
+  - xcespwdog    0.2.0 (unchanged)
+  - xcesp-on-rtr 0.2.0 (unchanged)
+  - xcesp-on-pw  0.2.0 (unchanged)
+  - xcesp-on-xc  0.2.0 (unchanged)
+  - xcespconfig  0.2.0 (unchanged)
+  - xcespmap     0.2.0 (unchanged)
+  - xcesppy      0.2.0 (unchanged)
+
 ## 0.2.5
 
 - **Fix: AAA never materialised on VMs upgraded from pre-0.2.2.**
