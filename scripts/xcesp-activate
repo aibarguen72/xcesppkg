@@ -852,6 +852,38 @@ fi
 chown "$XCESP_USER:$XCESP_GROUP" "$WDOG_PROC_FILE"
 chmod 0640 "$WDOG_PROC_FILE"
 
+# Patch existing xcespserver.ini installations that pre-date MANAGED_USERS_FILE
+# support (xcesppkg 0.2.2+).  install.sh only writes xcespserver.ini if the file
+# does not already exist (non-destructive), so a VM that was first installed
+# with an earlier xcesppkg keeps its INI verbatim and loses the new key.
+# Without MANAGED_USERS_FILE, xcespserver silently skips writing
+# /var/lib/xcesp/managed-users.state and the AAA section below has nothing
+# to consume — `sshd-integration true` looks like it does nothing at all.
+SERVER_INI=$XCESP_BASE/cfg/xcespserver.ini
+if [ -f "$SERVER_INI" ]; then
+    if ! grep -q "^MANAGED_USERS_FILE" "$SERVER_INI"; then
+        # Insert after DEPLOY_BATCH_SIZE (last line of the tuning block in the
+        # shipped template).  Fall back to inserting at the end of [SERVER]
+        # if the anchor line is absent.
+        if grep -q "^DEPLOY_BATCH_SIZE" "$SERVER_INI"; then
+            sed -i '/^DEPLOY_BATCH_SIZE/a MANAGED_USERS_FILE   = /var/lib/xcesp/managed-users.state' "$SERVER_INI"
+        else
+            # Insert immediately before the first non-[SERVER] section header,
+            # or at end-of-file if [SERVER] is the only section.
+            awk '
+                BEGIN { inserted=0; in_server=0 }
+                /^\[SERVER\]/  { in_server=1; print; next }
+                /^\[/ && in_server && !inserted { print "MANAGED_USERS_FILE   = /var/lib/xcesp/managed-users.state"; inserted=1; in_server=0 }
+                { print }
+                END { if (in_server && !inserted) print "MANAGED_USERS_FILE   = /var/lib/xcesp/managed-users.state" }
+            ' "$SERVER_INI" > "$SERVER_INI.tmp" && mv "$SERVER_INI.tmp" "$SERVER_INI"
+            chown "$XCESP_USER:$XCESP_GROUP" "$SERVER_INI"
+            chmod 0640 "$SERVER_INI"
+        fi
+        log "  injected MANAGED_USERS_FILE into $SERVER_INI (legacy install)"
+    fi
+fi
+
 # Patch existing xcespwdog.ini installations that pre-date PROC_CONFIG_FILE support:
 # 1. Inject PROC_CONFIG_FILE if missing.
 # 2. Remove any static [process.N] entries for xcespproc (N >= 2) — they would

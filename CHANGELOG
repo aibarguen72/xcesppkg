@@ -1,5 +1,47 @@
 # Changelog - xcesppkg
 
+## 0.2.5
+
+- **Fix: AAA never materialised on VMs upgraded from pre-0.2.2.**
+  install.sh treats /var/xcesp/cfg/xcespserver.ini as non-destructive
+  (existing file kept verbatim), so a VM first installed with an
+  xcesppkg before 0.2.2 never gained the
+  `MANAGED_USERS_FILE = /var/lib/xcesp/managed-users.state` key.
+  Without it, xcespserver silently skipped writing the state file
+  and xcesp-activate (with the 0.2.4 lifecycle) interpreted the
+  missing file as "sshd-integration=false → cleanup mode" — so
+  even `sshd-integration true` produced no xcespg1..4 groups.
+
+  xcesp-activate now auto-patches xcespserver.ini in place if the
+  MANAGED_USERS_FILE line is missing — same idempotent pattern
+  already used for PROC_CONFIG_FILE in xcespwdog.ini.  Inserts the
+  line after DEPLOY_BATCH_SIZE (the tuning anchor in the shipped
+  template), or as the last line of `[SERVER]` if that anchor is
+  also missing.
+
+  **Upgrade UX note:** the first service restart on a pre-0.2.5 VM
+  patches the INI but xcespserver hasn't run yet, so the state
+  file still doesn't exist when xcesp-activate's AAA section runs
+  on that boot.  xcespserver writes the state file moments later
+  during its own startup.  A SECOND restart (or any config commit
+  in between) is needed for AAA materialisation to take effect.
+  Once on 0.2.5+, all subsequent boots are single-step.
+
+- No source changes to xcespserver / xcespcli / xcespschema; this
+  release only ships an updated xcesp-activate.
+- Bundled component versions (unchanged from 0.2.4):
+  - xcespserver  0.2.4
+  - xcespcli     0.2.4
+  - xcespschema  0.2.1
+  - xcespproc    0.2.0
+  - xcespwdog    0.2.0
+  - xcesp-on-rtr 0.2.0
+  - xcesp-on-pw  0.2.0
+  - xcesp-on-xc  0.2.0
+  - xcespconfig  0.2.0
+  - xcespmap     0.2.0
+  - xcesppy      0.2.0
+
 ## 0.2.4
 
 - **`erase-startup-config` preserves `management`** (system
