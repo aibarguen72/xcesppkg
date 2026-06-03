@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.2.7
+
+- **Security fix bundled: ROLE_2 (NO_USER_ACCESS) is now
+  enforced.**  Bundles xcespcli 0.2.5 with the gate that blocks
+  every config-mode path that would mutate the
+  `management/aaa` subtree (local users + sshd-integration)
+  for any role above 1.  Previously the role was documented
+  but not implemented; a role 2 operator could `delete user
+  <name>` from inside management/aaa exactly like a role 1
+  admin.
+- The gate fires in five places — navigation, set, delete-attr,
+  delete-node, create-node — and emits a clear
+  "permission denied: <op> under management/aaa requires role 1
+  (current role N)" message.
+- No xcespserver / xcespschema / scripts changes; pure xcespcli
+  refresh.
+- Bundled component versions:
+  - xcespserver  0.2.5 (unchanged)
+  - xcespcli     0.2.5 (was 0.2.4) **role-2 aaa gate**
+  - xcespschema  0.2.1 (unchanged)
+  - xcespproc, xcespwdog, xcesp-on-rtr/pw/xc, xcespconfig,
+    xcespmap, xcesppy: all 0.2.0 (unchanged)
+
 ## 0.2.6
 
 - **Fix: managed users couldn't connect to the control socket.**
