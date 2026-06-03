@@ -1,5 +1,57 @@
 # Changelog - xcesppkg
 
+## 0.2.4
+
+- **`erase-startup-config` preserves `management`** (system
+  identity + AAA users + sshd-integration flag).  Previously
+  reset wiped them along with everything else.  Bundles
+  xcespcli 0.2.4 with the fix.
+- **xcesp-activate AAA logic reworked.**  The system-side
+  group + user materialisation is now tied entirely to the
+  `aaa sshd-integration` flag (read from the new v2 state file
+  header written by xcespserver 0.2.4):
+
+  - `sshd-integration true` (ENABLE):
+    1. Install /etc/ssh/sshd_config.d/50-xcesp.conf (Match
+       Group block routing xcespg1..4 into xcesp-login).
+    2. Create xcespg1..xcespg4 groups if missing.
+    3. State → Linux: useradd / usermod each configured user
+       with primary group xcespg<role>, login shell xcesp-login,
+       GECOS, and password hash (chpasswd -e or passwd -l).
+    4. Linux → State: every Linux account whose primary group
+       is xcespg1..4 (or supplementary member) and which is NOT
+       in the state file with the matching role is REMOVED.
+       Supplementary memberships in the wrong xcespgN are
+       stripped (gpasswd -d).
+    5. Reserved names (root, xcesp, daemon, bin, sys, nobody)
+       are never touched.
+
+  - `sshd-integration false` (or state file missing) — DISABLE:
+    1. Remove /etc/ssh/sshd_config.d/50-xcesp.conf.
+    2. userdel every account in xcespg1..4 (primary or
+       supplementary) — reserved names skipped.
+    3. groupdel xcespg1..xcespg4.
+
+  User definitions stay in the running config across enable/
+  disable cycles; only the materialised POSIX state moves.
+- The legacy `/var/lib/xcesp/managed-users.tracked` file is no
+  longer used — `xcesp-activate` discovers managed accounts
+  directly from getent passwd / getent group at run time.
+- v1 state files (xcesppkg 0.2.2) are detected and skipped;
+  xcespserver 0.2.4 rewrites as v2 on the next config commit.
+- Bundled component versions:
+  - xcespserver  0.2.4 (was 0.2.3)
+  - xcespcli     0.2.4 (was 0.2.3)
+  - xcespschema  0.2.1 (unchanged)
+  - xcespproc    0.2.0 (unchanged)
+  - xcespwdog    0.2.0 (unchanged)
+  - xcesp-on-rtr 0.2.0 (unchanged)
+  - xcesp-on-pw  0.2.0 (unchanged)
+  - xcesp-on-xc  0.2.0 (unchanged)
+  - xcespconfig  0.2.0 (unchanged)
+  - xcespmap     0.2.0 (unchanged)
+  - xcesppy      0.2.0 (unchanged)
+
 ## 0.2.3
 
 - **Fix: typing `management` in the CLI no longer errors with

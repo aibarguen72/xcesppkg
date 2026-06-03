@@ -880,132 +880,156 @@ fi
 # ---------------------------------------------------------------------------
 # AAA — sync local POSIX users from /var/lib/xcesp/managed-users.state
 # ---------------------------------------------------------------------------
-# Format of MANAGED_USERS_FILE (written by xcespserver):
+# Format of MANAGED_USERS_FILE (v2, written by xcespserver 0.2.4+):
 #
-#   # xcesp managed-users v1
-#   # fields: username:role:sshd-integration:password-hash:full-name
-#   alice:1:true:$6$salt$hash:Alice Admin
-#   bob:3:true::Bob Operator
+#   # xcesp managed-users v2
+#   # sshd-integration: true|false
+#   # fields: username:role:password-hash:full-name
+#   alice:1:$6$salt$hash:Alice Admin
+#   bob:3::Bob Operator
 #
-# Behaviour:
-#   * groupadd xcespg1..xcespg4 (idempotent).
-#   * For each user in the state file: ensure a POSIX account exists with
-#     primary group xcespg<role>, login shell /usr/lib/xcesp/xcesp-login,
-#     and (if password hash given) the hash applied via `chpasswd -e`.
-#   * Users previously created by this script but no longer in the state
-#     file are REMOVED (tracked via /var/lib/xcesp/managed-users.tracked
-#     — we never touch accounts we didn't create).
-#   * When sshd-integration is true, install a managed
-#     /etc/ssh/sshd_config.d/50-xcesp.conf that ForceCommand's xcesp-login
-#     for members of xcespg1..xcespg4.  When false, remove that file.
+# Lifecycle (tied to the sshd-integration flag — the user explicitly opts
+# into having XCESP touch /etc/ssh/sshd_config and the system user DB):
 #
-# A boot with no state file (first install, or no `management/aaa` block
-# in the running config) does NOTHING — neither creates groups nor
-# rewrites sshd_config.
+#  ENABLE (sshd-integration: true):
+#    1. /etc/ssh/sshd_config.d/50-xcesp.conf is written (Match Group block
+#       routing xcespg1..xcespg4 into /usr/lib/xcesp/xcesp-login).
+#    2. xcespg1..xcespg4 system groups are created if missing.
+#    3. POSIX users are SYNCHRONISED with the state file, bidirectionally:
+#       - State → Linux: each state user is created or fixed up (primary
+#         group xcespg<role>, login shell xcesp-login, GECOS, password
+#         via `chpasswd -e` or `passwd -l` when no hash).
+#       - Linux → State: every account whose primary group is xcespg1..4
+#         (or that is a supplementary member of any of those groups) and
+#         is NOT in the state file with the matching role is REMOVED.
+#         Reserved names (root, xcesp, daemon, bin, sys, nobody) are
+#         never touched.
+#
+#  DISABLE (sshd-integration: false, or no state file at all):
+#    1. /etc/ssh/sshd_config.d/50-xcesp.conf is removed.
+#    2. Every POSIX account whose primary group is xcespg1..4 (or
+#       supplementary member) is REMOVED (reserved names skipped).
+#    3. xcespg1..xcespg4 system groups are removed.
+#
+# The cleanup is intentional and matches the user-facing semantics:
+# disabling sshd-integration is the operator saying "I no longer want
+# XCESP-managed system accounts" — the system is returned to its
+# pre-enable state.  User definitions stay in the running config and
+# will re-materialise on the next enable.
 
 MANAGED_USERS_FILE=${MANAGED_USERS_FILE:-/var/lib/xcesp/managed-users.state}
-MANAGED_USERS_TRACKED=/var/lib/xcesp/managed-users.tracked
 XCESP_LOGIN_BIN=/usr/lib/xcesp/xcesp-login
 SSHD_DROPIN=/etc/ssh/sshd_config.d/50-xcesp.conf
+XCESP_ROLE_GROUPS="xcespg1 xcespg2 xcespg3 xcespg4"
+
+# Reserved names that we must never create, modify, or remove regardless
+# of what the state file or system groups claim — defence in depth in case
+# a future bug puts a critical account in xcespg1..4 by mistake.
+xcesp_aaa_reserved() {
+    case "$1" in
+        root|xcesp|daemon|bin|sys|nobody) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# Echo every account whose primary group is one of xcespg1..4 OR that is
+# a supplementary member of any of them, one username per line, sorted +
+# deduplicated.  Used to discover the set of XCESP-managed POSIX users
+# from the system side (independent of the state file).
+xcesp_aaa_collect_system_users() {
+    {
+        for g in $XCESP_ROLE_GROUPS; do
+            gid=$(getent group "$g" 2>/dev/null | awk -F: '{print $3}')
+            if [ -n "$gid" ]; then
+                # Primary-group members.
+                getent passwd | awk -F: -v gid="$gid" '$4 == gid {print $1}'
+            fi
+            # Supplementary-group members (group entry's 4th field is a comma list).
+            getent group "$g" 2>/dev/null | awk -F: '{print $4}' | tr ',' '\n' | grep -v '^$' || true
+        done
+    } | sort -u
+}
+
+# Remove a managed account safely.  Refuses reserved names.  Logs the
+# removal so a diff-able xcesp-activate run is auditable.
+xcesp_aaa_remove_user() {
+    local u="$1"
+    local reason="$2"
+    if xcesp_aaa_reserved "$u"; then
+        log "  skipping reserved name '$u' (${reason})"
+        return 0
+    fi
+    if ! id "$u" >/dev/null 2>&1; then
+        return 0
+    fi
+    # Prefer removing the home dir so a re-create with the same name
+    # starts clean.  If userdel -r fails (e.g. dir gone, processes
+    # owning it), fall back to userdel without -r.
+    if userdel -r "$u" 2>/dev/null; then
+        log "  removed user $u (${reason})"
+    elif userdel "$u" 2>/dev/null; then
+        log "  removed user $u (no home cleanup, ${reason})"
+    else
+        log "  WARNING: userdel failed for $u (${reason})"
+    fi
+}
+
+# --- Determine desired state ------------------------------------------------
+# When the state file exists we trust it; otherwise we behave as if
+# sshd-integration is false (so an uninstall / `aaa` removal from config
+# correctly tears the system back down).
+
+sshd_integration=false
+state_present=false
+state_format_ok=false
+declare -A state_user_role
+declare -A state_user_password
+declare -A state_user_fullname
+state_users_ordered=""
 
 if [ -f "$MANAGED_USERS_FILE" ]; then
-    log "AAA: syncing local users from $MANAGED_USERS_FILE"
-
-    # Validate magic header so we never operate on an unexpected file.
+    state_present=true
     head_line=$(head -1 "$MANAGED_USERS_FILE")
-    if [ "$head_line" != "# xcesp managed-users v1" ]; then
-        log "AAA: refusing to process $MANAGED_USERS_FILE — bad magic header"
-    else
-        # 1. Ensure the four role groups exist.
-        for g in xcespg1 xcespg2 xcespg3 xcespg4; do
-            if ! getent group "$g" >/dev/null; then
-                groupadd -r "$g"
-                log "  created group $g"
-            fi
-        done
+    case "$head_line" in
+        "# xcesp managed-users v2")
+            state_format_ok=true
+            ;;
+        "# xcesp managed-users v1")
+            log "AAA: $MANAGED_USERS_FILE is v1 (legacy from 0.2.2) — ignoring; xcespserver 0.2.4+ will rewrite as v2 on next commit"
+            ;;
+        *)
+            log "AAA: refusing to process $MANAGED_USERS_FILE — bad magic header"
+            ;;
+    esac
+fi
 
-        # 2. Read sshd-integration flag from the first data line (same on every line).
-        first_data=$(grep -v '^#' "$MANAGED_USERS_FILE" | head -1)
-        sshd_integration=$(echo "$first_data" | awk -F: '{print $3}')
+if [ "$state_format_ok" = "true" ]; then
+    # Parse sshd-integration from the header comment (always present in v2).
+    si=$(grep -m1 '^# sshd-integration:' "$MANAGED_USERS_FILE" | awk -F': *' '{print $2}' | tr -d '[:space:]')
+    [ "$si" = "true" ] && sshd_integration=true
 
-        # 3. Build list of users present in the state file.
-        new_users=$(grep -v '^#' "$MANAGED_USERS_FILE" | awk -F: 'NF>=2 {print $1}')
-        # ...and the previously-tracked list (may be empty / nonexistent).
-        old_users=""
-        if [ -f "$MANAGED_USERS_TRACKED" ]; then
-            old_users=$(cat "$MANAGED_USERS_TRACKED" 2>/dev/null || true)
-        fi
+    # Parse user lines (skip comments / blank).
+    while IFS=: read -r u_name u_role u_pw u_full; do
+        [ -z "$u_name" ] && continue
+        case "$u_name" in '#'*) continue ;; esac
+        state_user_role["$u_name"]="$u_role"
+        state_user_password["$u_name"]="$u_pw"
+        state_user_fullname["$u_name"]="$u_full"
+        state_users_ordered="$state_users_ordered $u_name"
+    done < "$MANAGED_USERS_FILE"
+fi
 
-        # 4. Process each user in the new state.
-        while IFS=: read -r u_name u_role u_sshd u_pw u_full; do
-            [ -z "$u_name" ] && continue
-            [ "${u_name:0:1}" = "#" ] && continue
+if [ "$state_present" = "false" ]; then
+    log "AAA: no state file at $MANAGED_USERS_FILE — treating as sshd-integration=false (cleanup)"
+fi
 
-            # Safety: never touch root, xcesp, or any system reserved account.
-            case "$u_name" in
-                root|xcesp|daemon|bin|sys|nobody) log "  skipping reserved name '$u_name'"; continue ;;
-            esac
+# --- ENABLE path -----------------------------------------------------------
+if [ "$sshd_integration" = "true" ]; then
+    log "AAA: sshd-integration=true — sync mode"
 
-            grp="xcespg${u_role}"
-            shell="$XCESP_LOGIN_BIN"
-
-            if id "$u_name" >/dev/null 2>&1; then
-                # Existing account — adjust primary group + shell, but leave
-                # other attributes (home dir, UID) alone.
-                current_gid=$(id -g "$u_name")
-                desired_gid=$(getent group "$grp" | awk -F: '{print $3}')
-                if [ "$current_gid" != "$desired_gid" ]; then
-                    usermod -g "$grp" "$u_name"
-                    log "  $u_name: primary group → $grp"
-                fi
-                current_shell=$(getent passwd "$u_name" | awk -F: '{print $7}')
-                if [ "$current_shell" != "$shell" ]; then
-                    usermod -s "$shell" "$u_name"
-                    log "  $u_name: shell → $shell"
-                fi
-                # Always refresh GECOS if it differs (cheap, harmless).
-                current_gecos=$(getent passwd "$u_name" | awk -F: '{print $5}')
-                if [ "$current_gecos" != "$u_full" ]; then
-                    usermod -c "$u_full" "$u_name"
-                fi
-            else
-                useradd --create-home --shell "$shell" -g "$grp" \
-                        --comment "$u_full" "$u_name"
-                log "  created user $u_name (group=$grp shell=$shell)"
-            fi
-
-            # 5. Password: apply if a hash is given.
-            if [ -n "$u_pw" ]; then
-                echo "$u_name:$u_pw" | chpasswd -e
-            else
-                # Empty hash → lock the account (defence in depth; an account
-                # with no password is otherwise login-disabled by sshd anyway).
-                passwd -l "$u_name" >/dev/null
-            fi
-        done < "$MANAGED_USERS_FILE"
-
-        # 6. Remove users that were tracked previously but are no longer in
-        #    the state file.
-        for u in $old_users; do
-            if ! echo "$new_users" | grep -qx "$u"; then
-                case "$u" in
-                    root|xcesp|daemon|bin|sys|nobody) continue ;;
-                esac
-                if id "$u" >/dev/null 2>&1; then
-                    userdel -r "$u" 2>/dev/null || userdel "$u" 2>/dev/null || true
-                    log "  removed user $u (no longer in state file)"
-                fi
-            fi
-        done
-
-        # 7. Update the tracked list so future activations know what we own.
-        echo "$new_users" > "$MANAGED_USERS_TRACKED"
-        chmod 0600 "$MANAGED_USERS_TRACKED"
-
-        # 8. sshd integration drop-in.
-        if [ "$sshd_integration" = "true" ]; then
-            mkdir -p /etc/ssh/sshd_config.d
-            cat > "$SSHD_DROPIN" <<'SSHEOF'
+    # 1. sshd_config drop-in (Pre-activate: ensure XCESPG group logic exists).
+    mkdir -p /etc/ssh/sshd_config.d
+    desired_dropin=$(cat <<'SSHEOF'
 # BEGIN xcesp — managed by xcesp-activate, do not edit
 #
 # Route members of xcespg1..xcespg4 directly into xcespcli on login.
@@ -1020,19 +1044,120 @@ Match Group xcespg1,xcespg2,xcespg3,xcespg4
     PermitTunnel no
 # END xcesp
 SSHEOF
-            chmod 0644 "$SSHD_DROPIN"
-            log "  installed $SSHD_DROPIN (sshd-integration=true)"
-            systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
-        else
-            if [ -f "$SSHD_DROPIN" ]; then
-                rm -f "$SSHD_DROPIN"
-                log "  removed $SSHD_DROPIN (sshd-integration=false)"
-                systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
-            fi
-        fi
+    )
+    current_dropin=""
+    [ -f "$SSHD_DROPIN" ] && current_dropin=$(cat "$SSHD_DROPIN")
+    if [ "$current_dropin" != "$desired_dropin" ]; then
+        printf '%s\n' "$desired_dropin" > "$SSHD_DROPIN"
+        chmod 0644 "$SSHD_DROPIN"
+        log "  installed $SSHD_DROPIN (sshd-integration=true)"
+        systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
     fi
-else
-    log "AAA: $MANAGED_USERS_FILE not present — skipping local-user sync"
+
+    # 2. Ensure the four role groups exist.
+    for g in $XCESP_ROLE_GROUPS; do
+        if ! getent group "$g" >/dev/null; then
+            groupadd -r "$g"
+            log "  created group $g"
+        fi
+    done
+
+    # 3. State → Linux: create or fix up each user in the state file.
+    for u_name in $state_users_ordered; do
+        if xcesp_aaa_reserved "$u_name"; then
+            log "  skipping reserved name '$u_name' (in state file)"
+            continue
+        fi
+        u_role="${state_user_role[$u_name]}"
+        u_pw="${state_user_password[$u_name]}"
+        u_full="${state_user_fullname[$u_name]}"
+
+        case "$u_role" in 1|2|3|4) ;; *) u_role=1 ;; esac
+        grp="xcespg${u_role}"
+        shell="$XCESP_LOGIN_BIN"
+
+        if id "$u_name" >/dev/null 2>&1; then
+            current_gid=$(id -g "$u_name")
+            desired_gid=$(getent group "$grp" | awk -F: '{print $3}')
+            if [ "$current_gid" != "$desired_gid" ]; then
+                usermod -g "$grp" "$u_name"
+                log "  $u_name: primary group → $grp"
+            fi
+            current_shell=$(getent passwd "$u_name" | awk -F: '{print $7}')
+            if [ "$current_shell" != "$shell" ]; then
+                usermod -s "$shell" "$u_name"
+                log "  $u_name: shell → $shell"
+            fi
+            current_gecos=$(getent passwd "$u_name" | awk -F: '{print $5}')
+            if [ "$current_gecos" != "$u_full" ]; then
+                usermod -c "$u_full" "$u_name"
+            fi
+        else
+            useradd --create-home --shell "$shell" -g "$grp" \
+                    --comment "$u_full" "$u_name"
+            log "  created user $u_name (group=$grp shell=$shell)"
+        fi
+
+        if [ -n "$u_pw" ]; then
+            echo "$u_name:$u_pw" | chpasswd -e
+        else
+            passwd -l "$u_name" >/dev/null
+        fi
+    done
+
+    # 4. Linux → State: remove any Linux account whose primary group is
+    #    xcespg1..4 (or that is a supplementary member) and whose name or
+    #    role does NOT match the state file.
+    system_xcesp_users=$(xcesp_aaa_collect_system_users)
+    for u in $system_xcesp_users; do
+        if xcesp_aaa_reserved "$u"; then continue; fi
+        if [ -n "${state_user_role[$u]+set}" ]; then
+            # User is in state.  Check primary group matches the configured role.
+            expected_gid=$(getent group "xcespg${state_user_role[$u]}" | awk -F: '{print $3}')
+            current_gid=$(id -g "$u" 2>/dev/null || echo "")
+            if [ "$current_gid" != "$expected_gid" ]; then
+                # Primary group still wrong (e.g. only-supplementary member of
+                # a different xcespg).  usermod above already fixed primary
+                # group for state users; if this fires it means the account
+                # was a supplementary member of xcespgX for a role it doesn't
+                # hold — strip the supplementary memberships.
+                for g in $XCESP_ROLE_GROUPS; do
+                    if [ "$g" != "xcespg${state_user_role[$u]}" ]; then
+                        gpasswd -d "$u" "$g" >/dev/null 2>&1 || true
+                    fi
+                done
+            fi
+        else
+            xcesp_aaa_remove_user "$u" "in xcespgX but not in state file"
+        fi
+    done
+fi
+
+# --- DISABLE path ----------------------------------------------------------
+if [ "$sshd_integration" = "false" ]; then
+    log "AAA: sshd-integration=false — cleanup mode"
+
+    # 1. Remove the sshd_config drop-in (Pre-activate: strip XCESPG group logic).
+    if [ -f "$SSHD_DROPIN" ]; then
+        rm -f "$SSHD_DROPIN"
+        log "  removed $SSHD_DROPIN (sshd-integration=false)"
+        systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+    fi
+
+    # 2. Remove every account whose primary group is xcespg1..4 (or that
+    #    is a supplementary member).  Reserved names are skipped.
+    system_xcesp_users=$(xcesp_aaa_collect_system_users)
+    for u in $system_xcesp_users; do
+        xcesp_aaa_remove_user "$u" "sshd-integration disabled"
+    done
+
+    # 3. Remove the role groups themselves.
+    for g in $XCESP_ROLE_GROUPS; do
+        if getent group "$g" >/dev/null; then
+            groupdel "$g" 2>/dev/null && log "  removed group $g" \
+                || log "  WARNING: groupdel failed for $g"
+        fi
+    done
 fi
 
 log "activation complete"
