@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.2.8
+
+- **Fix: xcespserver runs on Debian / Ubuntu out of the box.**
+  Bundles xcespserver 0.2.6 with libcrypt linked statically
+  (`-l:libcrypt.a` instead of `-lcrypt`).  Resolves the
+  cross-distro libxcrypt SONAME mismatch where a Fedora-built
+  xcespserver expected `libcrypt.so.2` but Debian / Ubuntu ship
+  `libcrypt.so.1`.  No manual symlink needed; no per-distro
+  install.sh carve-outs.
+- Binary grows by ~80 KB (the crypt() implementation is now
+  embedded directly).  `ldd /usr/bin/xcespserver` no longer lists
+  `libcrypt.so.*`.
+- Build-host requirement (developers only — operators not
+  affected): `sudo dnf install libxcrypt-static` on Fedora or
+  `sudo apt install libcrypt-dev` on Debian.
+- Bundled component versions:
+  - xcespserver  0.2.6 (was 0.2.5) **static libcrypt**
+  - xcespcli     0.2.5 (unchanged)
+  - xcespschema  0.2.1 (unchanged)
+  - xcespproc, xcespwdog, xcesp-on-rtr/pw/xc, xcespconfig,
+    xcespmap, xcesppy: all 0.2.0 (unchanged)
+
 ## 0.2.7
 
 - **Security fix bundled: ROLE_2 (NO_USER_ACCESS) is now
