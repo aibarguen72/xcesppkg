@@ -1,5 +1,59 @@
 # Changelog - xcesppkg
 
+## 0.2.11
+
+- **Hotfix: TACACS+ pool-account login was broken in 0.2.10.**
+  `AuthenticationMethods none` in the sshd drop-in was silently
+  ignored on Fedora's hardened sshd build — sshd reverted to default
+  password authentication, prompted for a password, then rejected the
+  locked /etc/shadow entry with "Permission denied".  `sshd -t`
+  accepted the syntax but the runtime behaviour didn't match.
+
+  Fix: pivot from `AuthenticationMethods none` to a **PAM permit hack**
+  that the popular network OSes (Cumulus Linux, pfSense) also use for
+  shared pool accounts:
+
+  1. xcesp-activate prepends a managed block at the TOP of
+     `/etc/pam.d/sshd`:
+     ```
+     # BEGIN xcesp-tacacs-pam
+     auth [success=done default=ignore] pam_succeed_if.so user = xcesp-tacacs quiet_success
+     # END xcesp-tacacs-pam
+     ```
+     - For the xcesp-tacacs user, pam_succeed_if returns SUCCESS,
+       [success=done] terminates the auth stack with PAM_SUCCESS
+       before any other line runs.
+     - For all other users, pam_succeed_if returns IGNORE,
+       [default=ignore] skips the line, normal auth chain runs.
+     - `quiet_success` keeps /var/log/secure clean.
+  2. sshd drop-in updated:
+     `AuthenticationMethods password` + `PermitEmptyPasswords yes`
+     so sshd prompts for a password but accepts ANY input (the PAM
+     short-circuit above does the real work).
+
+  UX: `ssh xcesp-tacacs@router` still shows a password prompt —
+  press Enter or type anything to get past it.  The REAL auth then
+  happens in xcesp-tacacs-auth (ForceCommand).
+
+- **Hotfix: xcesp-tacacs-auth wasn't self-refreshed by xcesp-activate.**
+  The /usr/lib/xcesp/xcesp-login self-refresh loop covered the
+  shell wrapper but not the new tool.  Operators upgrading via CLI
+  `software-install` (which only swaps mainsw/backupsw — does NOT
+  rerun install.sh) ended up with a stale tool while the mainsw
+  copy was current.  Now both are mirrored from
+  `$MAINSW/lib/xcesp/xcesp-tacacs-auth` on every activation.
+
+- Cleanup: 0.2.10's PAM block markers (`# BEGIN xcesp-tacacs-pam` /
+  `# END xcesp-tacacs-pam`) are torn down when `tacacs` is removed
+  from `aaa/order`, returning /etc/pam.d/sshd to its distro-default
+  state.
+
+- Bundled component versions (unchanged from 0.2.10):
+  - xcespserver  0.2.7
+  - xcespcli     0.2.5
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.10
 
 - **TACACS+ pivot: custom xcesp-tacacs-auth tool replaces libnss-tacplus.**

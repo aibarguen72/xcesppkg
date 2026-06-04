@@ -74,6 +74,19 @@ if [ -d "$MAINSW/scripts" ]; then
             log "  refreshed $dst"
         fi
     fi
+    # 0.2.11: xcesp-tacacs-auth is built into the package at build time
+    # and dropped into /usr/lib/xcesp/.  Self-refresh from mainsw/lib/xcesp/
+    # so a CLI `software-install` (which only swaps mainsw/backupsw, never
+    # re-runs install.sh) still picks up new tool versions.
+    if [ -f "$MAINSW/lib/xcesp/xcesp-tacacs-auth" ]; then
+        mkdir -p /usr/lib/xcesp
+        src="$MAINSW/lib/xcesp/xcesp-tacacs-auth"
+        dst="/usr/lib/xcesp/xcesp-tacacs-auth"
+        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+            install -o root -g root -m 0755 "$src" "$dst"
+            log "  refreshed $dst"
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -1257,12 +1270,77 @@ XCESP_TACACS_AUTH_BIN=/usr/lib/xcesp/xcesp-tacacs-auth
 XCESP_TACACS_CONF=/etc/xcesp/tacacs.conf
 SSHD_TACACS_DROPIN=/etc/ssh/sshd_config.d/51-xcesp-tacacs.conf
 
+# /etc/pam.d/sshd marker block for the xcesp-tacacs pool account.
+# AuthenticationMethods none in sshd_config is supposed to skip auth, but
+# Fedora's hardened sshd silently ignores it and falls back to password
+# auth.  We instead patch the PAM stack so the xcesp-tacacs user's auth
+# succeeds without password input — the real TACACS+ authentication then
+# happens inside xcesp-tacacs-auth (sshd ForceCommand target).
+PAM_SSHD=/etc/pam.d/sshd
+PAM_TACACS_BEGIN="# BEGIN xcesp-tacacs-pam"
+PAM_TACACS_END="# END xcesp-tacacs-pam"
+
 # 0.2.9-era paths we may need to clean up on upgrade
 LEGACY_TACPLUS_NSS_CONF=/etc/tacplus_nss.conf
 NSSWITCH_CONF=/etc/nsswitch.conf
-PAM_SSHD=/etc/pam.d/sshd
 LEGACY_TACPLUS_BEGIN="# BEGIN xcesp-tacplus"
 LEGACY_TACPLUS_END="# END xcesp-tacplus"
+
+# Prepend a managed block at the TOP of a file (after a leading #%PAM-1.0
+# header, if any).  PAM auth stacks are order-sensitive — pam_unix at the
+# top would FAIL on our locked xcesp-tacacs account, and `auth required`
+# semantics mean the eventual SUCCESS doesn't override that.  So our
+# pam_succeed_if must run FIRST and use `[success=done]` to terminate the
+# stack with PAM_SUCCESS before any other line runs.
+xcesp_pam_prepend_block() {
+    local file="$1" begin_marker="$2" end_marker="$3" new_content="$4"
+
+    [ -f "$file" ] || return 0   # nothing to patch if file doesn't exist
+
+    # Strip any pre-existing managed block.
+    local stripped
+    stripped=$(awk -v b="$begin_marker" -v e="$end_marker" '
+        $0 == b { skip = 1; next }
+        $0 == e { skip = 0; next }
+        !skip   { print }
+    ' "$file")
+
+    if [ -z "$new_content" ]; then
+        if [ "$stripped" = "$(cat "$file")" ]; then
+            return 0   # block wasn't there
+        fi
+        printf '%s\n' "$stripped" > "$file.tmp" && mv "$file.tmp" "$file"
+        log "  $file: removed xcesp PAM block"
+        return 0
+    fi
+
+    # Insert after a leading #%PAM-1.0 header line if one exists.
+    local header tail
+    if echo "$stripped" | head -1 | grep -q '^#%PAM-'; then
+        header=$(echo "$stripped" | head -1)
+        tail=$(echo "$stripped" | tail -n +2)
+    else
+        header=""
+        tail="$stripped"
+    fi
+
+    local block
+    block=$(printf '%s\n%s\n%s\n' "$begin_marker" "$new_content" "$end_marker")
+
+    local new_full
+    if [ -n "$header" ]; then
+        new_full=$(printf '%s\n%s\n%s\n' "$header" "$block" "$tail")
+    else
+        new_full=$(printf '%s\n%s\n' "$block" "$tail")
+    fi
+
+    if echo "$new_full" | cmp -s - "$file"; then
+        return 0
+    fi
+    printf '%s\n' "$new_full" > "$file.tmp" && mv "$file.tmp" "$file"
+    chmod 0644 "$file" 2>/dev/null || true
+    log "  $file: prepended xcesp PAM block"
+}
 
 aaa_cfg_get() {
     # Usage: aaa_cfg_get <section> <key> [<default>]
@@ -1431,27 +1509,48 @@ if [ -f "$AAA_CONFIG_FILE" ]; then
                 fi
             fi
 
-            # 3. /etc/ssh/sshd_config.d/51-xcesp-tacacs.conf — sshd Match
-            #    User block.  AuthenticationMethods=none short-circuits
-            #    ssh's password prompt; the only thing that can happen
-            #    is ForceCommand → xcesp-tacacs-auth, which performs the
-            #    real TACACS+ Access-Request itself.
+            # 3. PAM patch — let xcesp-tacacs's auth succeed without
+            #    password input.  We prepend a pam_succeed_if line at the
+            #    top of /etc/pam.d/sshd: when the user is xcesp-tacacs,
+            #    [success=done] terminates the PAM auth stack with
+            #    PAM_SUCCESS; for any other user, [default=ignore] skips
+            #    our line and the normal auth chain (pam_unix, etc.) runs
+            #    unchanged.  This is the same "shared pool account" pattern
+            #    Cumulus Linux and pfSense use for RADIUS/TACACS gates.
+            #
+            #    `quiet_success` keeps /var/log/secure from logging the
+            #    bypass on every connection — the auth tool itself does
+            #    the audit-relevant logging via LOG_AUTHPRIV.
+            pam_block="auth [success=done default=ignore] pam_succeed_if.so user = $XCESP_TACACS_USER quiet_success"
+            xcesp_pam_prepend_block "$PAM_SSHD" "$PAM_TACACS_BEGIN" "$PAM_TACACS_END" "$pam_block"
+
+            # 4. /etc/ssh/sshd_config.d/51-xcesp-tacacs.conf — Match User
+            #    block.  AuthenticationMethods=password + PermitEmptyPasswords
+            #    yes means sshd prompts for a password but accepts ANY
+            #    input (including just Enter) — the PAM stack short-circuits
+            #    via the pam_succeed_if line we just installed.  ForceCommand
+            #    then drops the operator into xcesp-tacacs-auth which
+            #    performs the real TACACS+ auth.
             mkdir -p /etc/ssh/sshd_config.d
             cat > "$SSHD_TACACS_DROPIN.tmp" <<SSHEOF
 # BEGIN xcesp-tacacs — managed by xcesp-activate, do not edit
 #
 # Shared pool account for TACACS+-authenticated users.  Users ssh as
-# \`$XCESP_TACACS_USER@router\`; sshd lets them through immediately
-# (AuthenticationMethods none) and xcesp-tacacs-auth (ForceCommand)
-# does the real authentication against the configured TACACS+ servers.
-# A FAIL from the TACACS server exits the tool with status 1, dropping
-# the operator out of ssh — no shell access leaked.
+# \`$XCESP_TACACS_USER@router\`; sshd's password prompt appears but the
+# PAM stack (see /etc/pam.d/sshd's xcesp-tacacs-pam block) short-circuits
+# to PAM_SUCCESS for this specific user.  Press Enter (or type any
+# garbage) to get past the prompt.  ForceCommand then drops into
+# xcesp-tacacs-auth, which does the REAL TACACS+ authentication against
+# the configured server.  A FAIL from the TACACS server exits the tool
+# with status 1, dropping the operator out of ssh — no shell access
+# leaked.
 
 Match User $XCESP_TACACS_USER
-    AuthenticationMethods none
-    PasswordAuthentication no
+    PasswordAuthentication yes
+    PermitEmptyPasswords yes
     PubkeyAuthentication no
     KbdInteractiveAuthentication no
+    AuthenticationMethods password
     PermitTTY yes
     X11Forwarding no
     AllowTcpForwarding no
@@ -1476,6 +1575,9 @@ SSHEOF
                 log "  removed $SSHD_TACACS_DROPIN"
                 systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
             fi
+            # Strip the PAM block too — never leave a permit-without-password
+            # entry behind for an account that no longer exists.
+            xcesp_pam_prepend_block "$PAM_SSHD" "$PAM_TACACS_BEGIN" "$PAM_TACACS_END" ""
             if id "$XCESP_TACACS_USER" >/dev/null 2>&1; then
                 userdel "$XCESP_TACACS_USER" 2>/dev/null || true
                 log "  removed pool account $XCESP_TACACS_USER"
