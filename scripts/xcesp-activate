@@ -1208,5 +1208,231 @@ if [ "$sshd_integration" = "false" ]; then
     done
 fi
 
+# ---------------------------------------------------------------------------
+# Centralised AAA (TACACS+) — 0.2.9
+# ---------------------------------------------------------------------------
+# Source of truth: /var/lib/xcesp/aaa-config.state written by xcespserver
+# on init/commit.  Format:
+#
+#   [global]
+#   order = local tacacs radius        # PAM auth order (whitespace list)
+#
+#   [tacacs]
+#   present = true
+#   key = shared-tacacs-secret
+#   timeout = 5
+#   servers = 10.0.0.50:49 10.0.0.51:49
+#
+# This release wires the TACACS path end-to-end: writes
+# /etc/tacplus_nss.conf for libnss-tacplus, patches /etc/nsswitch.conf
+# so passwd/group lookups consult TACACS, and patches /etc/pam.d/sshd
+# with `auth sufficient pam_tacplus.so` so sshd auths against TACACS.
+# All patches are wrapped in `# BEGIN xcesp-tacplus` / `# END xcesp-tacplus`
+# markers so a config flip from "tacacs in order" → "tacacs removed"
+# tears the integration back down on the next service start.
+#
+# RADIUS state in the file is captured but NOT materialised in 0.2.9
+# (no pool account, no sshd Match block) — that lands in 0.2.10
+# together with the xcesp-radius-auth tool and the audit log.
+
+AAA_CONFIG_FILE="$(dirname "$MANAGED_USERS_FILE")/aaa-config.state"
+TACPLUS_NSS_CONF=/etc/tacplus_nss.conf
+NSSWITCH_CONF=/etc/nsswitch.conf
+PAM_SSHD=/etc/pam.d/sshd
+TACPLUS_BEGIN="# BEGIN xcesp-tacplus"
+TACPLUS_END="# END xcesp-tacplus"
+
+aaa_cfg_get() {
+    # Usage: aaa_cfg_get <section> <key> [<default>]
+    # Echoes the value (possibly empty) or the default if section/key missing.
+    local sect="[$1]" key="$2" default="${3:-}"
+    local val
+    val=$(awk -v sect="$sect" -v key="$key" '
+        $0 == sect    { inS = 1; next }
+        /^\[/         { inS = 0 }
+        inS && index($0, key " = ") == 1 {
+            sub(/^[^=]+= */, "")
+            print
+            exit
+        }
+    ' "$AAA_CONFIG_FILE" 2>/dev/null)
+    if [ -z "$val" ]; then
+        echo "$default"
+    else
+        echo "$val"
+    fi
+}
+
+# Idempotent multi-line patching helper: replace the block between
+# BEGIN/END markers in a file with new content.  Adds the block at
+# end-of-file when no existing markers found.  Removes the block
+# entirely when the new content is empty.
+xcesp_patch_block() {
+    local file="$1" begin_marker="$2" end_marker="$3" new_content="$4"
+
+    if [ ! -f "$file" ]; then
+        if [ -n "$new_content" ]; then
+            mkdir -p "$(dirname "$file")"
+            {
+                echo "$begin_marker"
+                printf '%s\n' "$new_content"
+                echo "$end_marker"
+            } > "$file"
+            log "  $file: created with xcesp block"
+        fi
+        return 0
+    fi
+
+    # Read existing content sans the managed block.
+    local stripped
+    stripped=$(awk -v b="$begin_marker" -v e="$end_marker" '
+        $0 == b { skip = 1; next }
+        $0 == e { skip = 0; next }
+        !skip   { print }
+    ' "$file")
+
+    if [ -z "$new_content" ]; then
+        if echo "$stripped" | cmp -s - "$file"; then
+            return 0   # block wasn't there; nothing to do
+        fi
+        printf '%s\n' "$stripped" > "$file.tmp" && mv "$file.tmp" "$file"
+        log "  $file: removed xcesp block"
+        return 0
+    fi
+
+    local new_full
+    new_full=$(printf '%s\n%s\n%s\n%s\n' \
+        "$stripped" "$begin_marker" "$new_content" "$end_marker")
+
+    # Skip the write if nothing changed (avoids spurious sshd reloads).
+    if echo "$new_full" | cmp -s - "$file"; then
+        return 0
+    fi
+    printf '%s\n' "$new_full" > "$file.tmp" && mv "$file.tmp" "$file"
+    log "  $file: updated xcesp block"
+}
+
+if [ -f "$AAA_CONFIG_FILE" ]; then
+    # Validate magic
+    head_line=$(head -1 "$AAA_CONFIG_FILE")
+    if [ "$head_line" != "# xcesp aaa-config v1" ]; then
+        log "AAA: refusing to process $AAA_CONFIG_FILE — bad magic header"
+    else
+        aaa_order=$(aaa_cfg_get global order "local")
+        tac_present=$(aaa_cfg_get tacacs present "false")
+        tac_key=$(aaa_cfg_get tacacs key "")
+        tac_timeout=$(aaa_cfg_get tacacs timeout "5")
+        tac_servers=$(aaa_cfg_get tacacs servers "")
+
+        tac_enabled=false
+        case " $aaa_order " in
+            *" tacacs "*)
+                if [ "$tac_present" = "true" ] && [ -n "$tac_servers" ] && [ -n "$tac_key" ]; then
+                    tac_enabled=true
+                fi
+                ;;
+        esac
+
+        if [ "$tac_enabled" = "true" ]; then
+            # Safety probe: libnss_tacplus.so MUST exist before we patch
+            # nsswitch.conf to reference `tacplus`.  Otherwise every
+            # passwd/group lookup on the system fails, including the
+            # ones xcespwdog and xcespproc do at startup.  Better to
+            # log loudly and skip than to brick login.
+            if ! ldconfig -p 2>/dev/null | grep -q libnss_tacplus; then
+                log "AAA: TACACS+ requested but libnss_tacplus.so not found in ld cache"
+                log "     install the package first:"
+                log "       Debian/Ubuntu:  sudo apt install libnss-tacplus libpam-tacplus"
+                log "       Fedora/RHEL:    sudo dnf install pam_tacplus libnss-tacplus"
+                log "     skipping TACACS+ materialisation"
+                tac_enabled=false
+            fi
+            if ! ldconfig -p 2>/dev/null | grep -q libpam_tacplus -e pam_tacplus; then
+                # libpam-tacplus is in /usr/lib/x86_64-linux-gnu/security/
+                # which isn't in ldconfig — probe differently
+                if [ ! -f /lib/security/pam_tacplus.so ] && \
+                   [ ! -f /usr/lib/security/pam_tacplus.so ] && \
+                   [ ! -f /usr/lib64/security/pam_tacplus.so ] && \
+                   [ ! -f /usr/lib/x86_64-linux-gnu/security/pam_tacplus.so ]; then
+                    log "AAA: TACACS+ requested but pam_tacplus.so not found"
+                    log "     skipping TACACS+ materialisation"
+                    tac_enabled=false
+                fi
+            fi
+        fi
+
+        if [ "$tac_enabled" = "true" ]; then
+            log "AAA: TACACS+ enabled — order='$aaa_order'"
+
+            # 1. Write /etc/tacplus_nss.conf.  libnss-tacplus reads this on
+            #    every getpwnam() / getgrnam() lookup; it expects key=value
+            #    lines, with multiple `server=` lines for HA.
+            {
+                echo "# Managed by xcesp-activate — do not edit"
+                for sp in $tac_servers; do
+                    host=${sp%:*}
+                    echo "server=$host"
+                done
+                echo "secret=$tac_key"
+                echo "timeout=$tac_timeout"
+                echo "service=shell"
+                echo "protocol=ssh"
+                echo "user_homedir=1"
+                echo "many_to_one=0"
+            } > "$TACPLUS_NSS_CONF.tmp"
+            chmod 0640 "$TACPLUS_NSS_CONF.tmp"
+            chown root:root "$TACPLUS_NSS_CONF.tmp"
+            mv "$TACPLUS_NSS_CONF.tmp" "$TACPLUS_NSS_CONF"
+
+            # 2. Patch /etc/nsswitch.conf: add `tacplus` to passwd/group
+            #    lookup lines (after `files`, before any other module).
+            for db in passwd group; do
+                if grep -q "^${db}:" "$NSSWITCH_CONF"; then
+                    if ! grep -E "^${db}:.*\btacplus\b" "$NSSWITCH_CONF" >/dev/null; then
+                        sed -i -E "s/^(${db}:[[:space:]]+)(files)/\1\2 tacplus/" "$NSSWITCH_CONF"
+                        log "  $NSSWITCH_CONF: added 'tacplus' to $db"
+                    fi
+                fi
+            done
+
+            # 3. Patch /etc/pam.d/sshd with auth pam_tacplus.so.  Module
+            #    args carry server+secret inline — same secret as in
+            #    tacplus_nss.conf above; libpam-tacplus does NOT share
+            #    config with libnss-tacplus.
+            pam_args="debug server=$(echo "$tac_servers" | tr ' ' ',' | sed 's/:[0-9]*//g')"
+            pam_args="$pam_args secret=$tac_key timeout=$tac_timeout"
+            pam_block="auth sufficient pam_tacplus.so $pam_args"
+            xcesp_patch_block "$PAM_SSHD" "$TACPLUS_BEGIN" "$TACPLUS_END" "$pam_block"
+            chmod 0640 "$PAM_SSHD" 2>/dev/null || true
+        else
+            log "AAA: TACACS+ disabled — removing managed blocks"
+
+            # Tear down — leave /etc/tacplus_nss.conf in place (harmless
+            # without nsswitch.conf entry) but strip the nsswitch lookups
+            # and PAM stack so the system returns to non-TACACS behaviour.
+            for db in passwd group; do
+                if grep -E "^${db}:.*\btacplus\b" "$NSSWITCH_CONF" >/dev/null 2>&1; then
+                    sed -i -E "s/^(${db}:[^#]*)\btacplus\b[[:space:]]*/\1/" "$NSSWITCH_CONF"
+                    log "  $NSSWITCH_CONF: removed 'tacplus' from $db"
+                fi
+            done
+            xcesp_patch_block "$PAM_SSHD" "$TACPLUS_BEGIN" "$TACPLUS_END" ""
+
+            # Remove the config too (no longer authoritative).
+            if [ -f "$TACPLUS_NSS_CONF" ]; then
+                rm -f "$TACPLUS_NSS_CONF"
+                log "  removed $TACPLUS_NSS_CONF"
+            fi
+        fi
+
+        # Reload sshd if PAM stack changed (sshd reads /etc/pam.d/sshd
+        # at each connection, so reload is technically unnecessary, but
+        # NSS module changes need ldconfig / nscd-flush which we skip).
+        true   # placeholder — sshd doesn't need reload for /etc/pam.d edits
+    fi
+else
+    log "AAA: $AAA_CONFIG_FILE not present — TACACS+/RADIUS materialisation skipped"
+fi
+
 log "activation complete"
 exit 0

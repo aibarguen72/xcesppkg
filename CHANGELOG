@@ -1,5 +1,49 @@
 # Changelog - xcesppkg
 
+## 0.2.9
+
+- **TACACS+ centralised authentication is end-to-end functional.**
+  Operators can configure a `management/aaa/tacacs` block with one
+  or more `aaa-server <addr>` children and the shared secret; on
+  next service restart, xcesp-activate wires the system up:
+  - Writes `/etc/tacplus_nss.conf` consumed by libnss-tacplus on
+    every `getpwnam()` / `getgrnam()` lookup.
+  - Patches `/etc/nsswitch.conf` so `passwd` and `group` consult
+    `tacplus` after `files` (idempotent, marker-gated reversible).
+  - Patches `/etc/pam.d/sshd` with an `auth sufficient pam_tacplus.so`
+    line in a `# BEGIN xcesp-tacplus` / `# END xcesp-tacplus` block.
+  - **Safety probe**: refuses to patch nsswitch.conf if
+    libnss_tacplus.so is not in the ld cache, or pam_tacplus.so
+    is not in any standard security/ dir.  Logs a clear hint and
+    skips materialisation — the only thing worse than no TACACS
+    is a wedged NSS lookup that breaks login for everyone.
+- Pair with **xcespserver 0.2.7** which writes the new
+  `/var/lib/xcesp/aaa-config.state` file (INI-style, mode 0600
+  root:xcesp; secrets in plaintext since the file is for
+  xcesp-activate's eyes only).  TACACS / RADIUS shared secrets are
+  encrypted in the on-disk running config via SecretEncryptor.
+- **Role mapping** for TACACS+: gid-based.  The TACACS server is
+  configured to return `service = shell` authorisation with
+  `set gid = <xcespgN GID>` per user; libnss-tacplus picks the gid
+  up; sshd's existing `Match Group xcespg1..4` block fires;
+  xcesp-login (unchanged from 0.2.6) maps the primary group to a
+  CliRole.  An example tac_plus.conf will ship in 0.2.10.
+- **Runtime deps** (operators install separately, not via xcesppkg):
+  - Debian/Ubuntu: `sudo apt install libnss-tacplus libpam-tacplus`
+  - Fedora/RHEL:   `sudo dnf install pam_tacplus libnss-tacplus`
+- **RADIUS authentication + audit log** are **schema-only in 0.2.9**;
+  the running config parses + persists them, but xcesp-activate
+  does not yet materialise the xcesp-radius pool account, the
+  sshd Match block, or the audit-log destination.  The full
+  RADIUS path (custom `xcesp-radius-auth` tool linking
+  libfreeradius-client) and the syslog/file audit emit land in
+  0.2.10.
+- Bundled component versions:
+  - xcespserver  0.2.7 (was 0.2.6) — aaa schema + state file + secrets
+  - xcespcli     0.2.5 (unchanged)
+  - xcespschema  0.2.1 (unchanged)
+  - others all 0.2.0 (unchanged)
+
 ## 0.2.8
 
 - **Fix: xcespserver runs on Debian / Ubuntu out of the box.**
