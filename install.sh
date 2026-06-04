@@ -139,6 +139,22 @@ else
     warn "xcesp-ip wrapper not in package — DHCP client may fail on Debian/Fedora"
 fi
 
+# 0.2.10: xcesp-tacacs-auth → /usr/lib/xcesp/ (NOT on PATH).
+# Custom TACACS+ authentication tool built into xcesppkg at build time
+# (links libcrypto for the MD5 keystream).  Invoked by sshd ForceCommand
+# on the xcesp-tacacs pool account when centralised AAA is enabled.
+info "Installing xcesp-tacacs-auth..."
+src="$INSTALL_DIR/bin/xcesp-tacacs-auth"
+if [ -f "$src" ]; then
+    install -d -o root -g root -m 0755 "$MAINSW_DIR/lib/xcesp"
+    install -d -o root -g root -m 0755 /usr/lib/xcesp
+    install -o root -g root -m 0755 "$src" "$MAINSW_DIR/lib/xcesp/xcesp-tacacs-auth"
+    install -o root -g root -m 0755 "$src" /usr/lib/xcesp/xcesp-tacacs-auth
+    info "  /usr/lib/xcesp/xcesp-tacacs-auth (and $MAINSW_DIR/lib/xcesp/)"
+else
+    warn "xcesp-tacacs-auth not in package — TACACS+ authentication will be unavailable"
+fi
+
 # ---------------------------------------------------------------------------
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------
@@ -653,13 +669,12 @@ echo "      apt install kea-dhcp6-server                  (Debian/Ubuntu)"
 echo "      dnf install kea                               (Fedora/RHEL)"
 echo "  Persisted lease files live under $VAR_LIB_DIR/dhcp{-client,4,6}/."
 echo ""
-echo "  Centralised AAA (TACACS+) — only required if `management aaa tacacs`"
-echo "  is configured.  xcesp-activate detects the modules in ldconfig before"
-echo "  patching nsswitch.conf, so a missing package is logged and skipped."
-echo "      apt install libnss-tacplus libpam-tacplus     (Debian/Ubuntu)"
-echo "      dnf install pam_tacplus libnss-tacplus        (Fedora/RHEL)"
-echo "  RADIUS-based authentication and the audit log materialise in 0.2.10"
-echo "  (schema is parseable in 0.2.9 but no system patches yet)."
+echo "  Centralised AAA (TACACS+, 0.2.10+) is implemented by the bundled"
+echo "  xcesp-tacacs-auth tool — no external pam_tacplus / libnss-tacplus"
+echo "  packages required.  The only runtime dep is libcrypto (OpenSSL)"
+echo "  which is already on every supported distro."
+echo "  RADIUS-based authentication and the audit log are still pending;"
+echo "  they materialise in 0.2.11."
 echo ""
 echo "To install a second version and swap:"
 echo "  1. Unpack a new package into $BACKUPSW_DIR/"

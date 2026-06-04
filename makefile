@@ -76,7 +76,7 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
             scripts/xcesp-activate scripts/xcesp-swap.sh \
             scripts/xcesp-dhclient-script scripts/chrony-install.sh \
             scripts/xcesp-login \
-            scripts/xcesp-ip.c \
+            scripts/xcesp-ip.c scripts/xcesp-tacacs-auth.cpp \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
             cfg/xcespserver.conf python/pyproject.toml
 	@echo "Building package $(TARBALL) ..."
@@ -92,6 +92,16 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	# --- xcesp-ip wrapper (compiled here so the binary's arch matches the
 	# host packaging; ARM64 is built separately via xcesppkg/arm64/build.sh)
 	gcc -O2 -Wall -Wextra -o $(PKG_NAME)/bin/xcesp-ip scripts/xcesp-ip.c
+
+	# --- xcesp-tacacs-auth (0.2.10+): centralised AAA via TACACS+.
+	# Implements RFC 8907 (Authentication ASCII + Authorization) directly;
+	# the only external dep is libcrypto for MD5 (ubiquitous on every Linux).
+	# Installed off-PATH by install.sh; called by sshd ForceCommand on the
+	# xcesp-tacacs pool account.
+	g++ -std=c++17 -O2 -Wall -Wextra \
+	    -o $(PKG_NAME)/bin/xcesp-tacacs-auth \
+	    scripts/xcesp-tacacs-auth.cpp \
+	    -lcrypto
 
 	# --- Config templates ---
 	mkdir -p $(PKG_NAME)/cfg

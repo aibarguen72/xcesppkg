@@ -1,5 +1,79 @@
 # Changelog - xcesppkg
 
+## 0.2.10
+
+- **TACACS+ pivot: custom xcesp-tacacs-auth tool replaces libnss-tacplus.**
+  0.2.9 used libnss-tacplus + libpam-tacplus for centralised TACACS+
+  authentication; on testing this turned out to be Fedora 41 has no
+  pam_tacplus / libnss-tacplus packages in its repos (only the unrelated
+  Shrubbery server library).  Bundling the system .so files was an
+  option but rejected on maintenance grounds.
+
+  0.2.10 ships a small custom tool — xcesp-tacacs-auth — that implements
+  TACACS+ Authentication (ASCII flow) and Authorization (priv-lvl
+  extraction) directly per RFC 8907.  The only external dep is libcrypto
+  for the MD5 keystream cipher, which is on every Linux distro by
+  default.  No pam_tacplus or libnss-tacplus required.
+
+  Architecture: shared local pool account `xcesp-tacacs` (system uid,
+  primary group `xcesp`, locked /etc/shadow, shell points at the auth
+  tool).  Users ssh as `xcesp-tacacs@router`; sshd's `Match User
+  xcesp-tacacs` block has `AuthenticationMethods none` so the ssh
+  password prompt is bypassed; ForceCommand drops straight into
+  xcesp-tacacs-auth, which prompts the operator for real username +
+  password, performs the TACACS+ Access-Request, parses priv-lvl from
+  the Authorization-Response, and execs xcesp-login with the derived
+  CliRole.
+
+  Built into xcespkg-0.2.10/bin/xcesp-tacacs-auth at xcesppkg build
+  time (g++ -lcrypto, ~60 KB).  install.sh drops it into
+  /usr/lib/xcesp/xcesp-tacacs-auth (off PATH).  xcesp-login (0.2.10)
+  honours the XCESP_ROLE_OVERRIDE env var set by the tool so the
+  CliRole maps from priv-lvl rather than the pool account's group.
+
+- **xcesp-activate**: TACACS section completely rewritten.
+  - Removes the 0.2.9 libnss-tacplus path entirely.
+  - On every activation, strips any leftover 0.2.9 patches (nsswitch.conf
+    `tacplus` entries, /etc/tacplus_nss.conf, the pam_tacplus block in
+    /etc/pam.d/sshd) — idempotent upgrade.
+  - When `tacacs` is in `aaa/order` AND the `[tacacs]` section is in
+    aaa-config.state AND has servers + key, creates the xcesp-tacacs
+    pool account, writes /etc/xcesp/tacacs.conf (mode 0640 root:xcesp,
+    consumed by the auth tool), and installs
+    /etc/ssh/sshd_config.d/51-xcesp-tacacs.conf with the Match User
+    block.
+  - When TACACS is disabled, the pool account is removed, the sshd
+    drop-in is deleted, and /etc/xcesp/tacacs.conf is wiped.
+- **xcesp-login**: gains an `XCESP_ROLE_OVERRIDE` env var hook so the
+  auth tool can override the group-based role lookup.
+
+- **Runtime deps** (0.2.10 only needs libcrypto, which is already
+  installed on every supported distro):
+
+      Debian/Ubuntu:  (none — libcrypt-dev already there from 0.2.8 build)
+      Fedora/RHEL:    (none — libcrypto is on every base install)
+
+  The 0.2.9 `apt install libnss-tacplus libpam-tacplus` /
+  `dnf install pam_tacplus libnss-tacplus` instructions are now obsolete
+  (and were actually impossible on Fedora 41).
+
+- **Role mapping**: priv-lvl → CliRole via the `priv-lvl-map`
+  attribute already in the schema since 0.2.9 (was documentation-only
+  then, now actually consumed by xcesp-tacacs-auth).  Default mapping:
+  15→1, 10→2, 5→3, 0→4.  Operator overrides via
+  `management/aaa/tacacs/priv-lvl-map "<thresh>:<role> ..."`.
+
+- **RADIUS authentication + audit log** stay deferred to 0.2.11.  The
+  schema is parseable; xcespserver persists the config.  xcesp-radius-auth
+  (same custom-tool pattern, linking libfreeradius-client) and the
+  syslog audit emit are next.
+
+- Bundled component versions:
+  - xcespserver  0.2.7 (unchanged)
+  - xcespcli     0.2.5 (unchanged)
+  - xcespschema  0.2.1 (unchanged)
+  - others all 0.2.0 (unchanged)
+
 ## 0.2.9
 
 - **TACACS+ centralised authentication is end-to-end functional.**

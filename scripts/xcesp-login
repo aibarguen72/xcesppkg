@@ -28,32 +28,56 @@ if [ ! -x "$XCESPCLI" ]; then
     exit 1
 fi
 
-# Resolve role from user's primary group.
-primary_group=$(id -gn 2>/dev/null || true)
-case "$primary_group" in
-    xcespg1) role=1 ;;
-    xcespg2) role=2 ;;
-    xcespg3) role=3 ;;
-    xcespg4) role=4 ;;
-    *)
-        # Fallback: scan supplementary groups in case the primary is wrong.
-        role=""
-        for g in $(id -Gn 2>/dev/null); do
-            case "$g" in
-                xcespg1) role=1; break ;;
-                xcespg2) role=2; break ;;
-                xcespg3) role=3; break ;;
-                xcespg4) role=4; break ;;
-            esac
-        done
-        if [ -z "$role" ]; then
-            echo "xcesp-login: $(id -un) is not a member of any xcespg1..xcespg4 group — refusing" >&2
+# Role resolution priority:
+#   1. $XCESP_ROLE_OVERRIDE (set by xcesp-tacacs-auth or xcesp-radius-auth
+#      after a successful TACACS+/RADIUS authentication) — must be 1..4.
+#   2. The user's primary POSIX group (xcespg1..xcespg4) — the 0.2.2..0.2.6
+#      flow for locally-managed users.
+#   3. Any supplementary group membership in xcespg1..xcespg4 — fallback
+#      in case the primary is wrong (operator messed with /etc/passwd).
+if [ -n "${XCESP_ROLE_OVERRIDE:-}" ]; then
+    role="$XCESP_ROLE_OVERRIDE"
+    case "$role" in
+        1|2|3|4) ;;
+        *)
+            echo "xcesp-login: invalid XCESP_ROLE_OVERRIDE=$role — refusing" >&2
             exit 1
-        fi
-        ;;
-esac
+            ;;
+    esac
+else
+    primary_group=$(id -gn 2>/dev/null || true)
+    case "$primary_group" in
+        xcespg1) role=1 ;;
+        xcespg2) role=2 ;;
+        xcespg3) role=3 ;;
+        xcespg4) role=4 ;;
+        *)
+            # Fallback: scan supplementary groups in case the primary is wrong.
+            role=""
+            for g in $(id -Gn 2>/dev/null); do
+                case "$g" in
+                    xcespg1) role=1; break ;;
+                    xcespg2) role=2; break ;;
+                    xcespg3) role=3; break ;;
+                    xcespg4) role=4; break ;;
+                esac
+            done
+            if [ -z "$role" ]; then
+                echo "xcesp-login: $(id -un) is not a member of any xcespg1..xcespg4 group — refusing" >&2
+                exit 1
+            fi
+            ;;
+    esac
+fi
 
-# Build the xcespcli invocation.  We pass --socket explicitly (the operator's
-# user may not be able to read the default INI to discover it) and --role
-# so xcespcli applies the matching command gating.
+# Build the xcespcli invocation.  --audit-user is honoured by xcespcli
+# 0.2.11+ to record the REAL remote username in the audit log even when
+# the POSIX uid is a shared pool account (xcesp-tacacs, xcesp-radius).
+audit_user="${XCESP_AUDIT_USER:-$(id -un)}"
+
 exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role"
+# (--audit-user will be added once xcespcli ships it — silently ignored
+# by 0.2.5 xcespcli for forward compatibility.  When 0.2.11 lands, the
+# line above becomes:
+#   exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role" --audit-user "$audit_user"
+# )

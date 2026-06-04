@@ -1209,7 +1209,7 @@ if [ "$sshd_integration" = "false" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Centralised AAA (TACACS+) — 0.2.9
+# Centralised AAA (TACACS+) — 0.2.10
 # ---------------------------------------------------------------------------
 # Source of truth: /var/lib/xcesp/aaa-config.state written by xcespserver
 # on init/commit.  Format:
@@ -1222,25 +1222,47 @@ fi
 #   key = shared-tacacs-secret
 #   timeout = 5
 #   servers = 10.0.0.50:49 10.0.0.51:49
+#   priv-lvl-map = "15:1 10:2 5:3 0:4"
 #
-# This release wires the TACACS path end-to-end: writes
-# /etc/tacplus_nss.conf for libnss-tacplus, patches /etc/nsswitch.conf
-# so passwd/group lookups consult TACACS, and patches /etc/pam.d/sshd
-# with `auth sufficient pam_tacplus.so` so sshd auths against TACACS.
-# All patches are wrapped in `# BEGIN xcesp-tacplus` / `# END xcesp-tacplus`
-# markers so a config flip from "tacacs in order" → "tacacs removed"
-# tears the integration back down on the next service start.
+# 0.2.10 pivots away from the libnss-tacplus / libpam-tacplus design used
+# in 0.2.9 — Fedora 41 has no `pam_tacplus` / `libnss-tacplus` packages,
+# only the unrelated Shrubbery server library.  The new design uses a
+# shared local pool account `xcesp-tacacs` + a custom auth tool that
+# implements RFC 8907 directly (xcesppkg/scripts/xcesp-tacacs-auth.cpp).
+# This works identically on Fedora and Debian; the only runtime dep is
+# libcrypto, which is ubiquitous.
 #
-# RADIUS state in the file is captured but NOT materialised in 0.2.9
-# (no pool account, no sshd Match block) — that lands in 0.2.10
-# together with the xcesp-radius-auth tool and the audit log.
+# Login flow:
+#   ssh xcesp-tacacs@router
+#         → sshd matches `Match User xcesp-tacacs` block in 51-xcesp-tacacs.conf
+#         → AuthenticationMethods none → no ssh password
+#         → ForceCommand /usr/lib/xcesp/xcesp-tacacs-auth
+#         → tool prompts for real username + RADIUS-style password
+#         → libcrypto-MD5 TACACS+ Auth ASCII + Authorization
+#         → priv-lvl mapped via priv-lvl-map → CliRole
+#         → exec /usr/lib/xcesp/xcesp-login with XCESP_ROLE_OVERRIDE +
+#           XCESP_AUDIT_USER set
+#         → xcesp-login -> xcespcli --role <N>
+#
+# Cleanup on disable: removes /etc/xcesp/tacacs.conf, the sshd drop-in
+# 51-xcesp-tacacs.conf, and the xcesp-tacacs local account.  Also
+# strips any leftover 0.2.9 libnss-tacplus state (nsswitch.conf
+# `tacplus` entries, /etc/tacplus_nss.conf, the pam_tacplus block in
+# /etc/pam.d/sshd) — operators upgrading from 0.2.9 get a clean
+# slate.
 
 AAA_CONFIG_FILE="$(dirname "$MANAGED_USERS_FILE")/aaa-config.state"
-TACPLUS_NSS_CONF=/etc/tacplus_nss.conf
+XCESP_TACACS_USER=xcesp-tacacs
+XCESP_TACACS_AUTH_BIN=/usr/lib/xcesp/xcesp-tacacs-auth
+XCESP_TACACS_CONF=/etc/xcesp/tacacs.conf
+SSHD_TACACS_DROPIN=/etc/ssh/sshd_config.d/51-xcesp-tacacs.conf
+
+# 0.2.9-era paths we may need to clean up on upgrade
+LEGACY_TACPLUS_NSS_CONF=/etc/tacplus_nss.conf
 NSSWITCH_CONF=/etc/nsswitch.conf
 PAM_SSHD=/etc/pam.d/sshd
-TACPLUS_BEGIN="# BEGIN xcesp-tacplus"
-TACPLUS_END="# END xcesp-tacplus"
+LEGACY_TACPLUS_BEGIN="# BEGIN xcesp-tacplus"
+LEGACY_TACPLUS_END="# END xcesp-tacplus"
 
 aaa_cfg_get() {
     # Usage: aaa_cfg_get <section> <key> [<default>]
@@ -1333,102 +1355,136 @@ if [ -f "$AAA_CONFIG_FILE" ]; then
                 ;;
         esac
 
+        tac_priv_lvl_map=$(aaa_cfg_get tacacs priv-lvl-map "15:1 10:2 5:3 0:4")
+
+        # ----- 0.2.9 legacy cleanup --------------------------------------
+        # Always strip the 0.2.9 libnss-tacplus material on every activation.
+        # This is idempotent and guarantees an upgrade from 0.2.9 starts from
+        # a clean slate before the new pool-account pattern is applied.
+        for db in passwd group; do
+            if grep -E "^${db}:.*\btacplus\b" "$NSSWITCH_CONF" >/dev/null 2>&1; then
+                sed -i -E "s/^(${db}:[^#]*)\btacplus\b[[:space:]]*/\1/" "$NSSWITCH_CONF"
+                log "  $NSSWITCH_CONF: stripped legacy 'tacplus' from $db (0.2.9 cleanup)"
+            fi
+        done
+        xcesp_patch_block "$PAM_SSHD" "$LEGACY_TACPLUS_BEGIN" "$LEGACY_TACPLUS_END" ""
+        if [ -f "$LEGACY_TACPLUS_NSS_CONF" ]; then
+            rm -f "$LEGACY_TACPLUS_NSS_CONF"
+            log "  removed legacy $LEGACY_TACPLUS_NSS_CONF (0.2.9 cleanup)"
+        fi
+
         if [ "$tac_enabled" = "true" ]; then
-            # Safety probe: libnss_tacplus.so MUST exist before we patch
-            # nsswitch.conf to reference `tacplus`.  Otherwise every
-            # passwd/group lookup on the system fails, including the
-            # ones xcespwdog and xcespproc do at startup.  Better to
-            # log loudly and skip than to brick login.
-            if ! ldconfig -p 2>/dev/null | grep -q libnss_tacplus; then
-                log "AAA: TACACS+ requested but libnss_tacplus.so not found in ld cache"
-                log "     install the package first:"
-                log "       Debian/Ubuntu:  sudo apt install libnss-tacplus libpam-tacplus"
-                log "       Fedora/RHEL:    sudo dnf install pam_tacplus libnss-tacplus"
-                log "     skipping TACACS+ materialisation"
+            # Safety probe: the auth tool must be installed before sshd
+            # can ForceCommand it.  If install.sh hasn't dropped it yet
+            # (mid-upgrade, manual install half-done), skip materialisation
+            # rather than create a Match block pointing at a missing exec.
+            if [ ! -x "$XCESP_TACACS_AUTH_BIN" ]; then
+                log "AAA: TACACS+ requested but $XCESP_TACACS_AUTH_BIN not present — skipping"
                 tac_enabled=false
             fi
-            if ! ldconfig -p 2>/dev/null | grep -q libpam_tacplus -e pam_tacplus; then
-                # libpam-tacplus is in /usr/lib/x86_64-linux-gnu/security/
-                # which isn't in ldconfig — probe differently
-                if [ ! -f /lib/security/pam_tacplus.so ] && \
-                   [ ! -f /usr/lib/security/pam_tacplus.so ] && \
-                   [ ! -f /usr/lib64/security/pam_tacplus.so ] && \
-                   [ ! -f /usr/lib/x86_64-linux-gnu/security/pam_tacplus.so ]; then
-                    log "AAA: TACACS+ requested but pam_tacplus.so not found"
-                    log "     skipping TACACS+ materialisation"
-                    tac_enabled=false
-                fi
-            fi
         fi
 
         if [ "$tac_enabled" = "true" ]; then
-            log "AAA: TACACS+ enabled — order='$aaa_order'"
+            log "AAA: TACACS+ enabled — order='$aaa_order' priv-lvl-map='$tac_priv_lvl_map'"
 
-            # 1. Write /etc/tacplus_nss.conf.  libnss-tacplus reads this on
-            #    every getpwnam() / getgrnam() lookup; it expects key=value
-            #    lines, with multiple `server=` lines for HA.
+            # 1. /etc/xcesp/tacacs.conf — consumed by xcesp-tacacs-auth.
+            #    Mode 0640 root:xcesp so the pool account (in xcesp group)
+            #    can read but other users cannot see the shared secret.
+            mkdir -p /etc/xcesp
             {
-                echo "# Managed by xcesp-activate — do not edit"
+                echo "# xcesp tacacs-auth v1 — managed by xcesp-activate, do not edit"
                 for sp in $tac_servers; do
-                    host=${sp%:*}
-                    echo "server=$host"
+                    echo "server $sp"
                 done
-                echo "secret=$tac_key"
-                echo "timeout=$tac_timeout"
-                echo "service=shell"
-                echo "protocol=ssh"
-                echo "user_homedir=1"
-                echo "many_to_one=0"
-            } > "$TACPLUS_NSS_CONF.tmp"
-            chmod 0640 "$TACPLUS_NSS_CONF.tmp"
-            chown root:root "$TACPLUS_NSS_CONF.tmp"
-            mv "$TACPLUS_NSS_CONF.tmp" "$TACPLUS_NSS_CONF"
+                echo "key $tac_key"
+                echo "timeout $tac_timeout"
+                echo "priv-lvl-map $tac_priv_lvl_map"
+            } > "$XCESP_TACACS_CONF.tmp"
+            chmod 0640 "$XCESP_TACACS_CONF.tmp"
+            chown "root:$XCESP_GROUP" "$XCESP_TACACS_CONF.tmp"
+            mv "$XCESP_TACACS_CONF.tmp" "$XCESP_TACACS_CONF"
+            log "  wrote $XCESP_TACACS_CONF"
 
-            # 2. Patch /etc/nsswitch.conf: add `tacplus` to passwd/group
-            #    lookup lines (after `files`, before any other module).
-            for db in passwd group; do
-                if grep -q "^${db}:" "$NSSWITCH_CONF"; then
-                    if ! grep -E "^${db}:.*\btacplus\b" "$NSSWITCH_CONF" >/dev/null; then
-                        sed -i -E "s/^(${db}:[[:space:]]+)(files)/\1\2 tacplus/" "$NSSWITCH_CONF"
-                        log "  $NSSWITCH_CONF: added 'tacplus' to $db"
-                    fi
+            # 2. Local pool account xcesp-tacacs.  System uid, primary
+            #    group `xcesp` (so the pool account can read the socket
+            #    and the config file via group perms), locked /etc/shadow
+            #    (no direct ssh password — sshd uses AuthenticationMethods
+            #    none for this user), shell points at our auth tool.
+            if ! id "$XCESP_TACACS_USER" >/dev/null 2>&1; then
+                useradd --system --no-create-home \
+                        --shell "$XCESP_TACACS_AUTH_BIN" \
+                        -g "$XCESP_GROUP" \
+                        --comment "XCESP TACACS+ pool account" \
+                        "$XCESP_TACACS_USER"
+                passwd -l "$XCESP_TACACS_USER" >/dev/null
+                log "  created pool account $XCESP_TACACS_USER (group=$XCESP_GROUP shell=$XCESP_TACACS_AUTH_BIN)"
+            else
+                # Existing account — make sure shell + group are correct.
+                current_shell=$(getent passwd "$XCESP_TACACS_USER" | awk -F: '{print $7}')
+                if [ "$current_shell" != "$XCESP_TACACS_AUTH_BIN" ]; then
+                    usermod -s "$XCESP_TACACS_AUTH_BIN" "$XCESP_TACACS_USER"
                 fi
-            done
+                current_gid=$(id -g "$XCESP_TACACS_USER")
+                desired_gid=$(getent group "$XCESP_GROUP" | awk -F: '{print $3}')
+                if [ "$current_gid" != "$desired_gid" ]; then
+                    usermod -g "$XCESP_GROUP" "$XCESP_TACACS_USER"
+                fi
+            fi
 
-            # 3. Patch /etc/pam.d/sshd with auth pam_tacplus.so.  Module
-            #    args carry server+secret inline — same secret as in
-            #    tacplus_nss.conf above; libpam-tacplus does NOT share
-            #    config with libnss-tacplus.
-            pam_args="debug server=$(echo "$tac_servers" | tr ' ' ',' | sed 's/:[0-9]*//g')"
-            pam_args="$pam_args secret=$tac_key timeout=$tac_timeout"
-            pam_block="auth sufficient pam_tacplus.so $pam_args"
-            xcesp_patch_block "$PAM_SSHD" "$TACPLUS_BEGIN" "$TACPLUS_END" "$pam_block"
-            chmod 0640 "$PAM_SSHD" 2>/dev/null || true
+            # 3. /etc/ssh/sshd_config.d/51-xcesp-tacacs.conf — sshd Match
+            #    User block.  AuthenticationMethods=none short-circuits
+            #    ssh's password prompt; the only thing that can happen
+            #    is ForceCommand → xcesp-tacacs-auth, which performs the
+            #    real TACACS+ Access-Request itself.
+            mkdir -p /etc/ssh/sshd_config.d
+            cat > "$SSHD_TACACS_DROPIN.tmp" <<SSHEOF
+# BEGIN xcesp-tacacs — managed by xcesp-activate, do not edit
+#
+# Shared pool account for TACACS+-authenticated users.  Users ssh as
+# \`$XCESP_TACACS_USER@router\`; sshd lets them through immediately
+# (AuthenticationMethods none) and xcesp-tacacs-auth (ForceCommand)
+# does the real authentication against the configured TACACS+ servers.
+# A FAIL from the TACACS server exits the tool with status 1, dropping
+# the operator out of ssh — no shell access leaked.
+
+Match User $XCESP_TACACS_USER
+    AuthenticationMethods none
+    PasswordAuthentication no
+    PubkeyAuthentication no
+    KbdInteractiveAuthentication no
+    PermitTTY yes
+    X11Forwarding no
+    AllowTcpForwarding no
+    PermitTunnel no
+    ForceCommand $XCESP_TACACS_AUTH_BIN
+# END xcesp-tacacs
+SSHEOF
+            chmod 0644 "$SSHD_TACACS_DROPIN.tmp"
+            chown root:root "$SSHD_TACACS_DROPIN.tmp"
+            if ! cmp -s "$SSHD_TACACS_DROPIN.tmp" "$SSHD_TACACS_DROPIN" 2>/dev/null; then
+                mv "$SSHD_TACACS_DROPIN.tmp" "$SSHD_TACACS_DROPIN"
+                log "  wrote $SSHD_TACACS_DROPIN"
+                systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+            else
+                rm -f "$SSHD_TACACS_DROPIN.tmp"
+            fi
         else
-            log "AAA: TACACS+ disabled — removing managed blocks"
+            log "AAA: TACACS+ disabled — tearing down"
 
-            # Tear down — leave /etc/tacplus_nss.conf in place (harmless
-            # without nsswitch.conf entry) but strip the nsswitch lookups
-            # and PAM stack so the system returns to non-TACACS behaviour.
-            for db in passwd group; do
-                if grep -E "^${db}:.*\btacplus\b" "$NSSWITCH_CONF" >/dev/null 2>&1; then
-                    sed -i -E "s/^(${db}:[^#]*)\btacplus\b[[:space:]]*/\1/" "$NSSWITCH_CONF"
-                    log "  $NSSWITCH_CONF: removed 'tacplus' from $db"
-                fi
-            done
-            xcesp_patch_block "$PAM_SSHD" "$TACPLUS_BEGIN" "$TACPLUS_END" ""
-
-            # Remove the config too (no longer authoritative).
-            if [ -f "$TACPLUS_NSS_CONF" ]; then
-                rm -f "$TACPLUS_NSS_CONF"
-                log "  removed $TACPLUS_NSS_CONF"
+            if [ -f "$SSHD_TACACS_DROPIN" ]; then
+                rm -f "$SSHD_TACACS_DROPIN"
+                log "  removed $SSHD_TACACS_DROPIN"
+                systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+            fi
+            if id "$XCESP_TACACS_USER" >/dev/null 2>&1; then
+                userdel "$XCESP_TACACS_USER" 2>/dev/null || true
+                log "  removed pool account $XCESP_TACACS_USER"
+            fi
+            if [ -f "$XCESP_TACACS_CONF" ]; then
+                rm -f "$XCESP_TACACS_CONF"
+                log "  removed $XCESP_TACACS_CONF"
             fi
         fi
-
-        # Reload sshd if PAM stack changed (sshd reads /etc/pam.d/sshd
-        # at each connection, so reload is technically unnecessary, but
-        # NSS module changes need ldconfig / nscd-flush which we skip).
-        true   # placeholder — sshd doesn't need reload for /etc/pam.d edits
     fi
 else
     log "AAA: $AAA_CONFIG_FILE not present — TACACS+/RADIUS materialisation skipped"
