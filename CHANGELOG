@@ -1,5 +1,39 @@
 # Changelog - xcesppkg
 
+## 0.2.14
+
+- **Fix: TACACS+ authentication status codes were off-by-one.**
+  xcesp-tacacs-auth was using:
+
+      TAC_PLUS_AUTHEN_STATUS_GETUSER = 0x05   (wrong)
+      TAC_PLUS_AUTHEN_STATUS_GETPASS = 0x06   (wrong)
+
+  Per RFC 8907 §5.4.2.1 the correct values are:
+
+      GETUSER = 0x04
+      GETPASS = 0x05
+
+  Wire symptom: server sent a REPLY with `status=0x05` after the START
+  packet (requesting the password).  Our code matched that against the
+  wrong `GETUSER=0x05` constant, took the "send username" branch, and
+  the CONTINUE packet's user_msg field contained the username again
+  instead of the password.  tcpdump showed a 7-byte body (5 header +
+  2-byte "su" payload) where it should have been 11 (5 + 6 "su1234").
+  The server then compared the username string against the stored
+  password and rejected the login.
+
+  Fixed by correcting GETUSER/GETPASS and also adding the missing
+  GETDATA (0x03) and FOLLOW (0x21) constants for completeness.  The
+  rest of the constants table (header type/flags, action codes, authen
+  type, service, authorization status) was re-audited against the RFC
+  on this pass and is clean.
+
+- Bundled component versions unchanged from 0.2.13:
+  - xcespserver  0.2.7
+  - xcespcli     0.2.5
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.13
 
 - **Fix: TACACS+ protocol version byte was wrong for ASCII auth.**

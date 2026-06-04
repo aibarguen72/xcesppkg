@@ -80,12 +80,19 @@ constexpr uint8_t TAC_PLUS_AUTHEN_LOGIN  = 0x01;
 constexpr uint8_t TAC_PLUS_AUTHEN_TYPE_ASCII = 0x01;
 constexpr uint8_t TAC_PLUS_AUTHEN_SVC_LOGIN  = 0x01;
 
+// Authentication status codes — RFC 8907 §5.4.2.1.
+// (0.2.10..0.2.13 had these off by one — GETUSER=0x05/GETPASS=0x06 —
+// causing the GETPASS reply to be misinterpreted as GETUSER and the
+// username sent in place of the password.  Verified against the spec
+// table on 0.2.14.)
 constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_PASS    = 0x01;
 constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_FAIL    = 0x02;
-constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_GETUSER = 0x05;
-constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_GETPASS = 0x06;
-constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_RESTART = 0x07;
-constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_ERROR   = 0x08;
+constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_GETDATA = 0x03;
+constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_GETUSER = 0x04;
+constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_GETPASS = 0x05;
+constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_RESTART = 0x06;
+constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_ERROR   = 0x07;
+constexpr uint8_t TAC_PLUS_AUTHEN_STATUS_FOLLOW  = 0x21;
 
 constexpr uint8_t TAC_PLUS_AUTHEN_METH_TACACSPLUS = 0x06;
 constexpr uint8_t TAC_PLUS_AUTHEN_TYPE_NOT_SET    = 0x00;
