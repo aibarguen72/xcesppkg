@@ -601,9 +601,13 @@ int tacacsAuthorize(TacacsClient& cli,
                      std::string& err)
 {
     // Single Authorization request for service=shell, cmd=  (login shell).
+    // Per RFC 8907 §8.1, the `cmd` attribute MUST be present for service=shell
+    // and MUST be empty to mean "shell login (no specific command)".  We use
+    // `cmd=` (mandatory marker) not `cmd*` (optional marker) so Shrubbery
+    // tac_plus does not silently drop the attribute and reject the request.
     std::vector<std::string> args = {
         "service=shell",
-        "cmd*",     // optional, empty: any cmd
+        "cmd=",
     };
     if (!cli.sendBody(TAC_PLUS_AUTHOR, buildAuthorRequest(user, tty, remAddr, args))) {
         err = "send authorization REQUEST failed";
@@ -684,32 +688,53 @@ int main(int /*argc*/, char* /*argv*/[]) {
 
     // Try each configured server in order; TCP failure → next server,
     // PASS/FAIL from server → authoritative (no failover).
+    //
+    // Per RFC 8907 §4.5: a TACACS+ session is one authen, author, OR acct
+    // exchange.  Multiple sessions on the same TCP connection are only
+    // permitted when Single Connection Mode has been negotiated (§4.5.2.1).
+    // We do not negotiate single-connect, so each phase opens its own TCP
+    // connection (fresh session_id, seq=1).  Reusing the post-authentication
+    // socket — even with a new session_id — caused Shrubbery's tac_plus to
+    // discard the authorization REQUEST and the operator to see
+    // "Authorization failed." on a user the auth log just accepted.
+    const uint8_t protoVer =
+        (TAC_PLUS_MAJOR_VER << 4) | TAC_PLUS_MINOR_VER_DEFAULT;
     for (const auto& srv : cfg.servers) {
-        int fd = connectTcp(srv.host, srv.port, cfg.timeoutS, err);
-        if (fd < 0) {
-            syslog(LOG_WARNING, "tacacs server %s:%d unreachable: %s",
-                   srv.host.c_str(), srv.port, err.c_str());
-            continue;
-        }
-        // version: major=12, minor=0 (TAC_PLUS_MINOR_VER_DEFAULT) — per
-        // RFC 8907 §5.4.2, ASCII auth MUST use minor=0.  minor=1 is for
-        // CHAP / MS-CHAP / PAP only.  Shrubbery's tac_plus rejects the
-        // wrong minor version with `Illegal packet ver=193 action=1 type=1`
-        // followed by `choose_authen: unacceptable authen method`.
-        TacacsClient cli(fd, cfg.secret, (TAC_PLUS_MAJOR_VER << 4) | TAC_PLUS_MINOR_VER_DEFAULT);
+        // ── Authentication phase ─────────────────────────────────────────
+        {
+            int fd = connectTcp(srv.host, srv.port, cfg.timeoutS, err);
+            if (fd < 0) {
+                syslog(LOG_WARNING, "tacacs server %s:%d unreachable (authen): %s",
+                       srv.host.c_str(), srv.port, err.c_str());
+                continue;
+            }
+            TacacsClient cli(fd, cfg.secret, protoVer);
+            if (!tacacsAuthenticate(cli, user, pass, ttyName, remAddr, err)) {
+                std::cerr << "Authentication failed.\n";
+                syslog(LOG_NOTICE, "auth-fail user=%s server=%s reason=\"%s\"",
+                       user.c_str(), srv.host.c_str(), err.c_str());
+                return 1;
+            }
+        }   // ← cli destructor closes fd; new session begins below
 
-        if (!tacacsAuthenticate(cli, user, pass, ttyName, remAddr, err)) {
-            std::cerr << "Authentication failed.\n";
-            syslog(LOG_NOTICE, "auth-fail user=%s server=%s reason=\"%s\"",
-                   user.c_str(), srv.host.c_str(), err.c_str());
-            return 1;
-        }
-        int privLvl = tacacsAuthorize(cli, user, ttyName, remAddr, err);
-        if (privLvl < 0) {
-            std::cerr << "Authorization failed.\n";
-            syslog(LOG_NOTICE, "author-fail user=%s server=%s reason=\"%s\"",
-                   user.c_str(), srv.host.c_str(), err.c_str());
-            return 1;
+        // ── Authorization phase (fresh TCP, fresh session_id) ────────────
+        int privLvl;
+        {
+            int fd = connectTcp(srv.host, srv.port, cfg.timeoutS, err);
+            if (fd < 0) {
+                syslog(LOG_WARNING, "tacacs server %s:%d unreachable (author): %s",
+                       srv.host.c_str(), srv.port, err.c_str());
+                std::cerr << "Authorization failed.\n";
+                return 1;
+            }
+            TacacsClient cli(fd, cfg.secret, protoVer);
+            privLvl = tacacsAuthorize(cli, user, ttyName, remAddr, err);
+            if (privLvl < 0) {
+                std::cerr << "Authorization failed.\n";
+                syslog(LOG_NOTICE, "author-fail user=%s server=%s reason=\"%s\"",
+                       user.c_str(), srv.host.c_str(), err.c_str());
+                return 1;
+            }
         }
         int role = mapPrivLvl(cfg.privLvlMap, privLvl, 4);
 

@@ -1,5 +1,44 @@
 # Changelog - xcesppkg
 
+## 0.2.15
+
+- **Fix: TACACS+ authorization phase reused the authentication session.**
+  After a successful `login success` from Shrubbery's tac_plus the
+  client immediately sent the Authorization REQUEST on the same TCP
+  socket with seq=3 and the same session_id used for authentication.
+  Per RFC 8907 §4.5, a TACACS+ session is one authentication, one
+  authorization, or one accounting exchange — multiple sessions on a
+  single TCP connection are only permitted under Single Connection
+  Mode (§4.5.2.1), which we do not negotiate.  The server rejected the
+  follow-on transaction and the operator saw
+
+      XCESP TACACS+ authentication
+      Username: su
+      Password: ***
+      Authorization failed.
+
+  with the auth log on the server showing only the successful login
+  and no authorization line.
+
+  Fixed: each phase now opens its own TCP connection.  The
+  authentication TacacsClient (and its fd) is destroyed before the
+  authorization TacacsClient is constructed, guaranteeing a fresh
+  session_id and seq=1 for the second exchange.  Updated comments in
+  `main()` capture the rationale.
+
+- **Fix: `cmd` attribute on authorization request was optional.**
+  We were sending `cmd*` (optional marker, RFC 8907 §5.1.2) in the
+  authorization request's argument list, but §8.1 requires `cmd` to
+  be present on `service=shell` requests and to be empty to mean
+  "shell login".  Changed to `cmd=` so the value is parsed as
+  mandatory by stricter TACACS+ servers.
+
+- Bundled component versions unchanged from 0.2.14:
+  - xcespserver  0.2.7
+  - xcespcli     0.2.5
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.14
 
 - **Fix: TACACS+ authentication status codes were off-by-one.**
