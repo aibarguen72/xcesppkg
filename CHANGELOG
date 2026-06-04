@@ -1,5 +1,31 @@
 # Changelog - xcesppkg
 
+## 0.2.13
+
+- **Fix: TACACS+ protocol version byte was wrong for ASCII auth.**
+  xcesp-tacacs-auth was sending `ver = (major=12, minor=1) = 0xC1`
+  on the Authentication START packet.  Shrubbery's tac_plus server
+  correctly rejected this with:
+
+      Error <client>: 1 <user> Illegal packet ver=193 action=1 type=1
+      Error <client> 1: choose_authen: unacceptable authen method
+
+  Per RFC 8907 §5.4.2: **ASCII authentication MUST use minor
+  version = 0** (TAC_PLUS_MINOR_VER_DEFAULT).  Minor version = 1 is
+  reserved for CHAP, MS-CHAP, and PAP.
+
+  Corrected to `ver = 0xC0`.  The comment in the code that claimed
+  minor=1 was required for ASCII has also been fixed to reflect the
+  spec correctly.
+
+- No other changes from 0.2.12.
+
+- Bundled component versions:
+  - xcespserver  0.2.7
+  - xcespcli     0.2.5
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.12
 
 - **UX polish: `Could not chdir to home directory /home/xcesp-tacacs:

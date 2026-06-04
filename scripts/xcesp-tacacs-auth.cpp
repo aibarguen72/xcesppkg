@@ -684,9 +684,12 @@ int main(int /*argc*/, char* /*argv*/[]) {
                    srv.host.c_str(), srv.port, err.c_str());
             continue;
         }
-        // version: major=12, minor=1 (TAC_PLUS_MINOR_VER_ONE) — required for
-        // ASCII auth per RFC 8907 §5 (minor=0 is for CHAP, MS-CHAP, PAP).
-        TacacsClient cli(fd, cfg.secret, (TAC_PLUS_MAJOR_VER << 4) | TAC_PLUS_MINOR_VER_ONE);
+        // version: major=12, minor=0 (TAC_PLUS_MINOR_VER_DEFAULT) — per
+        // RFC 8907 §5.4.2, ASCII auth MUST use minor=0.  minor=1 is for
+        // CHAP / MS-CHAP / PAP only.  Shrubbery's tac_plus rejects the
+        // wrong minor version with `Illegal packet ver=193 action=1 type=1`
+        // followed by `choose_authen: unacceptable authen method`.
+        TacacsClient cli(fd, cfg.secret, (TAC_PLUS_MAJOR_VER << 4) | TAC_PLUS_MINOR_VER_DEFAULT);
 
         if (!tacacsAuthenticate(cli, user, pass, ttyName, remAddr, err)) {
             std::cerr << "Authentication failed.\n";
