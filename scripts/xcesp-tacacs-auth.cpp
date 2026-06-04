@@ -635,8 +635,12 @@ int main(int /*argc*/, char* /*argv*/[]) {
     openlog("xcesp-tacacs-auth", LOG_PID, LOG_AUTHPRIV);
 
     // Best-effort echo to TTY so the user sees we're alive even if config
-    // load fails.
+    // load fails.  Two-line banner so the operator knows what input the
+    // tool wants (vs. the prior sshd password prompt, which is a stub —
+    // pam_succeed_if short-circuits it and the operator can type anything
+    // there).
     std::cerr << "\nXCESP TACACS+ authentication\n";
+    std::cerr << "Enter your TACACS+ credentials below.\n";
 
     Config cfg;
     std::string err;

@@ -1486,10 +1486,20 @@ if [ -f "$AAA_CONFIG_FILE" ]; then
             # 2. Local pool account xcesp-tacacs.  System uid, primary
             #    group `xcesp` (so the pool account can read the socket
             #    and the config file via group perms), locked /etc/shadow
-            #    (no direct ssh password — sshd uses AuthenticationMethods
-            #    none for this user), shell points at our auth tool.
+            #    (real auth happens in the auth tool, not via sshd PAM
+            #    after the pam_succeed_if short-circuit installed above),
+            #    shell points at our auth tool.
+            #
+            #    The home directory `/var/lib/xcesp/xcesp-tacacs` MUST
+            #    exist — sshd does `chdir(home)` before exec'ing
+            #    ForceCommand and prints a warning to the operator's
+            #    terminal if the chdir fails.  We use /var/lib/xcesp/
+            #    rather than /home/ because pool accounts aren't real
+            #    users and shouldn't live under /home alongside humans.
+            XCESP_TACACS_HOME=/var/lib/xcesp/xcesp-tacacs
             if ! id "$XCESP_TACACS_USER" >/dev/null 2>&1; then
                 useradd --system --no-create-home \
+                        --home-dir "$XCESP_TACACS_HOME" \
                         --shell "$XCESP_TACACS_AUTH_BIN" \
                         -g "$XCESP_GROUP" \
                         --comment "XCESP TACACS+ pool account" \
@@ -1497,7 +1507,10 @@ if [ -f "$AAA_CONFIG_FILE" ]; then
                 passwd -l "$XCESP_TACACS_USER" >/dev/null
                 log "  created pool account $XCESP_TACACS_USER (group=$XCESP_GROUP shell=$XCESP_TACACS_AUTH_BIN)"
             else
-                # Existing account — make sure shell + group are correct.
+                # Existing account — fix up shell, group, AND home dir
+                # path (older 0.2.10/0.2.11 deployments left it at the
+                # useradd default /home/xcesp-tacacs, which never got
+                # created, causing the sshd chdir warning).
                 current_shell=$(getent passwd "$XCESP_TACACS_USER" | awk -F: '{print $7}')
                 if [ "$current_shell" != "$XCESP_TACACS_AUTH_BIN" ]; then
                     usermod -s "$XCESP_TACACS_AUTH_BIN" "$XCESP_TACACS_USER"
@@ -1507,6 +1520,17 @@ if [ -f "$AAA_CONFIG_FILE" ]; then
                 if [ "$current_gid" != "$desired_gid" ]; then
                     usermod -g "$XCESP_GROUP" "$XCESP_TACACS_USER"
                 fi
+                current_home=$(getent passwd "$XCESP_TACACS_USER" | awk -F: '{print $6}')
+                if [ "$current_home" != "$XCESP_TACACS_HOME" ]; then
+                    usermod -d "$XCESP_TACACS_HOME" "$XCESP_TACACS_USER"
+                    log "  $XCESP_TACACS_USER: home dir → $XCESP_TACACS_HOME"
+                fi
+            fi
+            # Always ensure the home dir actually exists on disk.
+            if [ ! -d "$XCESP_TACACS_HOME" ]; then
+                install -d -o "$XCESP_TACACS_USER" -g "$XCESP_GROUP" -m 0700 \
+                    "$XCESP_TACACS_HOME"
+                log "  created $XCESP_TACACS_HOME"
             fi
 
             # 3. PAM patch — let xcesp-tacacs's auth succeed without

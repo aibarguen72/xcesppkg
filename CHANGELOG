@@ -1,5 +1,38 @@
 # Changelog - xcesppkg
 
+## 0.2.12
+
+- **UX polish: `Could not chdir to home directory /home/xcesp-tacacs:
+  No such file or directory` warning is gone.**  xcesp-activate
+  previously created the pool account with `useradd --no-create-home`
+  but left the passwd entry's home field at the useradd default
+  (`/home/xcesp-tacacs`), which never existed on disk.  sshd's
+  `chdir(home)` before exec'ing ForceCommand emitted a warning.
+
+  Fix: pool account home is now `/var/lib/xcesp/xcesp-tacacs` (real
+  dir, created mode 0700 owned by the pool account on every
+  activation).  Existing 0.2.10/0.2.11 deployments get `usermod -d`
+  on the next service start so the passwd field updates.
+
+- **Tool banner adds a `Enter your TACACS+ credentials below` line**
+  after the sshd password gate.  Operator no longer has to guess
+  what's expected.
+
+- **Known UX quirk** (not new in 0.2.12 — was always present):
+  the sshd `password:` prompt that appears BEFORE the tool runs is
+  a no-op gate.  PermitEmptyPasswords yes is supposed to accept
+  empty input, but sshd checks /etc/shadow's `!` lock before
+  consulting PAM, so empty input is rejected pre-PAM.  The
+  workaround is to type ANY non-empty character (operator can press
+  any key + Enter).  Real authentication happens in
+  xcesp-tacacs-auth after that.
+
+- Bundled component versions (unchanged from 0.2.11):
+  - xcespserver  0.2.7
+  - xcespcli     0.2.5
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.11
 
 - **Hotfix: TACACS+ pool-account login was broken in 0.2.10.**
