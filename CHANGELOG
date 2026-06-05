@@ -1,5 +1,63 @@
 # Changelog - xcesppkg
 
+## 0.2.16
+
+- **New: RADIUS authentication** via custom `xcesp-radius-auth` tool
+  (RFC 2865 Access-Request/Accept, ~600 lines C++ linking only
+  libcrypto for MD5).  Same architectural pattern as the TACACS+
+  pool-account path shipped in 0.2.10–0.2.15:
+
+  - Pool ssh account `xcesp-radius` (system uid, primary group
+    `xcesp`, locked /etc/shadow, home `/var/lib/xcesp/xcesp-radius`,
+    shell `/usr/lib/xcesp/xcesp-radius-auth`).
+  - PAM permit hack in `/etc/pam.d/sshd` via the existing
+    `xcesp_pam_prepend_block` helper — the `xcesp-radius` user's
+    PAM auth succeeds without password input; real RADIUS auth
+    happens in the auth tool.
+  - sshd drop-in `/etc/ssh/sshd_config.d/52-xcesp-radius.conf`
+    `Match User xcesp-radius` block with `ForceCommand`.
+  - Tool prompts the operator for real username + RADIUS password
+    on the tty, sends Access-Request UDP to the first reachable
+    server, validates the Response-Authenticator MD5 (RFC §3 — a
+    forged Access-Accept would otherwise be a CVE-class issue),
+    extracts the Service-Type AVP, maps it to a CliRole via
+    `management/aaa/radius/service-type-map`, and execs
+    `/usr/lib/xcesp/xcesp-login` with `XCESP_AUDIT_USER` +
+    `XCESP_ROLE_OVERRIDE` in env.
+  - Default service-type-map (when unset):
+    6 (Administrative-User) → role 1 (ALL),
+    7 (NAS-Prompt-User) → role 2 (NO_USER_ACCESS),
+    1 (Login-User) → role 3 (NO_CONFIG),
+    anything else → role 4 (SHOW_ONLY).
+  - Per-server failover: UDP timeout + retransmits → next server.
+    Access-Reject and Access-Challenge are authoritative (no
+    failover); Access-Challenge is treated as failure since
+    MFA/OTP flows are out of scope for this release.
+
+- **New: xcespcli audit log** (bumps xcespcli 0.2.5 → 0.2.6).  Every
+  dispatched command emits one syslog record on `LOG_AUTHPRIV` /
+  `LOG_NOTICE` with ident `xcespcli`.  Format:
+
+      xcespcli[<pid>]: user=<name> session=<sid> role=<1..4> cmd="<line>"
+
+  The emit fires *before* the role gate so attempted-but-denied
+  commands are also recorded.  `--audit-user <name>` flag lets
+  `xcesp-radius-auth` (and `xcesp-tacacs-auth`) record the
+  centrally-authenticated identity rather than the pool account
+  name.
+
+- **xcesp-activate** gains the RADIUS materialisation + teardown
+  path (gated by `aaa.order` containing `radius` AND
+  `[radius] present=true` in `/var/lib/xcesp/aaa-config.state`).
+  Mirrors the TACACS path exactly with `xcesp-radius` /
+  `52-xcesp-radius.conf` / `# BEGIN xcesp-radius-pam` markers.
+
+- Bundled component versions:
+  - xcespserver  0.2.7
+  - xcespcli     0.2.6  ← bumped
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.15
 
 - **Fix: TACACS+ authorization phase reused the authentication session.**

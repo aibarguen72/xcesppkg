@@ -87,6 +87,16 @@ if [ -d "$MAINSW/scripts" ]; then
             log "  refreshed $dst"
         fi
     fi
+    # 0.2.16: same self-refresh for the RADIUS auth tool.
+    if [ -f "$MAINSW/lib/xcesp/xcesp-radius-auth" ]; then
+        mkdir -p /usr/lib/xcesp
+        src="$MAINSW/lib/xcesp/xcesp-radius-auth"
+        dst="/usr/lib/xcesp/xcesp-radius-auth"
+        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+            install -o root -g root -m 0755 "$src" "$dst"
+            log "  refreshed $dst"
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -1270,6 +1280,14 @@ XCESP_TACACS_AUTH_BIN=/usr/lib/xcesp/xcesp-tacacs-auth
 XCESP_TACACS_CONF=/etc/xcesp/tacacs.conf
 SSHD_TACACS_DROPIN=/etc/ssh/sshd_config.d/51-xcesp-tacacs.conf
 
+# 0.2.16: RADIUS counterparts.  Same pool-account / PAM-permit pattern
+# as TACACS, separate drop-in number (52) so both can be installed
+# concurrently when aaa.order="local tacacs radius".
+XCESP_RADIUS_USER=xcesp-radius
+XCESP_RADIUS_AUTH_BIN=/usr/lib/xcesp/xcesp-radius-auth
+XCESP_RADIUS_CONF=/etc/xcesp/radius.conf
+SSHD_RADIUS_DROPIN=/etc/ssh/sshd_config.d/52-xcesp-radius.conf
+
 # /etc/pam.d/sshd marker block for the xcesp-tacacs pool account.
 # AuthenticationMethods none in sshd_config is supposed to skip auth, but
 # Fedora's hardened sshd silently ignores it and falls back to password
@@ -1279,6 +1297,13 @@ SSHD_TACACS_DROPIN=/etc/ssh/sshd_config.d/51-xcesp-tacacs.conf
 PAM_SSHD=/etc/pam.d/sshd
 PAM_TACACS_BEGIN="# BEGIN xcesp-tacacs-pam"
 PAM_TACACS_END="# END xcesp-tacacs-pam"
+
+# 0.2.16: marker block for the xcesp-radius pool account.  Identical
+# pattern to the TACACS block above (pam_succeed_if user = xcesp-radius
+# with [success=done default=ignore]), different markers so the two
+# blocks are independently install/removable.
+PAM_RADIUS_BEGIN="# BEGIN xcesp-radius-pam"
+PAM_RADIUS_END="# END xcesp-radius-pam"
 
 # 0.2.9-era paths we may need to clean up on upgrade
 LEGACY_TACPLUS_NSS_CONF=/etc/tacplus_nss.conf
@@ -1609,6 +1634,154 @@ SSHEOF
             if [ -f "$XCESP_TACACS_CONF" ]; then
                 rm -f "$XCESP_TACACS_CONF"
                 log "  removed $XCESP_TACACS_CONF"
+            fi
+        fi
+
+        # =====================================================================
+        # RADIUS materialisation (0.2.16) — mirrors the TACACS block above.
+        # =====================================================================
+        rad_present=$(aaa_cfg_get radius present "false")
+        rad_key=$(aaa_cfg_get radius key "")
+        rad_timeout=$(aaa_cfg_get radius timeout "3")
+        rad_servers=$(aaa_cfg_get radius servers "")
+        rad_svc_map=$(aaa_cfg_get radius service-type-map "6:1 7:2 1:3")
+
+        rad_enabled=false
+        case " $aaa_order " in
+            *" radius "*)
+                if [ "$rad_present" = "true" ] && [ -n "$rad_servers" ] && [ -n "$rad_key" ]; then
+                    rad_enabled=true
+                fi
+                ;;
+        esac
+
+        if [ "$rad_enabled" = "true" ]; then
+            if [ ! -x "$XCESP_RADIUS_AUTH_BIN" ]; then
+                log "AAA: RADIUS requested but $XCESP_RADIUS_AUTH_BIN not present — skipping"
+                rad_enabled=false
+            fi
+        fi
+
+        if [ "$rad_enabled" = "true" ]; then
+            log "AAA: RADIUS enabled — order='$aaa_order' service-type-map='$rad_svc_map'"
+
+            # 1. /etc/xcesp/radius.conf — consumed by xcesp-radius-auth.
+            #    Same mode/owner pattern as the TACACS conf (0640 root:xcesp)
+            #    so the pool account (in xcesp group) can read but other
+            #    users cannot see the shared secret.
+            mkdir -p /etc/xcesp
+            {
+                echo "# xcesp radius-auth v1 — managed by xcesp-activate, do not edit"
+                for sp in $rad_servers; do
+                    echo "server $sp"
+                done
+                echo "key $rad_key"
+                echo "timeout $rad_timeout"
+                echo "service-type-map $rad_svc_map"
+            } > "$XCESP_RADIUS_CONF.tmp"
+            chmod 0640 "$XCESP_RADIUS_CONF.tmp"
+            chown "root:$XCESP_GROUP" "$XCESP_RADIUS_CONF.tmp"
+            mv "$XCESP_RADIUS_CONF.tmp" "$XCESP_RADIUS_CONF"
+            log "  wrote $XCESP_RADIUS_CONF"
+
+            # 2. Local pool account xcesp-radius.  Same configuration as
+            #    xcesp-tacacs: system uid, primary group `xcesp`, locked
+            #    /etc/shadow, shell is the auth tool, home under
+            #    /var/lib/xcesp/ (sshd chdirs here before ForceCommand).
+            XCESP_RADIUS_HOME=/var/lib/xcesp/xcesp-radius
+            if ! id "$XCESP_RADIUS_USER" >/dev/null 2>&1; then
+                useradd --system --no-create-home \
+                        --home-dir "$XCESP_RADIUS_HOME" \
+                        --shell "$XCESP_RADIUS_AUTH_BIN" \
+                        -g "$XCESP_GROUP" \
+                        --comment "XCESP RADIUS pool account" \
+                        "$XCESP_RADIUS_USER"
+                passwd -l "$XCESP_RADIUS_USER" >/dev/null
+                log "  created pool account $XCESP_RADIUS_USER (group=$XCESP_GROUP shell=$XCESP_RADIUS_AUTH_BIN)"
+            else
+                current_shell=$(getent passwd "$XCESP_RADIUS_USER" | awk -F: '{print $7}')
+                if [ "$current_shell" != "$XCESP_RADIUS_AUTH_BIN" ]; then
+                    usermod -s "$XCESP_RADIUS_AUTH_BIN" "$XCESP_RADIUS_USER"
+                fi
+                current_gid=$(id -g "$XCESP_RADIUS_USER")
+                desired_gid=$(getent group "$XCESP_GROUP" | awk -F: '{print $3}')
+                if [ "$current_gid" != "$desired_gid" ]; then
+                    usermod -g "$XCESP_GROUP" "$XCESP_RADIUS_USER"
+                fi
+                current_home=$(getent passwd "$XCESP_RADIUS_USER" | awk -F: '{print $6}')
+                if [ "$current_home" != "$XCESP_RADIUS_HOME" ]; then
+                    usermod -d "$XCESP_RADIUS_HOME" "$XCESP_RADIUS_USER"
+                    log "  $XCESP_RADIUS_USER: home dir → $XCESP_RADIUS_HOME"
+                fi
+            fi
+            if [ ! -d "$XCESP_RADIUS_HOME" ]; then
+                install -d -o "$XCESP_RADIUS_USER" -g "$XCESP_GROUP" -m 0700 \
+                    "$XCESP_RADIUS_HOME"
+                log "  created $XCESP_RADIUS_HOME"
+            fi
+
+            # 3. PAM permit hack for the xcesp-radius user — same shape as
+            #    the TACACS block; independent markers so removing one
+            #    does not disturb the other.
+            pam_block_r="auth [success=done default=ignore] pam_succeed_if.so user = $XCESP_RADIUS_USER quiet_success"
+            xcesp_pam_prepend_block "$PAM_SSHD" "$PAM_RADIUS_BEGIN" "$PAM_RADIUS_END" "$pam_block_r"
+
+            # 4. /etc/ssh/sshd_config.d/52-xcesp-radius.conf — Match User
+            #    block.  ForceCommand drops the operator into
+            #    xcesp-radius-auth which performs the real RADIUS
+            #    authentication.
+            mkdir -p /etc/ssh/sshd_config.d
+            cat > "$SSHD_RADIUS_DROPIN.tmp" <<SSHEOFR
+# BEGIN xcesp-radius — managed by xcesp-activate, do not edit
+#
+# Shared pool account for RADIUS-authenticated users.  Users ssh as
+# \`$XCESP_RADIUS_USER@router\`; sshd's password prompt appears but the
+# PAM stack (see /etc/pam.d/sshd's xcesp-radius-pam block) short-circuits
+# to PAM_SUCCESS for this specific user.  Press Enter (or type any
+# garbage) to get past the prompt.  ForceCommand then drops into
+# xcesp-radius-auth, which does the REAL RADIUS authentication against
+# the configured server.  An Access-Reject from the RADIUS server exits
+# the tool with status 1, dropping the operator out of ssh — no shell
+# access leaked.
+
+Match User $XCESP_RADIUS_USER
+    PasswordAuthentication yes
+    PermitEmptyPasswords yes
+    PubkeyAuthentication no
+    KbdInteractiveAuthentication no
+    AuthenticationMethods password
+    PermitTTY yes
+    X11Forwarding no
+    AllowTcpForwarding no
+    PermitTunnel no
+    ForceCommand $XCESP_RADIUS_AUTH_BIN
+# END xcesp-radius
+SSHEOFR
+            chmod 0644 "$SSHD_RADIUS_DROPIN.tmp"
+            chown root:root "$SSHD_RADIUS_DROPIN.tmp"
+            if ! cmp -s "$SSHD_RADIUS_DROPIN.tmp" "$SSHD_RADIUS_DROPIN" 2>/dev/null; then
+                mv "$SSHD_RADIUS_DROPIN.tmp" "$SSHD_RADIUS_DROPIN"
+                log "  wrote $SSHD_RADIUS_DROPIN"
+                systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+            else
+                rm -f "$SSHD_RADIUS_DROPIN.tmp"
+            fi
+        else
+            log "AAA: RADIUS disabled — tearing down"
+
+            if [ -f "$SSHD_RADIUS_DROPIN" ]; then
+                rm -f "$SSHD_RADIUS_DROPIN"
+                log "  removed $SSHD_RADIUS_DROPIN"
+                systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+            fi
+            xcesp_pam_prepend_block "$PAM_SSHD" "$PAM_RADIUS_BEGIN" "$PAM_RADIUS_END" ""
+            if id "$XCESP_RADIUS_USER" >/dev/null 2>&1; then
+                userdel "$XCESP_RADIUS_USER" 2>/dev/null || true
+                log "  removed pool account $XCESP_RADIUS_USER"
+            fi
+            if [ -f "$XCESP_RADIUS_CONF" ]; then
+                rm -f "$XCESP_RADIUS_CONF"
+                log "  removed $XCESP_RADIUS_CONF"
             fi
         fi
     fi

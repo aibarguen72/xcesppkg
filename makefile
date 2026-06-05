@@ -77,6 +77,7 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
             scripts/xcesp-dhclient-script scripts/chrony-install.sh \
             scripts/xcesp-login \
             scripts/xcesp-ip.c scripts/xcesp-tacacs-auth.cpp \
+            scripts/xcesp-radius-auth.cpp \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
             cfg/xcespserver.conf python/pyproject.toml
 	@echo "Building package $(TARBALL) ..."
@@ -101,6 +102,18 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	g++ -std=c++17 -O2 -Wall -Wextra \
 	    -o $(PKG_NAME)/bin/xcesp-tacacs-auth \
 	    scripts/xcesp-tacacs-auth.cpp \
+	    -lcrypto
+
+	# --- xcesp-radius-auth (0.2.16+): centralised AAA via RADIUS.
+	# Implements RFC 2865 (Access-Request/Accept with Response-Authenticator
+	# validation and User-Password MD5-XOR encryption) directly.  Same
+	# rationale as xcesp-tacacs-auth: distro-package availability on
+	# Fedora 41 (libfreeradius-client) is unreliable; the wire format is
+	# small enough that a direct implementation is a smaller bug surface
+	# than a library we don't control.  Only external dep is libcrypto.
+	g++ -std=c++17 -O2 -Wall -Wextra \
+	    -o $(PKG_NAME)/bin/xcesp-radius-auth \
+	    scripts/xcesp-radius-auth.cpp \
 	    -lcrypto
 
 	# --- Config templates ---

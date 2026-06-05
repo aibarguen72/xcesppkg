@@ -155,6 +155,22 @@ else
     warn "xcesp-tacacs-auth not in package — TACACS+ authentication will be unavailable"
 fi
 
+# 0.2.16: xcesp-radius-auth → /usr/lib/xcesp/ (NOT on PATH).
+# Custom RADIUS authentication tool built into xcesppkg at build time
+# (links libcrypto for MD5).  Invoked by sshd ForceCommand on the
+# xcesp-radius pool account when centralised AAA is enabled.
+info "Installing xcesp-radius-auth..."
+src="$INSTALL_DIR/bin/xcesp-radius-auth"
+if [ -f "$src" ]; then
+    install -d -o root -g root -m 0755 "$MAINSW_DIR/lib/xcesp"
+    install -d -o root -g root -m 0755 /usr/lib/xcesp
+    install -o root -g root -m 0755 "$src" "$MAINSW_DIR/lib/xcesp/xcesp-radius-auth"
+    install -o root -g root -m 0755 "$src" /usr/lib/xcesp/xcesp-radius-auth
+    info "  /usr/lib/xcesp/xcesp-radius-auth (and $MAINSW_DIR/lib/xcesp/)"
+else
+    warn "xcesp-radius-auth not in package — RADIUS authentication will be unavailable"
+fi
+
 # ---------------------------------------------------------------------------
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------
