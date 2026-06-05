@@ -1,5 +1,39 @@
 # Changelog - xcesppkg
 
+## 0.2.17
+
+- **Audit feature default flipped off.**  `management/aaa/audit/enabled`
+  schema default `true` → `false`.  0.2.16 emitted audit records
+  unconditionally (the knob was a placeholder); 0.2.17 honours it as
+  a real opt-in toggle.  Operators who want audit must add:
+
+      management
+        aaa
+          audit
+            enabled true
+          !
+        !
+      !
+
+  Bundles xcespserver 0.2.8 (publishes `/etc/xcesp/audit.conf` at
+  every commit) and xcespcli 0.2.7 (reads `/etc/xcesp/audit.conf` in
+  CliSession's constructor and short-circuits `emitAuditLog()` when
+  `enabled = false`).
+
+- **Fix: xcesp-login now passes `--audit-user` to xcespcli.**  In
+  0.2.16 the script set `audit_user` from `XCESP_AUDIT_USER` but
+  didn't pass it on the command line, so TACACS+/RADIUS audit lines
+  showed the pool account name (`xcesp-tacacs` / `xcesp-radius`)
+  instead of the centrally-authenticated identity.  The passthrough
+  was waiting for xcespcli to ship `--audit-user`, which landed in
+  0.2.6.
+
+- Bundled component versions:
+  - xcespserver  0.2.8  ← bumped
+  - xcespcli     0.2.7  ← bumped
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.16
 
 - **New: RADIUS authentication** via custom `xcesp-radius-auth` tool

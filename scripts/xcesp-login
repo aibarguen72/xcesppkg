@@ -71,13 +71,10 @@ else
 fi
 
 # Build the xcespcli invocation.  --audit-user is honoured by xcespcli
-# 0.2.11+ to record the REAL remote username in the audit log even when
+# 0.2.6+ to record the REAL remote username in the audit log even when
 # the POSIX uid is a shared pool account (xcesp-tacacs, xcesp-radius).
+# Falls back to the POSIX login name when XCESP_AUDIT_USER is unset
+# (local users authenticated by sshd directly).
 audit_user="${XCESP_AUDIT_USER:-$(id -un)}"
 
-exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role"
-# (--audit-user will be added once xcespcli ships it — silently ignored
-# by 0.2.5 xcespcli for forward compatibility.  When 0.2.11 lands, the
-# line above becomes:
-#   exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role" --audit-user "$audit_user"
-# )
+exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role" --audit-user "$audit_user"
