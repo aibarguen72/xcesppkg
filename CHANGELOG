@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.2.18
+
+- **Hotfix: audit feature was inert in 0.2.17.**  The audit policy
+  file was written to `/etc/xcesp/audit.conf`, but xcespserver runs
+  as the `xcesp` uid (non-root) and silently failed to write under
+  `/etc/`.  xcespcli read the missing file as "audit off" regardless
+  of the operator's `audit enabled true` commit.
+
+  Moved the policy file to `/var/lib/xcesp/audit.conf` — same
+  directory as managed-users.state and aaa-config.state, owned
+  `root:xcesp 2775` (writable by xcespserver, readable by every
+  xcespcli session).
+
+  Bundles xcespserver 0.2.9 (corrected writer path) and xcespcli
+  0.2.8 (corrected reader path).
+
+- Bundled component versions:
+  - xcespserver  0.2.9  ← bumped
+  - xcespcli     0.2.8  ← bumped
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.17
 
 - **Audit feature default flipped off.**  `management/aaa/audit/enabled`
