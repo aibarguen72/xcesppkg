@@ -1,5 +1,50 @@
 # Changelog - xcesppkg
 
+## 0.2.21
+
+- **Fix: SNMP feature didn't work on Fedora.**  Two packaging
+  assumptions were wrong:
+
+  1. Fedora's stock `/etc/snmp/snmpd.conf` does **not** auto-include
+     `/etc/snmp/snmpd.conf.d/` (Debian's does).  The 0.2.20 drop-in
+     was silently ignored, snmpd never enabled AgentX, the
+     `/var/agentx/master` socket never appeared, and xcespserver's
+     embedded subagent looped forever with `Failed to connect to
+     the agentx master agent`.
+
+  2. Fedora's net-snmp 5.9.4 rejects `agentXPerms 0660 0660 root
+     xcesp` with `Can't identify user (root).` and falls back to
+     creating the socket as `root:root mode 0755` — unreachable
+     from the `xcesp` uid.
+
+  `xcesp-activate` now does two things instead:
+
+  - Writes a managed marker block (`# BEGIN xcesp-snmp` / `# END
+    xcesp-snmp`) into `/etc/snmp/snmpd.conf` itself with the
+    `master agentx` + `agentXSocket` lines.  Same pattern used for
+    `/etc/pam.d/sshd`.  Works on every distro since we no longer
+    rely on conf.d auto-inclusion.
+  - Writes a systemd drop-in at
+    `/etc/systemd/system/snmpd.service.d/xcesp.conf` with
+    `ExecStartPost=chgrp xcesp + chmod 0660 /var/agentx/master`.
+    Fires after snmpd creates the socket; idempotent and harmless
+    if the socket isn't there yet.
+
+  Teardown (operator flips `enabled false`) strips the marker
+  block, removes the systemd drop-in, does daemon-reload, restarts
+  snmpd.
+
+  Legacy cleanup: the 0.2.20-era `/etc/snmp/snmpd.conf.d/xcesp.conf`
+  is removed on every activation, so upgrading from 0.2.20 leaves a
+  clean slate before the new pattern goes in.
+
+  The `cfg/xcesp-snmpd.conf` file is still shipped (in the tarball
+  and at `/var/xcesp/mainsw/cfg/`) for documentation; it is no
+  longer read by xcesp-activate.
+
+  No xcespserver / xcespcli rebuild required — install.sh-side
+  change only.
+
 ## 0.2.20
 
 - **Hotfix: SNMP feature was inert in 0.2.19.**  `xcesp-snmpd.conf`

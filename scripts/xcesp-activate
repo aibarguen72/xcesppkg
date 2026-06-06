@@ -1786,49 +1786,123 @@ SSHEOFR
         fi
 
         # =====================================================================
-        # SNMP AgentX materialisation (0.2.19)
+        # SNMP AgentX materialisation (0.2.19+; revised in 0.2.21)
         # =====================================================================
         #
-        # When the operator sets `management snmp enabled true`, install
-        # the snmpd drop-in that turns on AgentX in the master snmpd so
-        # xcespserver (a subagent) can connect.  Teardown when the knob
-        # flips back to false.
+        # When the operator sets `management snmp enabled true`, install two
+        # managed pieces so xcespserver (a subagent) can connect to the
+        # master snmpd:
         #
-        # Files we touch:
-        #   /etc/snmp/snmpd.conf.d/xcesp.conf — managed drop-in (this file)
+        #   1. A marker block in /etc/snmp/snmpd.conf with `master agentx`
+        #      + `agentXSocket`.  Fedora's stock snmpd does NOT auto-include
+        #      /etc/snmp/snmpd.conf.d/ (Debian's does) — the 0.2.20 drop-in
+        #      approach therefore worked on Debian but was silently ignored
+        #      on Fedora, leaving snmpd without AgentX support.
         #
-        # xcespserver itself runs as the `xcesp` user and connects to the
-        # AgentX Unix socket /var/agentx/master that snmpd creates after
-        # reading our drop-in.  agentXPerms in the drop-in gives the
-        # xcesp group read/write on the socket so no setuid is needed.
+        #   2. A systemd drop-in for snmpd.service that fixes up the AgentX
+        #      socket's group + perms post-start.  Fedora's net-snmp 5.9.4
+        #      rejects the `agentXPerms 0660 0660 root xcesp` form with
+        #      "Can't identify user (root).", and falls back to creating
+        #      the socket as root:root mode 0755 — unreachable from the
+        #      xcesp uid.  An ExecStartPost chgrp + chmod fixes this
+        #      cleanly without needing snmpd config tricks.
+        #
+        # Teardown: strip the marker block, remove the drop-in, daemon-
+        # reload, restart snmpd.  Also clean up the legacy 0.2.20 conf.d
+        # drop-in if it exists.
 
         snmp_present=$(aaa_cfg_get snmp present "false")
         snmp_enabled=$(aaa_cfg_get snmp enabled "false")
-        SNMP_SNMPD_DROPIN=/etc/snmp/snmpd.conf.d/xcesp.conf
-        SNMP_SNMPD_SRC="$MAINSW/cfg/xcesp-snmpd.conf"
+
+        SNMPD_MAIN_CONF=/etc/snmp/snmpd.conf
+        SNMPD_MARKER_BEGIN="# BEGIN xcesp-snmp"
+        SNMPD_MARKER_END="# END xcesp-snmp"
+        SNMPD_SYSTEMD_DROPIN=/etc/systemd/system/snmpd.service.d/xcesp.conf
+        SNMPD_LEGACY_CONFD=/etc/snmp/snmpd.conf.d/xcesp.conf   # 0.2.20 leftover
+
+        # Always strip the legacy 0.2.20 conf.d drop-in on every activation.
+        # Idempotent: guarantees an upgrade from 0.2.20 leaves a clean
+        # slate before the new marker-block pattern goes in.
+        if [ -f "$SNMPD_LEGACY_CONFD" ]; then
+            rm -f "$SNMPD_LEGACY_CONFD"
+            log "  removed legacy $SNMPD_LEGACY_CONFD (0.2.20 cleanup)"
+        fi
 
         if [ "$snmp_present" = "true" ] && [ "$snmp_enabled" = "true" ]; then
-            if [ ! -f "$SNMP_SNMPD_SRC" ]; then
-                log "AAA: SNMP requested but $SNMP_SNMPD_SRC missing — skipping"
+            log "AAA: SNMP enabled — patching $SNMPD_MAIN_CONF + installing systemd drop-in"
+
+            # 1. Marker block in /etc/snmp/snmpd.conf.
+            snmpd_block=$(cat <<'SNMPDBLOCK'
+master agentx
+agentXSocket /var/agentx/master
+SNMPDBLOCK
+            )
+            need_snmpd_reload=false
+            if [ -f "$SNMPD_MAIN_CONF" ]; then
+                pre=$(sha256sum "$SNMPD_MAIN_CONF" 2>/dev/null | awk '{print $1}')
+                xcesp_patch_block "$SNMPD_MAIN_CONF" \
+                    "$SNMPD_MARKER_BEGIN" "$SNMPD_MARKER_END" "$snmpd_block"
+                post=$(sha256sum "$SNMPD_MAIN_CONF" 2>/dev/null | awk '{print $1}')
+                [ "$pre" != "$post" ] && need_snmpd_reload=true
             else
-                log "AAA: SNMP enabled — installing $SNMP_SNMPD_DROPIN"
-                install -d -o root -g root -m 0755 /etc/snmp/snmpd.conf.d
-                if ! cmp -s "$SNMP_SNMPD_SRC" "$SNMP_SNMPD_DROPIN" 2>/dev/null; then
-                    install -o root -g root -m 0644 "$SNMP_SNMPD_SRC" "$SNMP_SNMPD_DROPIN"
-                    log "  wrote $SNMP_SNMPD_DROPIN"
-                    # Reload snmpd so it re-reads the drop-in.  Service is
-                    # called `snmpd` on Fedora/RHEL/Debian — same name on
-                    # all three.  Best-effort: skip silently if not present.
-                    systemctl reload snmpd 2>/dev/null \
-                        || systemctl restart snmpd 2>/dev/null \
-                        || true
-                fi
+                log "  $SNMPD_MAIN_CONF not present — skipping marker block (snmpd not installed?)"
+            fi
+
+            # 2. Systemd drop-in that fixes the socket's group + perms after
+            # snmpd creates it.  agentXPerms on Fedora's snmpd is broken
+            # (see comment above), so we work around with ExecStartPost.
+            install -d -o root -g root -m 0755 "$(dirname "$SNMPD_SYSTEMD_DROPIN")"
+            cat > "$SNMPD_SYSTEMD_DROPIN.tmp" <<'SYSDDROPIN'
+# Managed by xcesp-activate.  Fixes /var/agentx/master perms so the
+# xcespserver subagent (uid xcesp) can connect to the AgentX socket
+# that snmpd creates as root:root mode 0755 by default.
+[Service]
+ExecStartPost=/bin/sh -c 'chgrp xcesp /var/agentx/master 2>/dev/null; chmod 0660 /var/agentx/master 2>/dev/null; true'
+SYSDDROPIN
+            chmod 0644 "$SNMPD_SYSTEMD_DROPIN.tmp"
+            chown root:root "$SNMPD_SYSTEMD_DROPIN.tmp"
+            need_daemon_reload=false
+            if ! cmp -s "$SNMPD_SYSTEMD_DROPIN.tmp" "$SNMPD_SYSTEMD_DROPIN" 2>/dev/null; then
+                mv "$SNMPD_SYSTEMD_DROPIN.tmp" "$SNMPD_SYSTEMD_DROPIN"
+                log "  wrote $SNMPD_SYSTEMD_DROPIN"
+                need_daemon_reload=true
+                need_snmpd_reload=true
+            else
+                rm -f "$SNMPD_SYSTEMD_DROPIN.tmp"
+            fi
+
+            if [ "$need_daemon_reload" = "true" ]; then
+                systemctl daemon-reload 2>/dev/null || true
+            fi
+            if [ "$need_snmpd_reload" = "true" ]; then
+                # Restart (not reload) so ExecStartPost and the new marker
+                # block both take effect, AND the socket is recreated under
+                # the new perms.
+                systemctl restart snmpd 2>/dev/null || true
             fi
         else
-            if [ -f "$SNMP_SNMPD_DROPIN" ]; then
-                rm -f "$SNMP_SNMPD_DROPIN"
-                log "  removed $SNMP_SNMPD_DROPIN"
-                systemctl reload snmpd 2>/dev/null || true
+            log "AAA: SNMP disabled — tearing down snmpd integration"
+
+            need_snmpd_reload=false
+            need_daemon_reload=false
+            if [ -f "$SNMPD_MAIN_CONF" ]; then
+                pre=$(sha256sum "$SNMPD_MAIN_CONF" 2>/dev/null | awk '{print $1}')
+                xcesp_patch_block "$SNMPD_MAIN_CONF" \
+                    "$SNMPD_MARKER_BEGIN" "$SNMPD_MARKER_END" ""
+                post=$(sha256sum "$SNMPD_MAIN_CONF" 2>/dev/null | awk '{print $1}')
+                [ "$pre" != "$post" ] && need_snmpd_reload=true
+            fi
+            if [ -f "$SNMPD_SYSTEMD_DROPIN" ]; then
+                rm -f "$SNMPD_SYSTEMD_DROPIN"
+                log "  removed $SNMPD_SYSTEMD_DROPIN"
+                need_daemon_reload=true
+                need_snmpd_reload=true
+            fi
+            if [ "$need_daemon_reload" = "true" ]; then
+                systemctl daemon-reload 2>/dev/null || true
+            fi
+            if [ "$need_snmpd_reload" = "true" ]; then
+                systemctl restart snmpd 2>/dev/null || true
             fi
         fi
     fi
