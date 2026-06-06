@@ -1,5 +1,33 @@
 # Changelog - xcesppkg
 
+## 0.2.19
+
+- **New: SNMP AgentX scaffold.**  Bundles xcespserver 0.2.10 and ships:
+  - `cfg/xcesp-snmpd.conf` — system snmpd drop-in that turns on the
+    AgentX master.  Installed at
+    `/etc/snmp/snmpd.conf.d/xcesp.conf` by xcesp-activate when the
+    operator sets `management snmp enabled true`.
+  - `mib/XCESP-MIB.txt` — hand-written MIB ASN.1 covering the one
+    scalar (`xcespServerName`) and one notification
+    (`xcespColdStart`) shipped in this release.  Lands at
+    `$MAINSW_DIR/mib/XCESP-MIB.txt` for operators to scp to their
+    NMS host's MIB directory.
+  - `scripts/xcesp-activate` — new SNMP block that gates on
+    `[snmp] enabled = true` in `/var/lib/xcesp/aaa-config.state`,
+    materialises the drop-in, and reloads snmpd.  Tears down
+    cleanly when the operator flips the toggle off.
+
+- **Operator-side install advice** (`install.sh`) — new section
+  documenting the SNMP feature, listing the required runtime
+  packages (`snmpd`, `snmp` on Debian; `net-snmp`, `net-snmp-utils`
+  on Fedora), and noting the enterprise OID base.
+
+- Bundled component versions:
+  - xcespserver  **0.2.10**  ← bumped
+  - xcespcli     0.2.8
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.18
 
 - **Hotfix: audit feature was inert in 0.2.17.**  The audit policy

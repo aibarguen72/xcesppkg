@@ -1,0 +1,67 @@
+XCESP-MIB DEFINITIONS ::= BEGIN
+
+--
+-- XCESP router product MIB — sub-tree under IKATA-SNMP-MIB
+-- (ikataSnmp = enterprises.43978).
+--
+-- 0.2.19 — minimum vertical slice: one scalar (xcespServerName) and
+-- one notification (xcespColdStart).  Subsequent releases grow this
+-- file (or replace it with auto-generator output from gen-xcesp-mib.py
+-- in 0.2.21+).
+--
+
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
+    enterprises
+        FROM SNMPv2-SMI
+    DisplayString
+        FROM SNMPv2-TC;
+
+ikataSnmp           OBJECT IDENTIFIER ::= { enterprises 43978 }
+ikataSnmpObjects    OBJECT IDENTIFIER ::= { ikataSnmp 1 }
+
+xcespMib MODULE-IDENTITY
+    LAST-UPDATED "202606060000Z"
+    ORGANIZATION "www.ikatanetworks.com"
+    CONTACT-INFO "email: contact@ikatanetworks.com"
+    DESCRIPTION
+        "XCESP router product MIB.  Exposes router-level state through
+         the AgentX subagent embedded in xcespserver.  Polled values are
+         backed by ServerStatus paths; notifications fire on state
+         transitions captured by the EventDispatcher."
+    REVISION     "202606060000Z"
+    DESCRIPTION
+        "0.2.19 — initial release: xcespServerName scalar + xcespColdStart
+         notification.  Subsequent releases will add IF-MIB ifTable bridge
+         (0.2.20) and broader schema-derived objects (0.2.21+)."
+    ::= { ikataSnmpObjects 1 }
+
+--
+-- Scalar objects
+--
+
+xcespObjects        OBJECT IDENTIFIER ::= { xcespMib 1 }
+xcespNotifications  OBJECT IDENTIFIER ::= { xcespMib 0 }
+
+xcespServerName OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "Operator-configured XCESP system name (management/system/name).
+         When unset by the operator, defaults to the server's hostname."
+    ::= { xcespMib 1 }
+
+--
+-- Notifications
+--
+
+xcespColdStart NOTIFICATION-TYPE
+    STATUS       current
+    DESCRIPTION
+        "Fired once when xcespserver starts and successfully registers
+         with the master snmpd over AgentX.  Carries the standard
+         snmpTrapOID varbind identifying this notification."
+    ::= { xcespNotifications 1 }
+
+END

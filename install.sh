@@ -397,6 +397,18 @@ info "Installing schema to $MAINSW_DIR/schema ..."
 cp -rT "$INSTALL_DIR/schema" "$MAINSW_DIR/schema"
 
 # ---------------------------------------------------------------------------
+# MIB files → mainsw/mib/  (0.2.19+).  Operator scp's these to their NMS
+# host's MIB dir (typically /usr/share/snmp/mibs/) so snmpwalk -m XCESP-MIB
+# can resolve OIDs to names.  Not used by xcespserver itself — the AgentX
+# subagent registers under the numeric OID directly.
+# ---------------------------------------------------------------------------
+if [ -d "$INSTALL_DIR/mib" ]; then
+    info "Installing MIB files to $MAINSW_DIR/mib ..."
+    install -d -o root -g root -m 0755 "$MAINSW_DIR/mib"
+    cp -rT "$INSTALL_DIR/mib" "$MAINSW_DIR/mib"
+fi
+
+# ---------------------------------------------------------------------------
 # Python rules → mainsw/rules/  (then activated to /var/xcesp/rules/ below)
 # ---------------------------------------------------------------------------
 info "Installing Python rules to $MAINSW_DIR/rules ..."
@@ -691,6 +703,17 @@ echo "  packages required.  The only runtime dep is libcrypto (OpenSSL)"
 echo "  which is already on every supported distro."
 echo "  RADIUS-based authentication and the audit log are still pending;"
 echo "  they materialise in 0.2.11."
+echo ""
+echo " Optional: SNMP AgentX (0.2.19+)"
+echo "  XCESP can expose its state to SNMP NMS pollers as a subagent of"
+echo "  the system snmpd.  Operator turns it on with:"
+echo "    management snmp enabled true"
+echo "  Requires the master snmpd to be installed; xcesp-activate writes"
+echo "  /etc/snmp/snmpd.conf.d/xcesp.conf enabling AgentX when configured."
+echo "    apt install snmpd snmp                              (Debian/Ubuntu)"
+echo "    dnf install net-snmp net-snmp-utils                 (Fedora/RHEL)"
+echo "  Then:  systemctl enable --now snmpd"
+echo "  Pollers can walk the XCESP MIB at OID 1.3.6.1.4.1.43978.1.1 ..."
 echo ""
 echo "To install a second version and swap:"
 echo "  1. Unpack a new package into $BACKUPSW_DIR/"

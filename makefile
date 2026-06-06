@@ -79,7 +79,9 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
             scripts/xcesp-ip.c scripts/xcesp-tacacs-auth.cpp \
             scripts/xcesp-radius-auth.cpp \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
-            cfg/xcespserver.conf python/pyproject.toml
+            cfg/xcespserver.conf cfg/xcesp-snmpd.conf \
+            mib/XCESP-MIB.txt \
+            python/pyproject.toml
 	@echo "Building package $(TARBALL) ..."
 	rm -rf $(PKG_NAME)
 
@@ -122,6 +124,11 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp cfg/xcespproc.ini    $(PKG_NAME)/cfg/
 	cp cfg/xcespwdog.ini    $(PKG_NAME)/cfg/
 	cp cfg/xcespserver.conf $(PKG_NAME)/cfg/
+	cp cfg/xcesp-snmpd.conf $(PKG_NAME)/cfg/
+
+	# --- MIB files (operator-side, shipped for installation on NMS hosts) ---
+	mkdir -p $(PKG_NAME)/mib
+	cp mib/XCESP-MIB.txt $(PKG_NAME)/mib/
 
 	# --- Schema ---
 	# Direct xcesptest schema files

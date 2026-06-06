@@ -1784,9 +1784,56 @@ SSHEOFR
                 log "  removed $XCESP_RADIUS_CONF"
             fi
         fi
+
+        # =====================================================================
+        # SNMP AgentX materialisation (0.2.19)
+        # =====================================================================
+        #
+        # When the operator sets `management snmp enabled true`, install
+        # the snmpd drop-in that turns on AgentX in the master snmpd so
+        # xcespserver (a subagent) can connect.  Teardown when the knob
+        # flips back to false.
+        #
+        # Files we touch:
+        #   /etc/snmp/snmpd.conf.d/xcesp.conf — managed drop-in (this file)
+        #
+        # xcespserver itself runs as the `xcesp` user and connects to the
+        # AgentX Unix socket /var/agentx/master that snmpd creates after
+        # reading our drop-in.  agentXPerms in the drop-in gives the
+        # xcesp group read/write on the socket so no setuid is needed.
+
+        snmp_present=$(aaa_cfg_get snmp present "false")
+        snmp_enabled=$(aaa_cfg_get snmp enabled "false")
+        SNMP_SNMPD_DROPIN=/etc/snmp/snmpd.conf.d/xcesp.conf
+        SNMP_SNMPD_SRC="$MAINSW/cfg/xcesp-snmpd.conf"
+
+        if [ "$snmp_present" = "true" ] && [ "$snmp_enabled" = "true" ]; then
+            if [ ! -f "$SNMP_SNMPD_SRC" ]; then
+                log "AAA: SNMP requested but $SNMP_SNMPD_SRC missing — skipping"
+            else
+                log "AAA: SNMP enabled — installing $SNMP_SNMPD_DROPIN"
+                install -d -o root -g root -m 0755 /etc/snmp/snmpd.conf.d
+                if ! cmp -s "$SNMP_SNMPD_SRC" "$SNMP_SNMPD_DROPIN" 2>/dev/null; then
+                    install -o root -g root -m 0644 "$SNMP_SNMPD_SRC" "$SNMP_SNMPD_DROPIN"
+                    log "  wrote $SNMP_SNMPD_DROPIN"
+                    # Reload snmpd so it re-reads the drop-in.  Service is
+                    # called `snmpd` on Fedora/RHEL/Debian — same name on
+                    # all three.  Best-effort: skip silently if not present.
+                    systemctl reload snmpd 2>/dev/null \
+                        || systemctl restart snmpd 2>/dev/null \
+                        || true
+                fi
+            fi
+        else
+            if [ -f "$SNMP_SNMPD_DROPIN" ]; then
+                rm -f "$SNMP_SNMPD_DROPIN"
+                log "  removed $SNMP_SNMPD_DROPIN"
+                systemctl reload snmpd 2>/dev/null || true
+            fi
+        fi
     fi
 else
-    log "AAA: $AAA_CONFIG_FILE not present — TACACS+/RADIUS materialisation skipped"
+    log "AAA: $AAA_CONFIG_FILE not present — TACACS+/RADIUS/SNMP materialisation skipped"
 fi
 
 log "activation complete"
