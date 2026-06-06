@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.2.20
+
+- **Hotfix: SNMP feature was inert in 0.2.19.**  `xcesp-snmpd.conf`
+  was bundled into the tarball but `install.sh` never copied it to
+  `$MAINSW_DIR/cfg/xcesp-snmpd.conf` where `xcesp-activate` looks for
+  it.  Operators saw `AAA: SNMP requested but
+  /var/xcesp/mainsw/cfg/xcesp-snmpd.conf missing — skipping`, the
+  snmpd drop-in was never installed, snmpd never enabled AgentX, the
+  /var/agentx/master socket never appeared, and xcespserver's
+  embedded subagent looped forever with
+  `Failed to connect to the agentx master agent`.
+
+  Added a `Managed-asset configs → mainsw/cfg/` install step that
+  copies `xcesp-snmpd.conf` into `$MAINSW_DIR/cfg/`.  Now refreshed
+  on every package install, like binaries and schema.
+
+  No xcespserver / xcespcli rebuild required — this is install.sh
+  only.
+
 ## 0.2.19
 
 - **New: SNMP AgentX scaffold.**  Bundles xcespserver 0.2.10 and ships:

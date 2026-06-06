@@ -397,6 +397,27 @@ info "Installing schema to $MAINSW_DIR/schema ..."
 cp -rT "$INSTALL_DIR/schema" "$MAINSW_DIR/schema"
 
 # ---------------------------------------------------------------------------
+# Managed-asset configs → mainsw/cfg/  (0.2.20+).
+#
+# Distinct from $CFG_DIR (= /var/xcesp/cfg) which holds operator-mutable
+# files (xcespserver.ini, xcespserver.conf — never overwritten on
+# upgrade).  $MAINSW_DIR/cfg/ holds files xcesp-activate reads as
+# read-only templates and copies into the system on every service start
+# — refreshed on every package install.
+#
+# Currently:
+#   xcesp-snmpd.conf — system snmpd drop-in.  xcesp-activate installs it
+#     to /etc/snmp/snmpd.conf.d/xcesp.conf when management/snmp is
+#     enabled.
+# ---------------------------------------------------------------------------
+install -d -o root -g root -m 0755 "$MAINSW_DIR/cfg"
+if [ -f "$INSTALL_DIR/cfg/xcesp-snmpd.conf" ]; then
+    info "Installing xcesp-snmpd.conf to $MAINSW_DIR/cfg ..."
+    install -o root -g root -m 0644 "$INSTALL_DIR/cfg/xcesp-snmpd.conf" \
+        "$MAINSW_DIR/cfg/xcesp-snmpd.conf"
+fi
+
+# ---------------------------------------------------------------------------
 # MIB files → mainsw/mib/  (0.2.19+).  Operator scp's these to their NMS
 # host's MIB dir (typically /usr/share/snmp/mibs/) so snmpwalk -m XCESP-MIB
 # can resolve OIDs to names.  Not used by xcespserver itself — the AgentX
