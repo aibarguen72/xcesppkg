@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.2.24
+
+- **Fix: bundles xcespcli 0.2.9 — surfaces the success message for
+  short-circuit actions.**  0.2.23's new `copy sw latest backup-sw`
+  feature returned `STATUS=ok\ncopied + verified + installed: latest
+  = ...` on success, but xcespcli's streaming-action receiver
+  swallowed the body silently in the success path.  Operators saw
+  `XCESPFC>` reappear with no message and assumed the command
+  hadn't run.  The action had actually succeeded — only the display
+  was mute.
+
+  Pre-existing bug; surfaced by the new feature.  Fixes the display
+  for ALL streaming-action short-circuits (`copy log ...`, future
+  ones), not just `copy sw latest`.
+
+- Bundled component versions:
+  - xcespserver  0.2.12
+  - **xcespcli   0.2.9**  ← bumped
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.23
 
 - **New: `copy sw latest backup-sw` CLI command** for one-step
