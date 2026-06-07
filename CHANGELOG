@@ -1,5 +1,47 @@
 # Changelog - xcesppkg
 
+## 0.2.23
+
+- **New: `copy sw latest backup-sw` CLI command** for one-step
+  self-upgrade from the project's GitHub releases.  Bundles
+  xcespserver 0.2.12 which implements the download + verify +
+  install flow.  See xcespserver 0.2.12 CHANGELOG for the full
+  description.
+
+- **New: `MANIFEST.json` sidecar in every release.**  `make` now
+  emits `MANIFEST.json` alongside `xcespkg-X.Y.Z.tar.gz`, mapping
+  arch tokens to asset names + sha256 hashes:
+
+      {
+        "version": "0.2.23",
+        "x86_64":  "xcespkg-0.2.23.tar.gz",
+        "sha256":  { "x86_64": "<sha256-of-x86-tarball>" }
+      }
+
+  The ARM64 entry is intentionally absent during 0.2.x (per the
+  `feedback_arm64_defer_0_2_x` project memory).  When ARM64 builds
+  resume, the Makefile gets an `arm64` block emitted the same way.
+
+  The manifest must be uploaded to the GitHub release alongside the
+  tarball — operator-side `update-all-products` skill (or manual
+  `gh release create`) does this with `--file MANIFEST.json`.
+
+- **New: `[SOFTWARE]` section in xcespserver.ini** with
+  `LATEST_BASE_URL` defaulting to
+  `https://github.com/aibarguen72/xcesppkg/releases/latest/download/`.
+  OEM rebuilds and on-prem mirrors override here without touching
+  xcespserver source.
+
+  Section is intentionally kept out of the operator-visible CLI
+  config — `LATEST_BASE_URL` is a build/platform concern, not a
+  per-deployment configuration.
+
+- Bundled component versions:
+  - **xcespserver  0.2.12**  ← bumped
+  - xcespcli     0.2.8
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.22
 
 - **New: IF-MIB::ifTable bridge + XCESP-MIB::xcespIfTable.**  Bundles

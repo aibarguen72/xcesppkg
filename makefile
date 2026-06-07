@@ -227,5 +227,16 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	rm -rf $(PKG_NAME)
 	@echo "Package ready: $(TARBALL)"
 
+	# --- MANIFEST.json (0.2.23+) ---
+	# Sidecar manifest that `copy sw latest backup-sw` reads from
+	# GitHub's /latest/download/MANIFEST.json redirect.  Maps arch
+	# tokens (x86_64 / arm64) to asset names + sha256 hashes so
+	# xcespserver can verify the download before installing.  The
+	# ARM64 entry is intentionally absent during 0.2.x (per the
+	# arm64-defer memory); it gets added when ARM64 builds resume.
+	@x86_sha=$$(sha256sum $(TARBALL) | awk '{print $$1}'); \
+	printf '{\n  "version": "$(PRJVERSION)",\n  "x86_64": "$(TARBALL)",\n  "sha256": {\n    "x86_64": "%s"\n  }\n}\n' "$$x86_sha" > MANIFEST.json
+	@echo "Manifest ready:  MANIFEST.json"
+
 clean:
-	rm -rf $(PKG_NAME) $(TARBALL)
+	rm -rf $(PKG_NAME) $(TARBALL) MANIFEST.json
