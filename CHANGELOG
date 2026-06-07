@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.2.22
+
+- **New: IF-MIB::ifTable bridge + XCESP-MIB::xcespIfTable.**  Bundles
+  xcespserver 0.2.11.  When SNMP is enabled, the standard IF-MIB
+  ifTable returns one row per interface across every XCESP router
+  and VRF.  Private `xcespIfTable` joins on ifIndex for
+  router/vrf-aware filtering.  Persistent ifIndex map at
+  `/var/lib/xcesp/ifindex.state` keeps values stable across
+  restarts per RFC 2233.
+
+  See `xcespserver` 0.2.11 CHANGELOG for the full feature list and
+  the 0.2.x roadmap (0.2.23: admin-status / MAC / type; 0.2.24:
+  counters; 0.2.25: SNMPv3 contexts; 0.2.26: linkUp/linkDown traps).
+
+- **MIB updated**: `mib/XCESP-MIB.txt` adds the `xcespIfTable`
+  definition (xcespMib.2) with INDEX `{ ifIndex }` from IF-MIB.
+
+- Bundled component versions:
+  - **xcespserver  0.2.11**  ← bumped
+  - xcespcli     0.2.8
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.21
 
 - **Fix: SNMP feature didn't work on Fedora.**  Two packaging

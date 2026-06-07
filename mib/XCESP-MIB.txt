@@ -15,7 +15,9 @@ IMPORTS
     enterprises
         FROM SNMPv2-SMI
     DisplayString
-        FROM SNMPv2-TC;
+        FROM SNMPv2-TC
+    ifIndex
+        FROM IF-MIB;
 
 ikataSnmp           OBJECT IDENTIFIER ::= { enterprises 43978 }
 ikataSnmpObjects    OBJECT IDENTIFIER ::= { ikataSnmp 1 }
@@ -51,6 +53,77 @@ xcespServerName OBJECT-TYPE
         "Operator-configured XCESP system name (management/system/name).
          When unset by the operator, defaults to the server's hostname."
     ::= { xcespMib 1 }
+
+--
+-- xcespIfTable — per-interface mapping back to (router, vrf, name).
+-- Indexed by IF-MIB::ifIndex so it joins naturally with ifTable rows.
+-- Lets NMS pollers slice XCESP's flat ifTable by router and/or VRF.
+--
+
+xcespIfTable OBJECT-TYPE
+    SYNTAX       SEQUENCE OF XcespIfEntry
+    MAX-ACCESS   not-accessible
+    STATUS       current
+    DESCRIPTION
+        "Table mapping IF-MIB::ifIndex values to the (router, vrf,
+         xcesp-interface-name) tuple that XCESP uses internally.  One
+         row per interface; one ifIndex per row.  Pollers walk the
+         standard IF-MIB::ifTable for traffic and admin/oper data,
+         then snmpget rows from xcespIfTable to learn which router and
+         VRF each interface belongs to."
+    ::= { xcespMib 2 }
+
+xcespIfEntry OBJECT-TYPE
+    SYNTAX       XcespIfEntry
+    MAX-ACCESS   not-accessible
+    STATUS       current
+    DESCRIPTION  "One row per XCESP interface, indexed by ifIndex."
+    INDEX        { ifIndex }
+    ::= { xcespIfTable 1 }
+
+XcespIfEntry ::= SEQUENCE {
+    xcespIfRouter      DisplayString,
+    xcespIfVrf         DisplayString,
+    xcespIfXcespName   DisplayString,
+    xcespIfType        DisplayString
+}
+
+xcespIfRouter OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION  "Name of the XCESP router that owns this interface."
+    ::= { xcespIfEntry 1 }
+
+xcespIfVrf OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION  "Name of the VRF inside the router that owns this interface."
+    ::= { xcespIfEntry 2 }
+
+xcespIfXcespName OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "Interface name as XCESP knows it (e.g. `loHA`, `rlHA_XX`,
+         `greHA`).  Same value that appears in `show interface` CLI
+         output and in xcespserver.conf."
+    ::= { xcespIfEntry 3 }
+
+xcespIfType OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "XCESP's own interface-type tag (device, loopback, rlink, gre,
+         vlan, bridge, l2tp, vxlan, xfrm).  More descriptive than
+         IF-MIB::ifType for XCESP-specific tunnel/virtual types.  In
+         xcespserver 0.2.11 this field is a placeholder ('unknown')
+         pending xcesp-on-rtr emitting the IFACE_TYPE into ServerStatus
+         in 0.2.23."
+    ::= { xcespIfEntry 4 }
 
 --
 -- Notifications
