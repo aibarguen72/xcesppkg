@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.2.28
+
+- Bundles xcespserver 0.2.16, xcespcli 0.2.9, xcespproc 0.2.0,
+  xcespwdog 0.2.0 with the SnmpAgent column-handler refresh — the
+  IF-MIB columns `ifAdminStatus`, `ifPhysAddress`, `ifType` now return
+  real per-interface values instead of the 0.2.22-era placeholders,
+  and the private `xcespIfType` column carries the raw XCESP type
+  string.  Backed by new `admin-status` / `interface-type` /
+  `mac-address` status emissions from xcesp-on-rtr 0.2.1.
+- See the xcespserver 0.2.16 and xcesp-on-rtr 0.2.1 CHANGELOG entries
+  for handler / emission details.
+
 ## 0.2.27
 
 - **Fix: snmpget / snmpwalk on `IF-MIB::ifTable` columns crashed
