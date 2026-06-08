@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.2.26
+
+- **Fix: snmpwalk on IF-MIB::ifTable returned genError.**  Bundles
+  xcespserver 0.2.14.  The table handlers silently ignored
+  `MODE_GETNEXT` (only handled `MODE_GET`), so every walk request
+  produced "Reason: (genError) A general failure occured" with no
+  rows returned.
+
+- Bundled component versions:
+  - **xcespserver  0.2.14**  ← bumped
+  - xcespcli     0.2.9
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.25
 
 - **Fix: bundles xcespserver 0.2.13** — two SNMP / status fixes:
