@@ -1,5 +1,31 @@
 # Changelog - xcesppkg
 
+## 0.2.27
+
+- **Fix: snmpget / snmpwalk on `IF-MIB::ifTable` columns crashed
+  xcespserver.**  Bundles xcespserver 0.2.15.  The 0.2.11 iterator's
+  `data_context` was a pointer into the iterator's vector buffer;
+  net-snmp's table_iterator helper disposed of the loop_context
+  before the column handler ran, so the column handler dereferenced
+  freed memory and segfaulted on the first GET.  Symptom: subagent
+  disconnected silently after one request, subsequent snmpwalks
+  served from snmpd's built-in IF-MIB instead.
+
+  Now allocates a heap copy of each row's `Entry` and pairs it
+  with a `free_data_context` callback for clean per-row lifetime
+  management.
+
+  Verified end-to-end on xcesptest local stack:
+  `IF-MIB::ifTable` and `XCESP-MIB::xcespIfTable` walks both return
+  the configured XCESP interfaces; xcespserver stays alive across
+  consecutive walks.
+
+- Bundled component versions:
+  - **xcespserver  0.2.15**  ← bumped
+  - xcespcli     0.2.9
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.26
 
 - **Fix: snmpwalk on IF-MIB::ifTable returned genError.**  Bundles
