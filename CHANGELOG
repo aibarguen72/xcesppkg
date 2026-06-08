@@ -1,5 +1,30 @@
 # Changelog - xcesppkg
 
+## 0.2.25
+
+- **Fix: bundles xcespserver 0.2.13** — two SNMP / status fixes:
+
+  1. **IF-MIB::ifTable now correctly overrides the master snmpd's
+     built-in handler.**  0.2.22 shipped the subagent registration
+     at the net-snmp default priority (127), which TIES with the
+     built-in `mibII/interfaces` module — master kept its own and
+     `IF-MIB::ifTable` walks returned the host's kernel interfaces
+     (lo, ens160, …) instead of the XCESP router/vrf/interface
+     rows.  Now registers at priority 5 (lower = higher precedence
+     per AgentX) and wins regardless of master configuration.
+
+  2. **`show server` now reports the fresh BackupSW version
+     immediately after `copy sw latest backup-sw`** (was: stale
+     until next xcespserver restart).  FileActionHandler pushes
+     the new value into ServerStatus right after the tarball
+     extracts.
+
+- Bundled component versions:
+  - **xcespserver  0.2.13**  ← bumped
+  - xcespcli     0.2.9
+  - xcespschema  0.2.1
+  - others all 0.2.0
+
 ## 0.2.24
 
 - **Fix: bundles xcespcli 0.2.9 — surfaces the success message for
