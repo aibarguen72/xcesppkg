@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.2.29
+
+- **Hotfix to 0.2.28: bundle the actually-rebuilt xcespproc 0.2.1.**
+  0.2.28 shipped xcespproc 0.2.0 — the byte-identical 0.2.x baseline,
+  linked against the pre-emission xcesp-on-rtr.  In running stacks
+  SnmpAgent's new ifType/ifPhysAddress/xcespIfType column handlers
+  fell back to placeholders (`propVirtual(53)`, empty OCTET STRING,
+  `"unknown"`) because xcespproc never produced the underlying
+  `admin-status` / `interface-type` / `mac-address` ServerStatus
+  keys.  Pure relink — no xcespproc source changes.
+- Bundles xcespserver 0.2.16, xcespcli 0.2.9, xcespproc 0.2.1,
+  xcespwdog 0.2.0.
+
 ## 0.2.28
 
 - Bundles xcespserver 0.2.16, xcespcli 0.2.9, xcespproc 0.2.0,
