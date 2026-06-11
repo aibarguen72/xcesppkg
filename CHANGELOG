@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.2.31
+
+- **SNMP linkUp/linkDown traps + IF-MIB::ifLastChange.** Bundles
+  xcespserver 0.2.18, xcespcli 0.2.9, xcespproc 0.2.3,
+  xcespwdog 0.2.0.
+- IF-MIB::linkUp / linkDown fire on interface oper-status
+  transitions (driven by xcesp-on-rtr's existing LOS alarm).
+  Operator opts in via `[EVENTS] DISPATCHER = SNMP` in
+  xcespserver.ini; otherwise events go to the log dispatcher.
+  Trap destinations stay operator-managed in
+  `/etc/snmp/snmpd.conf` (trap2sink).
+- IF-MIB::ifLastChange now returns real TimeTicks since agent boot
+  at the moment the interface entered its current operStatus
+  (previously hardcoded 0).  xcesp-on-rtr emits CLOCK_MONOTONIC ms
+  of each transition; xcespserver subtracts its own start anchor
+  and converts to 1/100 s units.
+- See xcespserver 0.2.18 and xcesp-on-rtr 0.2.3 CHANGELOG entries
+  for handler / emission details.
+
 ## 0.2.30
 
 - **SNMP interface counters.**  Bundles xcespserver 0.2.17,
