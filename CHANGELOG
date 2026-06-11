@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.2.30
+
+- **SNMP interface counters.**  Bundles xcespserver 0.2.17,
+  xcespcli 0.2.9, xcespproc 0.2.2, xcespwdog 0.2.0.
+- IF-MIB::ifTable now reports `ifIn{Octets,UcastPkts,Discards,Errors}`
+  and `ifOut*` mirrors as 32-bit Counter32 columns.
+- IF-MIB::ifXTable is freshly registered, exposing 64-bit
+  `ifHC{In,Out}{Octets,UcastPkts}` Counter64 columns plus `ifName`
+  (`<router>:<vrf>:<iface>`) and `ifHighSpeed` (Mbps).  HC variants
+  let NMS pollers track high-rate counters without 32-bit wrap.
+- xcesp-on-rtr now reads `stats64` from `ip -j -s link show` every
+  monitorLinkState() tick (~5 s) and emits eight counter ServerStatus
+  keys per interface.
+- See xcespserver 0.2.17 and xcesp-on-rtr 0.2.2 CHANGELOG entries for
+  handler / emission details.
+
 ## 0.2.29
 
 - **Hotfix to 0.2.28: bundle the actually-rebuilt xcespproc 0.2.1.**
