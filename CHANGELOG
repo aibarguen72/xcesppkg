@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.2.33
+
+- **SNMPv3 contexts — per-router-any-VRF aggregates.**  Bundles
+  xcespserver 0.2.20, xcespcli 0.2.9, xcespproc 0.2.3,
+  xcespwdog 0.2.0.
+- `management/snmp/if-context-format` now accepts a
+  whitespace-separated list of templates so an operator can register
+  multiple parallel context shapes from one knob.  Each template's
+  placeholders determine the filter scope — omitting `%V` means
+  "any VRF", omitting `%R` means "any router".
+  ```
+  > management snmp
+  >   if-context-format "r=%R;v=%V r=%R"
+  > !
+  > commit ; save
+  ```
+  Both walks then work side by side:
+  ```
+  snmpwalk -v3 ... -n "r=RC;v=default" router IF-MIB::ifDescr   # exact
+  snmpwalk -v3 ... -n "r=RC"           router IF-MIB::ifDescr   # any VRF
+  ```
+- See xcespserver 0.2.20 CHANGELOG for registration + iterator
+  filter details.
+
 ## 0.2.32
 
 - **SNMP polish: trap-target CLI + tri-state DISPATCHER + SNMPv3
