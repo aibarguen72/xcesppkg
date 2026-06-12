@@ -1831,12 +1831,44 @@ SSHEOFR
         if [ "$snmp_present" = "true" ] && [ "$snmp_enabled" = "true" ]; then
             log "AAA: SNMP enabled — patching $SNMPD_MAIN_CONF + installing systemd drop-in"
 
-            # 1. Marker block in /etc/snmp/snmpd.conf.
-            snmpd_block=$(cat <<'SNMPDBLOCK'
-master agentx
-agentXSocket /var/agentx/master
-SNMPDBLOCK
-            )
+            # 1. Marker block in /etc/snmp/snmpd.conf.  AgentX glue
+            #    + (0.2.x) one trap2sink/trapsink line per enabled
+            #    trap-target instance.  Targets serialised in
+            #    aaa-config.state under [snmp] with .count + indexed
+            #    keys; we iterate them here and emit the matching
+            #    snmpd directives.  Communities arrive plaintext via
+            #    decryptConfigSecrets ahead of aaa_cfg_get; do NOT
+            #    log them.
+            snmpd_block="master agentx"
+            snmpd_block="${snmpd_block}
+agentXSocket /var/agentx/master"
+            trap_count=$(aaa_cfg_get snmp trap-target.count "0")
+            if [ -n "$trap_count" ] && [ "$trap_count" != "0" ]; then
+                i=1
+                trap_emitted=0
+                while [ "$i" -le "$trap_count" ]; do
+                    t_enabled=$(aaa_cfg_get snmp "trap-target.${i}.enabled" "true")
+                    if [ "$t_enabled" = "true" ]; then
+                        t_host=$(aaa_cfg_get snmp "trap-target.${i}.host" "")
+                        t_port=$(aaa_cfg_get snmp "trap-target.${i}.port" "162")
+                        t_comm=$(aaa_cfg_get snmp "trap-target.${i}.community" "public")
+                        t_ver=$(aaa_cfg_get snmp "trap-target.${i}.version" "v2c")
+                        if [ -n "$t_host" ]; then
+                            case "$t_ver" in
+                                v1) directive="trapsink"   ;;
+                                *)  directive="trap2sink"  ;;
+                            esac
+                            snmpd_block="${snmpd_block}
+${directive} ${t_host}:${t_port} ${t_comm}"
+                            trap_emitted=$((trap_emitted + 1))
+                        fi
+                    fi
+                    i=$((i + 1))
+                done
+                if [ "$trap_emitted" -gt 0 ]; then
+                    log "  trap targets configured: $trap_emitted enabled"
+                fi
+            fi
             need_snmpd_reload=false
             if [ -f "$SNMPD_MAIN_CONF" ]; then
                 pre=$(sha256sum "$SNMPD_MAIN_CONF" 2>/dev/null | awk '{print $1}')

@@ -1,5 +1,43 @@
 # Changelog - xcesppkg
 
+## 0.2.32
+
+- **SNMP polish: trap-target CLI + tri-state DISPATCHER + SNMPv3
+  contexts.**  Bundles xcespserver 0.2.19, xcespcli 0.2.9,
+  xcespproc 0.2.3, xcespwdog 0.2.0.
+- **CLI trap-target.**
+  ```
+  > management snmp
+  >   enabled true
+  >   trap-target nms-primary
+  >     host 10.0.0.51
+  >     community publictrap
+  >   !
+  >   trap-target nms-backup
+  >     host 10.0.0.52
+  >     port 1162
+  >   !
+  > !
+  > commit ; save
+  ```
+  `xcesp-activate` reads the materialised list from
+  `/var/lib/xcesp/aaa-config.state` and writes one
+  `trap2sink` (v2c) / `trapsink` (v1) line per enabled target
+  into the existing `# BEGIN xcesp-snmp` marker block in
+  `/etc/snmp/snmpd.conf`.  Restarts snmpd on any change.
+- **Bundled INI default** now `DISPATCHER = AUTO` (was `LOG`).
+  Tri-state behaviour: `AUTO` picks SNMP iff trap-targets are
+  configured; `LOG` and `SNMP` keep the explicit-override
+  paths.  Existing remote `xcespserver.ini` files are
+  preserved by install.sh's non-destructive policy.
+- **SNMPv3 contexts** auto-registered per (router, vrf).
+  Pollers do `snmpwalk -v3 -n "r=HA;v=WAN" …` and see only
+  that VRF's slice of the three iterator tables.  Default-
+  context (flat) registration unchanged for stock NMS tools
+  that don't speak contexts.
+- See xcespserver 0.2.19 CHANGELOG for handler / parser /
+  registration details.
+
 ## 0.2.31
 
 - **SNMP linkUp/linkDown traps + IF-MIB::ifLastChange.** Bundles
