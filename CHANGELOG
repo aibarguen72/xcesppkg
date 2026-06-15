@@ -1,5 +1,33 @@
 # Changelog - xcesppkg
 
+## 0.3.0
+
+- **Cross-machine secret portability — opens the 0.3.x line.**
+  Bundles xcespserver 0.3.0, xcespcli 0.2.9, xcespproc 0.2.3,
+  xcespwdog 0.2.0.
+- **`[SECRETS] KEY_SOURCE` in `xcespserver.ini`** (default
+  `machine-id` — 0.2.x behaviour byte-for-byte).  Operators opt
+  into fleet portability by provisioning
+  `/etc/xcesp/fleet.key` (32+ bytes, mode 0640 root:xcesp,
+  via Ansible vault / ZTP / scp) and flipping the knob to
+  `file:/etc/xcesp/fleet.key,machine-id`.  Once the file is in
+  place on every fleet router, `show running-config` output
+  pastes verbatim across the fleet — secrets decrypt natively
+  on the target, RMA recovery works, Ansible templating with
+  secrets becomes possible.
+- **install.sh non-destructive** — existing remote
+  `xcespserver.ini` files are preserved as before; only fresh
+  installs pick up the new `[SECRETS]` block.
+- **`xcesp-activate` fleet.key sanity** — if
+  `/etc/xcesp/fleet.key` is present, enforce mode 0640 +
+  ownership root:xcesp on every activation.  Warn if the file is
+  empty (`SecretEncryptor` rejects zero-byte sources to avoid the
+  constant-key footgun on freshly-cloned VMs).  Does NOT create
+  or sync the file — operators provision out-of-band.
+- **Lands FIRST in 0.3.x** so the v2c-community (0.3.1), v3-user
+  (0.3.2), and v3-trap (0.3.3) secrets coming next all inherit
+  portable encryption from day one.
+
 ## 0.2.33
 
 - **SNMPv3 contexts — per-router-any-VRF aggregates.**  Bundles

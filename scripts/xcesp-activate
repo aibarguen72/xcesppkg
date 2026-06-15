@@ -1942,5 +1942,41 @@ else
     log "AAA: $AAA_CONFIG_FILE not present — TACACS+/RADIUS/SNMP materialisation skipped"
 fi
 
+# ---------------------------------------------------------------------------
+# 0.3.0 — fleet.key permission sanity
+# ---------------------------------------------------------------------------
+#
+# When the operator opts into cross-machine secret portability by
+# setting `[SECRETS] KEY_SOURCE = file:/etc/xcesp/fleet.key,machine-id`
+# in xcespserver.ini, they MUST provision /etc/xcesp/fleet.key
+# out-of-band (Ansible vault, ZTP, manual scp).  xcesp-activate does
+# NOT create or sync the file — only enforces minimum-correct
+# permissions if it's present, and logs one line so the operator can
+# see in the journal whether the file is present and usable.
+#
+# Required: mode 0640 owner root:xcesp (xcespserver runs as the
+# xcesp uid; group-read is sufficient).  Empty files would
+# deterministically derive a constant key — keySourceUsable() rejects
+# zero-byte sources but we also warn here.
+FLEET_KEY=/etc/xcesp/fleet.key
+if [ -f "$FLEET_KEY" ]; then
+    if [ ! -s "$FLEET_KEY" ]; then
+        log "  WARNING $FLEET_KEY is empty — SecretEncryptor will skip it"
+    fi
+    if [ "$(stat -c '%a' "$FLEET_KEY" 2>/dev/null)" != "640" ]; then
+        if chmod 0640 "$FLEET_KEY" 2>/dev/null; then
+            log "  fixed mode on $FLEET_KEY (now 0640)"
+        fi
+    fi
+    if [ "$(stat -c '%U:%G' "$FLEET_KEY" 2>/dev/null)" != "root:xcesp" ]; then
+        if chown root:xcesp "$FLEET_KEY" 2>/dev/null; then
+            log "  fixed ownership on $FLEET_KEY (now root:xcesp)"
+        fi
+    fi
+    log "  fleet.key present (cross-machine secret portability available)"
+else
+    log "  fleet.key absent (machine-id mode — per-router secrets)"
+fi
+
 log "activation complete"
 exit 0
