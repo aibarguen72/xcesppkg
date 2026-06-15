@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.3.2
+
+- **0.3.1 follow-up — `xcespview` auto-default hole fix.**  Bundles
+  xcespserver 0.3.2, xcespcli 0.3.1, xcespproc 0.2.3,
+  xcespwdog 0.2.0.
+- 0.3.1's `ManagementConfig` auto-inserted the default
+  `xcespview included .1` only when the operator's views list was
+  empty.  An operator who defined `view bgp-only` (or any other
+  named view) without redefining `xcespview` ended up with v2c
+  communities defaulting to `view xcespview` referencing a
+  non-existent view — snmpd silently granted them zero access.
+- xcespserver 0.3.2 changes the condition to "auto-insert when no
+  view named `xcespview` is present in the list".  Operator-defined
+  `view xcespview` blocks still win (no auto-add when the label is
+  there).
+- **Roadmap shift**: v3-user CLI was previously slated for 0.3.2.
+  It moves to **0.3.3**; everything downstream shifts +1.
+
 ## 0.3.1
 
 - **SNMPv2c community-string CLI + shared `view` schema +
