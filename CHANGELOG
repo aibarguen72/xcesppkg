@@ -1,5 +1,51 @@
 # Changelog - xcesppkg
 
+## 0.3.3
+
+- **SNMPv3 USM users via CLI — last `management/` feature now
+  CLI-managed.**  Bundles xcespserver 0.3.3, xcespcli 0.3.1,
+  xcespproc 0.2.3, xcespwdog 0.2.0.
+- **Operator UX:**
+  ```
+  > management snmp
+  >   enabled true
+  >   v3-user xcesp-ro
+  >     auth-password mySecretAuth123
+  >     priv-password mySecretPriv123
+  >   !
+  >   v3-user xcesp-rw-bgp
+  >     auth-protocol SHA-256
+  >     auth-password ...
+  >     priv-protocol AES-256
+  >     priv-password ...
+  >     access rw
+  >     view bgp-only
+  >   !
+  > !
+  > commit ; save
+  ```
+- **xcesp-activate two-phase materialisation:**
+  - **Phase A** renders `rouser`/`rwuser` lines into the existing
+    `# BEGIN xcesp-snmp` marker block in `/etc/snmp/snmpd.conf`,
+    alongside view + community + trap-target lines.  Security
+    level derived from password presence
+    (`noauth` / `auth` / `priv`).  Required `-V VIEW` literal
+    syntax baked in (same as 0.3.1 v2c-community writer).
+  - **Phase B** handles the `createUser` consume-on-start dance:
+    hash the desired `(name, protocols, passwords)` tuple,
+    compare against `/var/lib/xcesp/snmp-v3-users.state`.  On
+    mismatch: stop snmpd, append managed-block `createUser`
+    lines to `/var/lib/net-snmp/snmpd.conf`, save new hash,
+    force restart.  On match: skip the dance entirely.  Result:
+    snmpd is only restarted on actual v3-user changes.
+- **Teardown**: when SNMP is disabled, the xcesp-managed
+  `createUser` block is stripped from
+  `/var/lib/net-snmp/snmpd.conf` and the hash sidecar is
+  removed.  snmpd is restarted to drop the managed users.
+- **Roadmap position**: last security-side feature.  Next is
+  **0.3.4 SNMPv3 trap delivery via USM** (extends trap-target
+  with `auth-protocol`, `priv-protocol`, `inform`, etc.).
+
 ## 0.3.2
 
 - **0.3.1 follow-up — `xcespview` auto-default hole fix.**  Bundles

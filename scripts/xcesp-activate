@@ -1907,6 +1907,64 @@ ${directive} ${c_community} ${c_source} -V ${c_view}"
                 fi
             fi
 
+            # 0.3.3 — SNMPv3 USM users.  Two-phase materialisation:
+            #
+            # Phase A (this loop): render rouser/rwuser lines into
+            # the marker block in /etc/snmp/snmpd.conf, alongside
+            # the view + community lines.  Same `-V VIEW` literal
+            # syntax as v2c-community (a bare view name parses as
+            # an OID and errors with `bad SUBTREE object id`).
+            # Security level is derived from password presence:
+            #   no auth-password               -> noauth
+            #   auth-password only             -> auth
+            #   both auth-password + priv-pw   -> priv
+            #
+            # Phase B (createUser dance) happens AFTER the marker
+            # block is patched and before the snmpd restart — see
+            # below.  Reason: net-snmp's createUser is consume-on-
+            # start, so we must (1) stop snmpd, (2) write fresh
+            # createUser lines into /var/lib/net-snmp/snmpd.conf,
+            # (3) start snmpd.  Idempotency via hash sidecar at
+            # /var/lib/xcesp/snmp-v3-users.state — when the desired
+            # tuple-hash matches the previous activation, Phase B
+            # is skipped entirely and snmpd only needs a reload (if
+            # the marker block changed) or nothing.
+            v3_count=$(aaa_cfg_get snmp v3-user.count "0")
+            if [ -n "$v3_count" ] && [ "$v3_count" != "0" ]; then
+                i=1
+                v3_emitted=0
+                while [ "$i" -le "$v3_count" ]; do
+                    u_enabled=$(aaa_cfg_get snmp "v3-user.${i}.enabled" "true")
+                    if [ "$u_enabled" = "true" ]; then
+                        u_name=$(aaa_cfg_get snmp "v3-user.${i}.name" "")
+                        u_authpw=$(aaa_cfg_get snmp "v3-user.${i}.auth-password" "")
+                        u_privpw=$(aaa_cfg_get snmp "v3-user.${i}.priv-password" "")
+                        u_access=$(aaa_cfg_get snmp "v3-user.${i}.access" "ro")
+                        u_view=$(aaa_cfg_get snmp "v3-user.${i}.view" "xcespview")
+                        if [ -n "$u_name" ] && [ -n "$u_view" ]; then
+                            case "$u_access" in
+                                rw) directive="rwuser" ;;
+                                *)  directive="rouser" ;;
+                            esac
+                            if [ -n "$u_authpw" ] && [ -n "$u_privpw" ]; then
+                                u_level="priv"
+                            elif [ -n "$u_authpw" ]; then
+                                u_level="auth"
+                            else
+                                u_level="noauth"
+                            fi
+                            snmpd_block="${snmpd_block}
+${directive} ${u_name} ${u_level} -V ${u_view}"
+                            v3_emitted=$((v3_emitted + 1))
+                        fi
+                    fi
+                    i=$((i + 1))
+                done
+                if [ "$v3_emitted" -gt 0 ]; then
+                    log "  v3 users configured: $v3_emitted enabled"
+                fi
+            fi
+
             trap_count=$(aaa_cfg_get snmp trap-target.count "0")
             if [ -n "$trap_count" ] && [ "$trap_count" != "0" ]; then
                 i=1
@@ -1971,6 +2029,103 @@ SYSDDROPIN
             if [ "$need_daemon_reload" = "true" ]; then
                 systemctl daemon-reload 2>/dev/null || true
             fi
+
+            # 0.3.3 Phase B — SNMPv3 USM users idempotency dance.
+            #
+            # net-snmp's createUser is consume-on-start: the line in
+            # /var/lib/net-snmp/snmpd.conf is parsed only when snmpd
+            # boots, and snmpd then replaces it with a hashed
+            # `usmUser` entry on shutdown.  A running snmpd holds the
+            # file open and ignores any createUser appended underneath
+            # it.  So:
+            #
+            #   1. Hash the desired (name, protocols, passwords)
+            #      tuple of every ENABLED v3-user, compare against
+            #      /var/lib/xcesp/snmp-v3-users.state.
+            #   2. On mismatch (= operator added/changed/removed at
+            #      least one user): stop snmpd, append fresh
+            #      createUser lines, save new hash, force restart.
+            #   3. On match: skip the dance entirely — the marker
+            #      block may still need a reload (handled below).
+            #
+            # The state-file path lives under /var/lib/xcesp/ which is
+            # mode 2775 root:xcesp; the v3-users.state file is mode
+            # 0600 root:xcesp because the hash itself isn't sensitive
+            # but consistent perms with the AAA state file is the
+            # path of least surprise.
+            V3_STATE=/var/lib/xcesp/snmp-v3-users.state
+            NET_SNMP_PERSIST=/var/lib/net-snmp/snmpd.conf
+
+            v3_desired_hash=""
+            if [ -n "$v3_count" ] && [ "$v3_count" != "0" ]; then
+                v3_desired_input=""
+                i=1
+                while [ "$i" -le "$v3_count" ]; do
+                    u_enabled=$(aaa_cfg_get snmp "v3-user.${i}.enabled" "true")
+                    if [ "$u_enabled" = "true" ]; then
+                        u_name=$(aaa_cfg_get snmp "v3-user.${i}.name" "")
+                        u_authp=$(aaa_cfg_get snmp "v3-user.${i}.auth-protocol" "SHA")
+                        u_authpw=$(aaa_cfg_get snmp "v3-user.${i}.auth-password" "")
+                        u_privp=$(aaa_cfg_get snmp "v3-user.${i}.priv-protocol" "AES")
+                        u_privpw=$(aaa_cfg_get snmp "v3-user.${i}.priv-password" "")
+                        v3_desired_input="${v3_desired_input}${u_name}|${u_authp}|${u_authpw}|${u_privp}|${u_privpw}
+"
+                    fi
+                    i=$((i + 1))
+                done
+                v3_desired_hash=$(printf "%s" "$v3_desired_input" | sha256sum | awk '{print $1}')
+            else
+                v3_desired_hash="empty"
+            fi
+            v3_actual_hash=$(cat "$V3_STATE" 2>/dev/null || echo "")
+
+            if [ "$v3_desired_hash" != "$v3_actual_hash" ]; then
+                log "  v3-user set changed (hash $v3_actual_hash -> $v3_desired_hash) — running createUser dance"
+                systemctl stop snmpd 2>/dev/null || true
+                if [ ! -d /var/lib/net-snmp ]; then
+                    install -d -o root -g root -m 0755 /var/lib/net-snmp
+                fi
+                # Strip any prior xcesp-managed createUser block.
+                if [ -f "$NET_SNMP_PERSIST" ]; then
+                    sed -i '/^# BEGIN xcesp-v3-users/,/^# END xcesp-v3-users/d' "$NET_SNMP_PERSIST"
+                fi
+                if [ -n "$v3_count" ] && [ "$v3_count" != "0" ]; then
+                    touch "$NET_SNMP_PERSIST" 2>/dev/null
+                    chmod 0600 "$NET_SNMP_PERSIST" 2>/dev/null
+                    {
+                        echo "# BEGIN xcesp-v3-users (managed by xcesp-activate; do not edit)"
+                        i=1
+                        while [ "$i" -le "$v3_count" ]; do
+                            u_enabled=$(aaa_cfg_get snmp "v3-user.${i}.enabled" "true")
+                            if [ "$u_enabled" = "true" ]; then
+                                u_name=$(aaa_cfg_get snmp "v3-user.${i}.name" "")
+                                u_authp=$(aaa_cfg_get snmp "v3-user.${i}.auth-protocol" "SHA")
+                                u_authpw=$(aaa_cfg_get snmp "v3-user.${i}.auth-password" "")
+                                u_privp=$(aaa_cfg_get snmp "v3-user.${i}.priv-protocol" "AES")
+                                u_privpw=$(aaa_cfg_get snmp "v3-user.${i}.priv-password" "")
+                                if [ -n "$u_name" ]; then
+                                    if [ -n "$u_authpw" ] && [ -n "$u_privpw" ]; then
+                                        echo "createUser ${u_name} ${u_authp} \"${u_authpw}\" ${u_privp} \"${u_privpw}\""
+                                    elif [ -n "$u_authpw" ]; then
+                                        echo "createUser ${u_name} ${u_authp} \"${u_authpw}\""
+                                    else
+                                        echo "createUser ${u_name}"
+                                    fi
+                                fi
+                            fi
+                            i=$((i + 1))
+                        done
+                        echo "# END xcesp-v3-users"
+                    } >> "$NET_SNMP_PERSIST"
+                fi
+                install -d -o root -g xcesp -m 2775 /var/lib/xcesp 2>/dev/null
+                printf "%s\n" "$v3_desired_hash" > "$V3_STATE.tmp"
+                chmod 0600 "$V3_STATE.tmp" 2>/dev/null
+                chown root:xcesp "$V3_STATE.tmp" 2>/dev/null
+                mv "$V3_STATE.tmp" "$V3_STATE"
+                need_snmpd_reload=true   # force the start path below
+            fi
+
             if [ "$need_snmpd_reload" = "true" ]; then
                 # Restart (not reload) so ExecStartPost and the new marker
                 # block both take effect, AND the socket is recreated under
@@ -1994,6 +2149,24 @@ SYSDDROPIN
                 log "  removed $SNMPD_SYSTEMD_DROPIN"
                 need_daemon_reload=true
                 need_snmpd_reload=true
+            fi
+            # 0.3.3 — strip xcesp-managed createUser block from
+            # /var/lib/net-snmp/snmpd.conf when SNMP is disabled,
+            # and clear the hash sidecar so a future re-enable runs
+            # Phase B fresh.
+            NET_SNMP_PERSIST=/var/lib/net-snmp/snmpd.conf
+            V3_STATE=/var/lib/xcesp/snmp-v3-users.state
+            if [ -f "$NET_SNMP_PERSIST" ]; then
+                if grep -q "^# BEGIN xcesp-v3-users" "$NET_SNMP_PERSIST" 2>/dev/null; then
+                    systemctl stop snmpd 2>/dev/null || true
+                    sed -i '/^# BEGIN xcesp-v3-users/,/^# END xcesp-v3-users/d' "$NET_SNMP_PERSIST"
+                    log "  stripped xcesp-v3-users block from $NET_SNMP_PERSIST"
+                    need_snmpd_reload=true
+                fi
+            fi
+            if [ -f "$V3_STATE" ]; then
+                rm -f "$V3_STATE"
+                log "  removed $V3_STATE"
             fi
             if [ "$need_daemon_reload" = "true" ]; then
                 systemctl daemon-reload 2>/dev/null || true
