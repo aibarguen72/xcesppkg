@@ -1842,6 +1842,71 @@ SSHEOFR
             snmpd_block="master agentx"
             snmpd_block="${snmpd_block}
 agentXSocket /var/agentx/master"
+
+            # 0.3.1 — view definitions FIRST so any rocommunity /
+            # rwcommunity line below that references them via `-V
+            # VIEW` parses cleanly.  ManagementConfig auto-inserts a
+            # default xcespview {included = .1} when the operator
+            # didn't configure any views, so the count is always
+            # >= 1 when SNMP is enabled.
+            view_count=$(aaa_cfg_get snmp view.count "0")
+            if [ -n "$view_count" ] && [ "$view_count" != "0" ]; then
+                i=1
+                view_emitted=0
+                while [ "$i" -le "$view_count" ]; do
+                    v_label=$(aaa_cfg_get snmp "view.${i}.label" "")
+                    v_inc=$(aaa_cfg_get snmp "view.${i}.included" "")
+                    v_exc=$(aaa_cfg_get snmp "view.${i}.excluded" "")
+                    if [ -n "$v_label" ] && [ -n "$v_inc" ]; then
+                        snmpd_block="${snmpd_block}
+view ${v_label} included ${v_inc}"
+                        if [ -n "$v_exc" ]; then
+                            snmpd_block="${snmpd_block}
+view ${v_label} excluded ${v_exc}"
+                        fi
+                        view_emitted=$((view_emitted + 1))
+                    fi
+                    i=$((i + 1))
+                done
+                if [ "$view_emitted" -gt 0 ]; then
+                    log "  views configured: $view_emitted"
+                fi
+            fi
+
+            # 0.3.1 — SNMPv2c community-string ACLs.  Each enabled
+            # entry becomes one `rocommunity` / `rwcommunity` line.
+            # `-V <view>` is required: snmpd parses a bare 4th
+            # token as an OID and errors with `bad SUBTREE object
+            # id`.  Community values arrive plaintext via
+            # decryptConfigSecrets; never log them.
+            v2c_count=$(aaa_cfg_get snmp v2c-community.count "0")
+            if [ -n "$v2c_count" ] && [ "$v2c_count" != "0" ]; then
+                i=1
+                v2c_emitted=0
+                while [ "$i" -le "$v2c_count" ]; do
+                    c_enabled=$(aaa_cfg_get snmp "v2c-community.${i}.enabled" "true")
+                    if [ "$c_enabled" = "true" ]; then
+                        c_community=$(aaa_cfg_get snmp "v2c-community.${i}.community" "")
+                        c_access=$(aaa_cfg_get snmp "v2c-community.${i}.access" "ro")
+                        c_source=$(aaa_cfg_get snmp "v2c-community.${i}.source" "default")
+                        c_view=$(aaa_cfg_get snmp "v2c-community.${i}.view" "xcespview")
+                        if [ -n "$c_community" ] && [ -n "$c_view" ]; then
+                            case "$c_access" in
+                                rw) directive="rwcommunity" ;;
+                                *)  directive="rocommunity" ;;
+                            esac
+                            snmpd_block="${snmpd_block}
+${directive} ${c_community} ${c_source} -V ${c_view}"
+                            v2c_emitted=$((v2c_emitted + 1))
+                        fi
+                    fi
+                    i=$((i + 1))
+                done
+                if [ "$v2c_emitted" -gt 0 ]; then
+                    log "  v2c communities configured: $v2c_emitted enabled"
+                fi
+            fi
+
             trap_count=$(aaa_cfg_get snmp trap-target.count "0")
             if [ -n "$trap_count" ] && [ "$trap_count" != "0" ]; then
                 i=1
