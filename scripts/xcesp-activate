@@ -2008,11 +2008,24 @@ ${directive} ${t_host}:${t_port} ${t_comm}"
             # (see comment above), so we work around with ExecStartPost.
             install -d -o root -g root -m 0755 "$(dirname "$SNMPD_SYSTEMD_DROPIN")"
             cat > "$SNMPD_SYSTEMD_DROPIN.tmp" <<'SYSDDROPIN'
-# Managed by xcesp-activate.  Fixes /var/agentx/master perms so the
-# xcespserver subagent (uid xcesp) can connect to the AgentX socket
-# that snmpd creates as root:root mode 0755 by default.
+# Managed by xcesp-activate.  Fixes /var/agentx/{,master} perms so
+# the xcespserver subagent (uid xcesp) can connect to the AgentX
+# socket that snmpd creates with restrictive default perms.
+#
+# Two pieces:
+#   - parent directory /var/agentx is created drwx------ root:root
+#     by snmpd on Debian; xcesp can't even traverse it.  Set group
+#     to xcesp + mode 0750 so xcesp has r-x.
+#   - socket /var/agentx/master needs group xcesp + mode 0660 so
+#     the subagent can connect.
+#
+# The `+` prefix on ExecStartPost forces it to run as root
+# regardless of any User=/Group= directive on the snmpd unit.
+# Fedora's snmpd has no User= (already root); Debian doesn't either
+# (snmpd drops privs internally via -u/-g flags) — but the prefix
+# is defensive against future distro changes.
 [Service]
-ExecStartPost=/bin/sh -c 'chgrp xcesp /var/agentx/master 2>/dev/null; chmod 0660 /var/agentx/master 2>/dev/null; true'
+ExecStartPost=+/bin/sh -c 'chgrp xcesp /var/agentx 2>/dev/null; chmod 0750 /var/agentx 2>/dev/null; chgrp xcesp /var/agentx/master 2>/dev/null; chmod 0660 /var/agentx/master 2>/dev/null; true'
 SYSDDROPIN
             chmod 0644 "$SNMPD_SYSTEMD_DROPIN.tmp"
             chown root:root "$SNMPD_SYSTEMD_DROPIN.tmp"

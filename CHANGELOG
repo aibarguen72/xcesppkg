@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.3.6
+
+- **Fix: xcesp uid couldn't reach /var/agentx/master on Debian.**
+  Debian's snmpd creates `/var/agentx/` as `drwx------ root:root`
+  (mode 0700) — restrictive enough that the `xcesp` group can't
+  even traverse the directory to reach the socket inside it.
+  Even though our `ExecStartPost` correctly set the socket's own
+  group to `xcesp` and mode to 0660, the parent directory blocked
+  access.  Symptom on Debian: xcespserver journal full of
+  `Warning: Failed to connect to the agentx master agent
+  (/var/agentx/master)` — repeated every 15 s.  Consequence:
+  AgentX subagent never registered, snmpd served its built-in
+  mibII/interfaces module instead of XCESP's IF-MIB handlers
+  (operator saw host NICs in walks instead of XCESP's
+  `router R vrf V interface I` names).
+- **Fix**: `ExecStartPost` now chgrps + chmods the parent
+  directory `/var/agentx` to `xcesp:xcesp 0750` in addition to
+  the existing socket fix.  Defensive `+` prefix added so the
+  command always runs as root regardless of future snmpd-unit
+  hardening.
+- **Roadmap shift**: SNMPv3 trap delivery (was 0.3.6) → 0.3.7;
+  downstream slots shift +1.  Pure bash patch in xcesp-activate.
+
 ## 0.3.5
 
 - **Fix: 0.3.3 → 0.3.4 migration silently skipped Phase B.**  The
