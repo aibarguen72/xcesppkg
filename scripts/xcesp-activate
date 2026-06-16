@@ -2102,6 +2102,28 @@ SYSDDROPIN
                 NET_SNMP_OWN=$(stat -c '%U:%G' "$(dirname "$NET_SNMP_PERSIST")" 2>/dev/null || echo "root:root")
             fi
 
+            # 0.3.5 — auto-recovery for the 0.3.3 → 0.3.4 migration:
+            # if a stale xcesp-v3-users block exists in the OTHER
+            # candidate path (not the one we now picked), strip it
+            # AND force Phase B to re-run.  Without this, the hash
+            # sidecar's "no changes" optimisation incorrectly skips
+            # Phase B even when the actual createUser state lives in
+            # the wrong file.  This catches:
+            #   - upgrades from 0.3.3 (Fedora-only path) on Debian
+            #   - operator-driven path moves (rare but possible)
+            #   - any cross-distro reinstall scenario
+            v3_force_run=false
+            for stale in /var/lib/snmp/snmpd.conf /var/lib/net-snmp/snmpd.conf; do
+                if [ "$stale" != "$NET_SNMP_PERSIST" ] && [ -f "$stale" ]; then
+                    if grep -q "^# BEGIN xcesp-v3-users" "$stale" 2>/dev/null; then
+                        systemctl stop snmpd 2>/dev/null || true
+                        sed -i '/^# BEGIN xcesp-v3-users/,/^# END xcesp-v3-users/d' "$stale"
+                        log "  stripped stale xcesp-v3-users block from $stale (recovery)"
+                        v3_force_run=true
+                    fi
+                fi
+            done
+
             v3_desired_hash=""
             if [ -n "$v3_count" ] && [ "$v3_count" != "0" ]; then
                 v3_desired_input=""
@@ -2125,8 +2147,12 @@ SYSDDROPIN
             fi
             v3_actual_hash=$(cat "$V3_STATE" 2>/dev/null || echo "")
 
-            if [ "$v3_desired_hash" != "$v3_actual_hash" ]; then
-                log "  v3-user set changed (hash $v3_actual_hash -> $v3_desired_hash) — running createUser dance"
+            if [ "$v3_desired_hash" != "$v3_actual_hash" ] || [ "$v3_force_run" = "true" ]; then
+                if [ "$v3_force_run" = "true" ] && [ "$v3_desired_hash" = "$v3_actual_hash" ]; then
+                    log "  v3-user set unchanged but stale block found in other path — re-running createUser dance"
+                else
+                    log "  v3-user set changed (hash $v3_actual_hash -> $v3_desired_hash) — running createUser dance"
+                fi
                 systemctl stop snmpd 2>/dev/null || true
                 # Ensure the persistent directory exists with the right
                 # ownership for snmpd's runtime user.  install -d is a

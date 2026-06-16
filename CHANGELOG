@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.3.5
+
+- **Fix: 0.3.3 → 0.3.4 migration silently skipped Phase B.**  The
+  hash-sidecar idempotency optimisation in 0.3.3 correctly
+  detects "no changes since last activation" by hashing the
+  desired (name, protocols, passwords) tuple.  But when 0.3.4
+  changed the chosen persistent-state file path (Fedora
+  /var/lib/net-snmp/snmpd.conf → Debian /var/lib/snmp/snmpd.conf),
+  the hash WAS unchanged and Phase B was skipped — leaving the
+  stale createUser block in the wrong file and no usmUser
+  entries on the correct one.  Operator hit it on a Debian VM
+  during 0.3.x verification 2026-06-16.
+- **Fix**: xcesp-activate now strips any stale
+  `# BEGIN xcesp-v3-users` block from the non-chosen candidate
+  path on every activation, AND forces Phase B to re-run when it
+  finds one.  Covers the upgrade scenario automatically — no
+  operator workaround needed.
+- **Roadmap shift**: SNMPv3 trap delivery (was 0.3.5) → 0.3.6;
+  downstream slots shift +1.  No xcespserver / xcespcli /
+  xcespproc / xcespwdog source changes in 0.3.5 — pure bash
+  patch in xcesp-activate.
+
 ## 0.3.4
 
 - **Fix: xcesp-activate hardcoded the Fedora net-snmp persistent
