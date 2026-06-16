@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.3.4
+
+- **Fix: xcesp-activate hardcoded the Fedora net-snmp persistent
+  path** (`/var/lib/net-snmp/snmpd.conf`).  On Debian, the snmpd
+  package's runtime daemon reads from `/var/lib/snmp/snmpd.conf`
+  (owned by `Debian-snmp` user), so the Phase B `createUser`
+  block we wrote never got consumed → SNMPv3 users never made it
+  into snmpd's USM database → `snmpwalk -v3` failed with
+  `Unknown user name` on Debian even when 0.3.3 looked correct
+  on Fedora.
+- **Fix**: xcesp-activate now probes both candidate paths and
+  uses whichever snmpd actually reads from on this distro.
+  Probe order: existing `snmpd.conf` file → existing directory →
+  /etc/os-release-based fallback (`/var/lib/snmp` for
+  debian/ubuntu, `/var/lib/net-snmp` otherwise).  Ownership of
+  the persistent file is preserved when it exists; new files
+  inherit the parent directory's owner so Debian's
+  `Debian-snmp:Debian-snmp` and Fedora's `root:root` conventions
+  both hold.
+- **Teardown** path also probes both locations and strips any
+  xcesp-managed createUser block found in either.
+- **Roadmap shift**: SNMPv3 trap delivery (was 0.3.4) → 0.3.5.
+  Everything downstream shifts +1.
+
 ## 0.3.3
 
 - **SNMPv3 USM users via CLI — last `management/` feature now

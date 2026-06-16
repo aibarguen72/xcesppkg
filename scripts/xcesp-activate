@@ -2054,7 +2054,53 @@ SYSDDROPIN
             # but consistent perms with the AAA state file is the
             # path of least surprise.
             V3_STATE=/var/lib/xcesp/snmp-v3-users.state
-            NET_SNMP_PERSIST=/var/lib/net-snmp/snmpd.conf
+
+            # 0.3.4 — detect snmpd's persistent-state file cross-distro.
+            # Fedora's net-snmp build uses /var/lib/net-snmp/snmpd.conf
+            # (compile default).  Debian's snmpd package uses
+            # /var/lib/snmp/snmpd.conf (owned by Debian-snmp:Debian-snmp,
+            # the snmpd runtime user).  Writing createUser lines to the
+            # wrong path means snmpd never consumes them on Debian.
+            #
+            # Probe in this order:
+            #   1. an existing snmpd.conf file (live state)
+            #   2. an existing directory (snmpd installed but stateless)
+            #   3. distro fallback by /etc/os-release id_like
+            NET_SNMP_PERSIST=""
+            for cand in /var/lib/snmp/snmpd.conf /var/lib/net-snmp/snmpd.conf; do
+                if [ -f "$cand" ]; then
+                    NET_SNMP_PERSIST="$cand"
+                    break
+                fi
+            done
+            if [ -z "$NET_SNMP_PERSIST" ]; then
+                for d in /var/lib/snmp /var/lib/net-snmp; do
+                    if [ -d "$d" ]; then
+                        NET_SNMP_PERSIST="$d/snmpd.conf"
+                        break
+                    fi
+                done
+            fi
+            if [ -z "$NET_SNMP_PERSIST" ]; then
+                if grep -qi 'ID_LIKE=.*debian\|^ID=debian\|^ID=ubuntu' /etc/os-release 2>/dev/null; then
+                    NET_SNMP_PERSIST=/var/lib/snmp/snmpd.conf
+                else
+                    NET_SNMP_PERSIST=/var/lib/net-snmp/snmpd.conf
+                fi
+            fi
+            log "  net-snmp persistent file: $NET_SNMP_PERSIST"
+
+            # Capture the runtime ownership snmpd expects on this file
+            # (Debian: Debian-snmp:Debian-snmp; Fedora: root:root).  If
+            # the file already exists we keep its current owner; if it
+            # has to be created we mirror the parent directory's owner
+            # (which is what each distro's snmpd-package install
+            # configured).
+            if [ -f "$NET_SNMP_PERSIST" ]; then
+                NET_SNMP_OWN=$(stat -c '%U:%G' "$NET_SNMP_PERSIST" 2>/dev/null || echo "root:root")
+            else
+                NET_SNMP_OWN=$(stat -c '%U:%G' "$(dirname "$NET_SNMP_PERSIST")" 2>/dev/null || echo "root:root")
+            fi
 
             v3_desired_hash=""
             if [ -n "$v3_count" ] && [ "$v3_count" != "0" ]; then
@@ -2082,8 +2128,15 @@ SYSDDROPIN
             if [ "$v3_desired_hash" != "$v3_actual_hash" ]; then
                 log "  v3-user set changed (hash $v3_actual_hash -> $v3_desired_hash) — running createUser dance"
                 systemctl stop snmpd 2>/dev/null || true
-                if [ ! -d /var/lib/net-snmp ]; then
-                    install -d -o root -g root -m 0755 /var/lib/net-snmp
+                # Ensure the persistent directory exists with the right
+                # ownership for snmpd's runtime user.  install -d is a
+                # no-op when the directory already exists with the
+                # expected attrs.
+                NET_SNMP_DIR=$(dirname "$NET_SNMP_PERSIST")
+                NET_SNMP_DIR_OWN_USER=${NET_SNMP_OWN%:*}
+                NET_SNMP_DIR_OWN_GROUP=${NET_SNMP_OWN#*:}
+                if [ ! -d "$NET_SNMP_DIR" ]; then
+                    install -d -o "$NET_SNMP_DIR_OWN_USER" -g "$NET_SNMP_DIR_OWN_GROUP" -m 0755 "$NET_SNMP_DIR"
                 fi
                 # Strip any prior xcesp-managed createUser block.
                 if [ -f "$NET_SNMP_PERSIST" ]; then
@@ -2092,6 +2145,7 @@ SYSDDROPIN
                 if [ -n "$v3_count" ] && [ "$v3_count" != "0" ]; then
                     touch "$NET_SNMP_PERSIST" 2>/dev/null
                     chmod 0600 "$NET_SNMP_PERSIST" 2>/dev/null
+                    chown "$NET_SNMP_OWN" "$NET_SNMP_PERSIST" 2>/dev/null
                     {
                         echo "# BEGIN xcesp-v3-users (managed by xcesp-activate; do not edit)"
                         i=1
@@ -2151,19 +2205,28 @@ SYSDDROPIN
                 need_snmpd_reload=true
             fi
             # 0.3.3 — strip xcesp-managed createUser block from
-            # /var/lib/net-snmp/snmpd.conf when SNMP is disabled,
+            # snmpd's persistent-state file when SNMP is disabled,
             # and clear the hash sidecar so a future re-enable runs
             # Phase B fresh.
-            NET_SNMP_PERSIST=/var/lib/net-snmp/snmpd.conf
+            #
+            # 0.3.4 — probe both Debian (/var/lib/snmp) and Fedora
+            # (/var/lib/net-snmp) locations so teardown finds and
+            # strips whichever one we wrote to.  Strip from both if
+            # both happen to have our block (defensive — shouldn't
+            # normally happen but cheap to handle).
             V3_STATE=/var/lib/xcesp/snmp-v3-users.state
-            if [ -f "$NET_SNMP_PERSIST" ]; then
-                if grep -q "^# BEGIN xcesp-v3-users" "$NET_SNMP_PERSIST" 2>/dev/null; then
-                    systemctl stop snmpd 2>/dev/null || true
-                    sed -i '/^# BEGIN xcesp-v3-users/,/^# END xcesp-v3-users/d' "$NET_SNMP_PERSIST"
-                    log "  stripped xcesp-v3-users block from $NET_SNMP_PERSIST"
+            stripped_any=false
+            for persist in /var/lib/snmp/snmpd.conf /var/lib/net-snmp/snmpd.conf; do
+                if [ -f "$persist" ] && grep -q "^# BEGIN xcesp-v3-users" "$persist" 2>/dev/null; then
+                    if [ "$stripped_any" = "false" ]; then
+                        systemctl stop snmpd 2>/dev/null || true
+                    fi
+                    sed -i '/^# BEGIN xcesp-v3-users/,/^# END xcesp-v3-users/d' "$persist"
+                    log "  stripped xcesp-v3-users block from $persist"
+                    stripped_any=true
                     need_snmpd_reload=true
                 fi
-            fi
+            done
             if [ -f "$V3_STATE" ]; then
                 rm -f "$V3_STATE"
                 log "  removed $V3_STATE"
