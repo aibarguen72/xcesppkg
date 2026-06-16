@@ -1,5 +1,47 @@
 # Changelog - xcesppkg
 
+## 0.3.7
+
+- **SNMPv3 trap + inform delivery via USM** + per-trap
+  contextName tagging (Approach A).  Bundles xcespserver 0.3.7,
+  xcespcli 0.3.1, xcespproc 0.2.3, xcespwdog 0.2.0.
+- **Operator UX**:
+  ```
+  > management snmp
+  >   trap-target nms-v3-primary
+  >     host 10.0.0.51
+  >     version v3
+  >     auth-protocol SHA-256
+  >     auth-password mySecretAuth
+  >     priv-protocol AES-256
+  >     priv-password mySecretPriv
+  >     security-level authPriv
+  >     inform true              ; true=acked Inform-Request (default), false=fire-and-forget Trap
+  >   !
+  > !
+  > commit ; save
+  ```
+- **xcesp-activate** now renders one `trapsess` line per
+  enabled v3 trap-target into the existing
+  `# BEGIN xcesp-snmp` marker block.  Argument mapping:
+  - `-v 3 -u <label>` (label is the USM username on the remote)
+  - `-l noAuthNoPriv|authNoPriv|authPriv` (auto-derived if a
+    password is missing for the requested level)
+  - `-a/-A` auth proto + password (if level ≥ auth)
+  - `-x/-X` priv proto + password (if level == priv)
+  - `-Ci` inform flag (when `inform = true`)
+  - `-e <engine-id>` if operator pre-shared one
+  - `<host>:<port>` destination
+- v1 destinations still use `trapsink`; v2c destinations still
+  use `trap2sink` — only v3 destinations get the `trapsess`
+  treatment.
+- **Approach A — context-tagged trap PDUs.** Trap origins
+  carry their source `(router, vrf)` contextName in the
+  trap PDU's scopedPDU header.  SNMPv3 receivers can
+  filter on `snmpTrapContext` natively; v1/v2c receivers
+  silently ignore the field.  Free upgrade — no operator
+  config required.
+
 ## 0.3.6
 
 - **Fix: xcesp uid couldn't reach /var/agentx/master on Debian.**

@@ -1978,12 +1978,91 @@ ${directive} ${u_name} ${u_level} -V ${u_view}"
                         t_ver=$(aaa_cfg_get snmp "trap-target.${i}.version" "v2c")
                         if [ -n "$t_host" ]; then
                             case "$t_ver" in
-                                v1) directive="trapsink"   ;;
-                                *)  directive="trap2sink"  ;;
+                                v1)
+                                    # snmpd trapsink supports only v1
+                                    # trap PDUs; no community-string
+                                    # variation needed beyond what
+                                    # community attr already provides.
+                                    snmpd_block="${snmpd_block}
+trapsink ${t_host}:${t_port} ${t_comm}"
+                                    trap_emitted=$((trap_emitted + 1))
+                                    ;;
+                                v2c)
+                                    snmpd_block="${snmpd_block}
+trap2sink ${t_host}:${t_port} ${t_comm}"
+                                    trap_emitted=$((trap_emitted + 1))
+                                    ;;
+                                v3)
+                                    # 0.3.7 — SNMPv3 USM trap/inform
+                                    # delivery via snmpd's `trapsess`.
+                                    # Map our schema to the net-snmp
+                                    # trapsess argument format:
+                                    #   -v 3 -e <eng-id>?       version + remote engineID
+                                    #   -u <user>?              username — instance label here
+                                    #   -l noAuth|auth|priv     security level
+                                    #   -a <proto> -A <pw>      auth (if level >= auth)
+                                    #   -x <proto> -X <pw>      priv (if level == priv)
+                                    #   -Ci                     send as Inform (acked); omit for plain trap
+                                    #   <host>:<port>           destination address
+                                    #
+                                    # Password values arrive plaintext
+                                    # via decryptConfigSecrets; never
+                                    # log them.  Username == label of
+                                    # the trap-target is the convention
+                                    # operators expect (matches the
+                                    # remote NMS's USM user name).
+                                    t_sec=$(aaa_cfg_get snmp "trap-target.${i}.security-level" "authPriv")
+                                    t_authp=$(aaa_cfg_get snmp "trap-target.${i}.auth-protocol" "SHA")
+                                    t_authpw=$(aaa_cfg_get snmp "trap-target.${i}.auth-password" "")
+                                    t_privp=$(aaa_cfg_get snmp "trap-target.${i}.priv-protocol" "AES")
+                                    t_privpw=$(aaa_cfg_get snmp "trap-target.${i}.priv-password" "")
+                                    t_inform=$(aaa_cfg_get snmp "trap-target.${i}.inform" "true")
+                                    t_eng=$(aaa_cfg_get snmp "trap-target.${i}.engine-id" "")
+                                    t_label=$(aaa_cfg_get snmp "trap-target.${i}.label" "")
+                                    # Derive level: respect the schema
+                                    # value, but if password presence
+                                    # contradicts the requested level
+                                    # (e.g. priv requested but no
+                                    # priv-password set), demote to
+                                    # auth or noAuth so snmpd doesn't
+                                    # reject the trapsess line.
+                                    t_level_actual="$t_sec"
+                                    if [ "$t_level_actual" = "authPriv" ] && [ -z "$t_privpw" ]; then
+                                        t_level_actual="auth"
+                                    fi
+                                    if [ "$t_level_actual" = "auth" ] && [ -z "$t_authpw" ]; then
+                                        t_level_actual="noAuthNoPriv"
+                                    fi
+                                    case "$t_level_actual" in
+                                        noAuth*) t_l="-l noAuthNoPriv" ;;
+                                        auth)    t_l="-l authNoPriv"   ;;
+                                        *)       t_l="-l authPriv"     ;;
+                                    esac
+                                    # Build the line.  Single-quote
+                                    # password values so passwords
+                                    # containing spaces or special
+                                    # chars pass through cleanly.
+                                    t_session="-v 3 -u ${t_label} ${t_l}"
+                                    if [ -n "$t_eng" ]; then
+                                        t_session="${t_session} -e ${t_eng}"
+                                    fi
+                                    if [ "$t_level_actual" != "noAuthNoPriv" ] && [ -n "$t_authpw" ]; then
+                                        t_session="${t_session} -a ${t_authp} -A '${t_authpw}'"
+                                    fi
+                                    if [ "$t_level_actual" = "authPriv" ] && [ -n "$t_privpw" ]; then
+                                        t_session="${t_session} -x ${t_privp} -X '${t_privpw}'"
+                                    fi
+                                    if [ "$t_inform" = "true" ]; then
+                                        t_session="${t_session} -Ci"
+                                    fi
+                                    snmpd_block="${snmpd_block}
+trapsess ${t_session} ${t_host}:${t_port}"
+                                    trap_emitted=$((trap_emitted + 1))
+                                    ;;
+                                *)
+                                    log "  WARN trap-target ${i} unsupported version '${t_ver}' — skipped"
+                                    ;;
                             esac
-                            snmpd_block="${snmpd_block}
-${directive} ${t_host}:${t_port} ${t_comm}"
-                            trap_emitted=$((trap_emitted + 1))
                         fi
                     fi
                     i=$((i + 1))
