@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.3.13
+
+- **Install XCESP-MIB.txt system-wide** to `/usr/share/snmp/mibs/`
+  during install.sh so `snmpwalk -m XCESP-MIB` (or any snmpwalk with
+  `MIBS=ALL`) on the router resolves names without an operator scp.
+  Only our private MIB is shipped — IETF standard MIBs (IF-MIB,
+  IP-MIB, etc.) remain operator-installed via the distro path
+  (`snmp-mibs-downloader` from Debian non-free, etc.); we don't ship
+  those for licensing reasons.
+
 ## 0.3.12
 
 - **Cleanup bundle.**  Bundles xcesp-on-rtr 0.2.7 + xcespproc 0.2.7

@@ -422,11 +422,29 @@ fi
 # host's MIB dir (typically /usr/share/snmp/mibs/) so snmpwalk -m XCESP-MIB
 # can resolve OIDs to names.  Not used by xcespserver itself — the AgentX
 # subagent registers under the numeric OID directly.
+#
+# 0.3.13 — also install our XCESP-MIB into the system MIB dir
+# /usr/share/snmp/mibs/ so `snmpwalk` on this host resolves names without
+# an operator scp.  Cross-distro path: present on both Fedora (net-snmp
+# package) and Debian (snmp package).  Created if missing — covers
+# installs where no snmp client is yet installed locally.
 # ---------------------------------------------------------------------------
 if [ -d "$INSTALL_DIR/mib" ]; then
     info "Installing MIB files to $MAINSW_DIR/mib ..."
     install -d -o root -g root -m 0755 "$MAINSW_DIR/mib"
     cp -rT "$INSTALL_DIR/mib" "$MAINSW_DIR/mib"
+
+    # System-wide MIB dir so local snmpwalk can resolve XCESP-MIB::*
+    # names.  Only our private MIB — we do NOT ship IETF standard MIBs
+    # (licensing constraints; the Debian non-free path is the right
+    # source for those).
+    SYSTEM_MIB_DIR=/usr/share/snmp/mibs
+    install -d -o root -g root -m 0755 "$SYSTEM_MIB_DIR"
+    for m in "$INSTALL_DIR/mib"/XCESP-MIB*.txt; do
+        [ -f "$m" ] || continue
+        install -o root -g root -m 0644 "$m" "$SYSTEM_MIB_DIR/"
+        info "  → $SYSTEM_MIB_DIR/$(basename "$m")"
+    done
 fi
 
 # ---------------------------------------------------------------------------
