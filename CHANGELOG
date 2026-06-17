@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.3.10
+
+- **Diagnostic build for the 0.3.8 IP-MIB empty-rows bug.**  Bundles
+  xcesp-on-rtr 0.2.5 + xcespproc 0.2.5 with a single per-iface
+  `addr_poll dev=<X> addresses=N neighbours=M` INFO log per
+  monitor tick.  Lets the next debugging round see directly whether
+  the parser populates the address vector.  Once the actual fix
+  ships, this log line will be removed.
+
 ## 0.3.9
 
 - **0.3.8 IP-MIB hotfix.**  Bundles xcespserver 0.3.9 (off-by-one
