@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.3.15
+
+- **IP-FORWARD-MIB::inetCidrRouteTable bridge** (RFC 4292) — kernel
+  routing table per (router, vrf) exposed via SNMP at
+  `.1.3.6.1.2.1.4.24.7`.  Off-the-shelf NMS tools see one row per
+  installed route across every (router, vrf) of the XCESP box,
+  with ifIndex linking each row back to the same IF-MIB row.
+  Sourced from `ip -j route show vrf <V>` polled per-VRF by
+  xcesp-on-rtr.
+- Bundles xcespserver 0.3.15, xcespcli 0.3.1, xcespproc 0.2.8,
+  xcespwdog 0.2.0.
+
 ## 0.3.14
 
 - **Mirror 0.3.13 MIB install in xcesp-activate** so a CLI
