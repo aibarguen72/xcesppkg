@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.3.14
+
+- **Mirror 0.3.13 MIB install in xcesp-activate** so a CLI
+  `copy sw latest backup-sw` + `software-install` + reboot path
+  also lands the updated XCESP-MIB.txt at `/usr/share/snmp/mibs/`.
+  Without this, 0.3.13's install.sh fix only helped fresh installs
+  (the CLI upgrade path never re-runs install.sh — same gotcha
+  pattern as memory `project_cli_upgrade_self_sufficient`).
+
 ## 0.3.13
 
 - **Install XCESP-MIB.txt system-wide** to `/usr/share/snmp/mibs/`

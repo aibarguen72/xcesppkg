@@ -100,6 +100,25 @@ if [ -d "$MAINSW/scripts" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 0.3.13 — XCESP-MIB.txt self-refresh into /usr/share/snmp/mibs/
+# ---------------------------------------------------------------------------
+# Mirror the install.sh MIB install path so a CLI `copy sw latest backup-sw`
+# + `software-install` + reboot also lands an updated XCESP-MIB on the
+# system MIB dir.  Without this, the MIB only refreshes when an operator
+# manually re-runs install.sh.
+if [ -d "$MAINSW/mib" ]; then
+    install -d -o root -g root -m 0755 /usr/share/snmp/mibs
+    for src in "$MAINSW/mib"/XCESP-MIB*.txt; do
+        [ -f "$src" ] || continue
+        dst="/usr/share/snmp/mibs/$(basename "$src")"
+        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+            install -o root -g root -m 0644 "$src" "$dst"
+            log "  refreshed $dst"
+        fi
+    done
+fi
+
+# ---------------------------------------------------------------------------
 # Runtime directory
 # ---------------------------------------------------------------------------
 # /run is tmpfs — cleared on reboot. systemd RuntimeDirectory= handles this
