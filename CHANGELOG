@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.3.18
+
+- **BGP4-MIB::bgpPeerTable bridge** (RFC 4273) — per-VRF BGP peer
+  state polled via FRR vtysh and exposed via SNMP at
+  `.1.3.6.1.2.1.15.3`.  Per-(router, vrf) SNMPv3 contexts wired
+  on day one.  Bundles xcesp-on-rtr 0.2.10, xcespproc 0.2.10,
+  xcespserver 0.3.18.
+- **IPv4-only** for this slot.  IPv6 BGP peers (BGP4V2-MIB)
+  deferred to a follow-up.
+
+  ```
+  snmpwalk -v2c -c <community> router BGP4-MIB::bgpPeerState
+  # or scoped:
+  snmpwalk -v3 ... -n "r=RC;v=default" router BGP4-MIB::bgpPeerTable
+  ```
+
 ## 0.3.17
 
 - **Per-(router, vrf) SNMPv3 contexts for IP-MIB + IP-FORWARD-MIB.**
