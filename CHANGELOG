@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.3.8
+
+- **IP-MIB::ipAddressTable + ipNetToPhysicalTable bridges** (RFC 4293
+  unified v4 + v6).  Off-the-shelf SNMP NMS tools (LibreNMS, Zabbix,
+  Observium, PRTG) that walk the standard `.1.3.6.1.2.1.4.34` and
+  `.1.3.6.1.2.1.4.35` tables now see one row per kernel address and
+  ARP/NDP cache entry across every (router, vrf, interface) of the
+  XCESP box, with ifIndex linking each row back to the matching
+  IF-MIB / xcespIfTable row.  Sourced from `ip -j addr show` and
+  `ip -j neigh show` polled per-iface by xcesp-on-rtr.
+- Bundles xcespserver 0.3.8, xcespcli 0.3.1, xcespproc 0.2.4,
+  xcespwdog 0.2.0.
+
 ## 0.3.7
 
 - **SNMPv3 trap + inform delivery via USM** + per-trap
