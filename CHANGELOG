@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.3.11
+
+- Bundle xcesp-on-rtr 0.2.6 + xcespproc 0.2.6: unconditional
+  `addr_poll` log line per monitor tick (no `ifaceUp` gate).  0.3.10
+  produced zero log lines on the test VM, so we need to first prove
+  whether `monitorLinkState()` reaches my code at all.
+
 ## 0.3.10
 
 - **Diagnostic build for the 0.3.8 IP-MIB empty-rows bug.**  Bundles
