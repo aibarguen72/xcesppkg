@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.3.9
+
+- **0.3.8 IP-MIB hotfix.**  Bundles xcespserver 0.3.9 (off-by-one
+  parts-count fix in the IP-MIB rescan: empty rows on every walk →
+  now returns one row per kernel address / ARP-NDP cache entry as
+  intended).  xcespcli 0.3.1, xcespproc 0.2.4, xcespwdog 0.2.0
+  unchanged.
+
 ## 0.3.8
 
 - **IP-MIB::ipAddressTable + ipNetToPhysicalTable bridges** (RFC 4293
