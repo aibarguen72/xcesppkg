@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.3.16
+
+- **Hotfix for 0.3.15: default-VRF routes weren't being polled.**
+  Bundles xcesp-on-rtr 0.2.9 + xcespproc 0.2.9 with the fix.
+  Other versions unchanged.
+
 ## 0.3.15
 
 - **IP-FORWARD-MIB::inetCidrRouteTable bridge** (RFC 4292) — kernel
