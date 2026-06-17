@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.3.17
+
+- **Per-(router, vrf) SNMPv3 contexts for IP-MIB + IP-FORWARD-MIB.**
+  Bundles xcespserver 0.3.17 (extends `buildContextReg()` to also
+  register the 3 newer tables under each active context).  Other
+  versions unchanged.
+
+  Walk a scoped IP / route view per (router, vrf):
+  ```
+  snmpwalk -v3 -u test -l noAuthNoPriv -n "r=RC;v=default" localhost \
+      IP-MIB::ipAddressTable
+  snmpwalk -v3 -u test -l noAuthNoPriv -n "r=RC;v=default" localhost \
+      IP-FORWARD-MIB::inetCidrRouteTable
+  ```
+
 ## 0.3.16
 
 - **Hotfix for 0.3.15: default-VRF routes weren't being polled.**
