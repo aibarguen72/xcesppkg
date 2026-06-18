@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.3.20
+
+- **OSPF-MIB::ospfNbrTable bridge** (RFC 4750) — per-VRF OSPFv2
+  neighbor state polled via FRR vtysh and exposed via SNMP at
+  `.1.3.6.1.2.1.14.10`.  Per-(router, vrf) SNMPv3 contexts wired
+  on day one.  Bundles xcesp-on-rtr 0.2.11, xcespproc 0.2.11,
+  xcespserver 0.3.20.
+- **IPv4-only** — OSPFV3-MIB::ospfv3NbrTable for v6 deferred.
+
+  ```
+  snmpwalk -v2c -c <community> router 1.3.6.1.2.1.14.10
+  snmpwalk -v3 ... -n "r=RC;v=default" router 1.3.6.1.2.1.14.10
+  ```
+
 ## 0.3.19
 
 - **Hotfix for 0.3.18 BGP4-MIB INDEX byte-reversal.**  Bundles
