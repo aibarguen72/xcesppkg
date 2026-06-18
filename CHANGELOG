@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.3.21
+
+- **BGP / OSPF state-change traps**.  Bundles xcespserver 0.3.21
+  with `bgpEstablished`, `bgpBackwardTrans`, and
+  `ospfNbrStateChange` notification senders.  5 s poll-based
+  edge detection; per-(router, vrf) context tagging on the PDU.
+
+  Try with snmptrapd subscribed to the master snmpd's trap forward:
+  ```
+  snmptrapd -f -Lo
+  # then on a router, bounce a peer / shutdown a neighbour iface
+  ```
+
 ## 0.3.20
 
 - **OSPF-MIB::ospfNbrTable bridge** (RFC 4750) — per-VRF OSPFv2
