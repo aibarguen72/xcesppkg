@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.3.19
+
+- **Hotfix for 0.3.18 BGP4-MIB INDEX byte-reversal.**  Bundles
+  xcespserver 0.3.19 (host-order uint32 fix for ASN_IPADDRESS
+  index encoding).  Other versions unchanged.
+
 ## 0.3.18
 
 - **BGP4-MIB::bgpPeerTable bridge** (RFC 4273) — per-VRF BGP peer
