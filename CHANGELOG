@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.3.27
+
+- **Fix: ospfAreaTable spfRuns column always 0** — FRR's per-area
+  SPF execution counter in `show ip ospf json` is named
+  `spfExecutedCounter` (we were reading `spfExecutedCount`).
+- Bundles xcesp-on-rtr 0.2.15, xcespproc 0.2.15.
+
 ## 0.3.26
 
 - **Hotfix: bgpIdentifier scalar OID** — was registered at
