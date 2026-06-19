@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.3.25
+
+- **Static routing-protocol MIB additions** — completes the
+  0.3.x SNMP roadmap.
+  - OSPF-MIB::ospfAreaTable (per-area config + counters)
+  - OSPF-MIB::ospfIfTable (per-OSPF-interface config)
+  - BGP4-MIB::bgpIdentifier scalar (local BGP router-id)
+- Per-(router, vrf) SNMPv3 contexts for all three.
+- Bundles xcesp-on-rtr 0.2.14, xcespproc 0.2.14, xcespserver 0.3.25.
+
 ## 0.3.24
 
 - **HOST-RESOURCES-MIB bridge** (RFC 2790) — CPU / memory / storage.
