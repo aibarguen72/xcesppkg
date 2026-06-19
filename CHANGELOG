@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.3.26
+
+- **Hotfix: bgpIdentifier scalar OID** — was registered at
+  `1.3.6.1.2.1.15.4.0.0` instead of `1.3.6.1.2.1.15.4.0`; query for
+  the correct instance returned "No Such Instance".  Same trailing-`.0`
+  bug also affected four HOST-RESOURCES scalars (hrSystemUpTime,
+  hrSystemNumUsers, hrSystemProcesses, hrMemorySize) but those are
+  masked by master snmpd's mibII/host module.
+- Bundles xcespserver 0.3.26.
+
 ## 0.3.25
 
 - **Static routing-protocol MIB additions** — completes the
