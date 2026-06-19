@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.3.24
+
+- **HOST-RESOURCES-MIB bridge** (RFC 2790) — CPU / memory / storage.
+  Per-core CPU rows with 60 s averaged load%, plus system RAM and
+  each real filesystem in `hrStorageTable`.  No `hrSWRunTable`
+  (intentional).  Bundles xcespserver 0.3.24; other versions
+  unchanged.
+
+  ```
+  snmpwalk -v2c -c <community> router 1.3.6.1.2.1.25
+  ```
+
 ## 0.3.23
 
 - **OSPFV3-MIB::ospfv3NbrTable bridge** (RFC 5643) — per-VRF OSPFv3
