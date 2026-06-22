@@ -429,6 +429,12 @@ fi
 # package) and Debian (snmp package).  Created if missing — covers
 # installs where no snmp client is yet installed locally.
 # ---------------------------------------------------------------------------
+if [ -d "$INSTALL_DIR/yang" ]; then
+    info "Installing YANG modules to $MAINSW_DIR/yang ..."
+    install -d -o root -g root -m 0755 "$MAINSW_DIR/yang"
+    cp -rT "$INSTALL_DIR/yang" "$MAINSW_DIR/yang"
+fi
+
 if [ -d "$INSTALL_DIR/mib" ]; then
     info "Installing MIB files to $MAINSW_DIR/mib ..."
     install -d -o root -g root -m 0755 "$MAINSW_DIR/mib"

@@ -81,6 +81,7 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
             cfg/xcespserver.conf cfg/xcesp-snmpd.conf \
             mib/XCESP-MIB.txt \
+            yang/ietf/ietf-system@2014-08-06.yang \
             python/pyproject.toml
 	@echo "Building package $(TARBALL) ..."
 	rm -rf $(PKG_NAME)
@@ -129,6 +130,14 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	# --- MIB files (operator-side, shipped for installation on NMS hosts) ---
 	mkdir -p $(PKG_NAME)/mib
 	cp mib/XCESP-MIB.txt $(PKG_NAME)/mib/
+
+	# --- YANG modules (0.4.0+, for sysrepo --install at activate time).
+	# xcesp-activate's NETCONF block runs `sysrepoctl --install` for each
+	# .yang file under $MAINSW/yang/ (Fedora's stock sysrepo does not
+	# ship IETF YANG modules; we bundle the ones our NetconfAgent
+	# subscribes to).
+	mkdir -p $(PKG_NAME)/yang/ietf
+	cp yang/ietf/*.yang $(PKG_NAME)/yang/ietf/
 
 	# --- Schema ---
 	# Direct xcesptest schema files

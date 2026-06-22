@@ -2375,9 +2375,128 @@ SYSDDROPIN
                 systemctl restart snmpd 2>/dev/null || true
             fi
         fi
+
+        # =====================================================================
+        # NETCONF subscriber materialisation (0.4.0+)
+        # =====================================================================
+        #
+        # When `management netconf enabled true`, three independent
+        # permission steps must all succeed for xcespserver's
+        # NetconfAgent to bind to sysrepo and serve operational data via
+        # netopeer2 (see project_netconf_sysrepo_perms_chain memory):
+        #
+        #   1. xcesp user must be in the `sysrepo` group — `sr_connect`
+        #      reads /dev/shm/sr_main which is 0660 root:sysrepo.
+        #
+        #   2. The IETF YANG modules NetconfAgent subscribes to must be
+        #      Implemented in sysrepo, not just Imported.  Stock Fedora
+        #      sysrepo doesn't ship ietf-system; we bundle our own copy
+        #      under $MAINSW/yang/ietf/ and `sysrepoctl --install` each
+        #      on first activate.  Hash sidecar at
+        #      /var/lib/xcesp/netconf-modules.state makes this a no-op
+        #      on subsequent activates unless the bundled YANG content
+        #      changes.
+        #
+        #   3. Module permissions must be 660 (not the install default
+        #      600).  `sr_oper_get_subscribe` requires WRITE access
+        #      and the xcesp user reaches it via sysrepo group.
+        #
+        # Teardown: disable netopeer2-server, clear the hash sidecar
+        # so a future re-enable re-runs the install/perm check.  Leave
+        # the YANG modules installed (cheap to keep; expensive to
+        # un/re-install across enable/disable cycles, and other
+        # consumers may rely on them).
+
+        netconf_present=$(aaa_cfg_get netconf present "false")
+        netconf_enabled=$(aaa_cfg_get netconf enabled "false")
+        NETCONF_MODULES_STATE=/var/lib/xcesp/netconf-modules.state
+        YANG_SRC_DIR="$MAINSW/yang/ietf"
+        SYSREPO_GROUP=sysrepo
+
+        if [ "$netconf_present" = "true" ] && [ "$netconf_enabled" = "true" ]; then
+            log "AAA: NETCONF enabled — wiring sysrepo + netopeer2"
+
+            # 1. Add xcesp to sysrepo group (idempotent)
+            if getent group "$SYSREPO_GROUP" >/dev/null 2>&1; then
+                if id -nG "$XCESP_USER" 2>/dev/null | tr ' ' '\n' | grep -qx "$SYSREPO_GROUP"; then
+                    :   # already a member
+                else
+                    if usermod -aG "$SYSREPO_GROUP" "$XCESP_USER" 2>/dev/null; then
+                        log "  added $XCESP_USER to $SYSREPO_GROUP group"
+                    else
+                        log "  WARNING: usermod -aG $SYSREPO_GROUP $XCESP_USER failed"
+                    fi
+                fi
+            else
+                log "  WARNING: $SYSREPO_GROUP group missing (is sysrepo installed?)"
+            fi
+
+            # 2. Install bundled YANG modules — hash-gated so re-runs are no-ops.
+            install -d -o root -g xcesp -m 2775 /var/lib/xcesp 2>/dev/null
+            desired_hash=""
+            if [ -d "$YANG_SRC_DIR" ]; then
+                desired_hash=$(find "$YANG_SRC_DIR" -maxdepth 1 -name "*.yang" -type f \
+                                 -exec sha256sum {} + 2>/dev/null | sort | sha256sum | awk '{print $1}')
+            fi
+            current_hash=""
+            [ -f "$NETCONF_MODULES_STATE" ] && current_hash=$(cat "$NETCONF_MODULES_STATE" 2>/dev/null)
+
+            if [ -n "$desired_hash" ] && [ "$desired_hash" != "$current_hash" ]; then
+                log "  installing bundled YANG modules into sysrepo"
+                for yang in "$YANG_SRC_DIR"/*.yang; do
+                    [ -f "$yang" ] || continue
+                    mod_name=$(basename "$yang" | sed 's/@.*$//; s/\.yang$//')
+                    # Skip if module is already Implemented (flag column shows "I")
+                    if sysrepoctl --list 2>/dev/null | \
+                           awk -v m="$mod_name" 'BEGIN{ok=0} $1==m && index($5,"I")>0 {ok=1} END{exit !ok}'; then
+                        log "    $mod_name already Implemented — perms-only refresh"
+                    else
+                        if sysrepoctl --install "$yang" >/dev/null 2>&1; then
+                            log "    installed $(basename "$yang")"
+                        else
+                            log "    WARNING: sysrepoctl --install failed for $yang"
+                            continue
+                        fi
+                    fi
+                    # Required permissions: 660 so xcesp (via sysrepo group)
+                    # has WRITE access for sr_oper_get_subscribe.
+                    sysrepoctl --change "$mod_name" --permissions 660 >/dev/null 2>&1 || \
+                        log "    WARNING: sysrepoctl --change $mod_name --permissions 660 failed"
+                done
+                printf "%s\n" "$desired_hash" > "$NETCONF_MODULES_STATE.tmp"
+                chmod 0644 "$NETCONF_MODULES_STATE.tmp" 2>/dev/null
+                mv "$NETCONF_MODULES_STATE.tmp" "$NETCONF_MODULES_STATE"
+            elif [ -z "$desired_hash" ]; then
+                log "  WARNING: no bundled YANG modules under $YANG_SRC_DIR"
+            fi
+
+            # 3. Enable netopeer2-server (stock defaults — listens 0.0.0.0:830).
+            # bind-address / port from `management/netconf/` are serialised but
+            # not yet plumbed into netopeer2's ietf-netconf-server module
+            # (deferred to a 0.4.x follow-up).
+            if systemctl list-unit-files netopeer2-server.service >/dev/null 2>&1; then
+                if systemctl enable --now netopeer2-server.service 2>/dev/null; then
+                    log "  netopeer2-server.service enabled"
+                else
+                    log "  WARNING: systemctl enable --now netopeer2-server failed"
+                fi
+            else
+                log "  WARNING: netopeer2-server.service unit missing (install netopeer2 package)"
+            fi
+        else
+            if [ "$netconf_present" = "true" ]; then
+                log "AAA: NETCONF disabled — tearing down netopeer2-server"
+            fi
+            if systemctl list-unit-files netopeer2-server.service >/dev/null 2>&1; then
+                systemctl disable --now netopeer2-server.service 2>/dev/null || true
+            fi
+            if [ -f "$NETCONF_MODULES_STATE" ]; then
+                rm -f "$NETCONF_MODULES_STATE"
+            fi
+        fi
     fi
 else
-    log "AAA: $AAA_CONFIG_FILE not present — TACACS+/RADIUS/SNMP materialisation skipped"
+    log "AAA: $AAA_CONFIG_FILE not present — TACACS+/RADIUS/SNMP/NETCONF materialisation skipped"
 fi
 
 # ---------------------------------------------------------------------------

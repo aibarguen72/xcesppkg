@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.4.0
+
+- **NETCONF support (first 0.4.x release)** — bundles xcespserver 0.4.0
+  with NETCONF compiled in (when `pkg-config --exists sysrepo libyang`).
+- **`xcesp-activate` NETCONF block** — sibling of the SNMP marker block:
+  enables/disables `netopeer2-server.service`, installs bundled YANG
+  modules into sysrepo via `sysrepoctl --install` (0.4.x ships none —
+  IETF/openconfig modules used by 0.4.x are sysrepo built-ins),
+  creates the `xcesp-netconf` pool account with PAM/TACACS/RADIUS
+  forced-command (reuses the 0.2.10→0.2.18 AAA chain).
+- **`cfg/xcesp-netopeer2.conf`** — listen address / SSH host-key path
+  template, copied to `/etc/netopeer2/` only when operator-managed
+  files are absent (idempotent rewrite pattern).
+- Fedora-only for 0.4.x (CESNET stack not in Debian 13 archive — see
+  dependencies.md).  Bundles xcespserver 0.4.0.
+
 ## 0.3.27
 
 - **Fix: ospfAreaTable spfRuns column always 0** — FRR's per-area
