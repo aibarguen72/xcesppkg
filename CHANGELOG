@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.4.3
+
+- **Bundles xcespserver 0.4.3 hotfix** — fixes the empty
+  /ietf-routing:routing response on routers with slashed route IDs
+  (any production deploy with static routes or BGP/OSPF-learned
+  routes).  See xcespserver 0.4.3 CHANGELOG for the root-cause
+  details.
+- xcespcli 0.3.1, xcespproc 0.2.15, xcespwdog 0.2.0 unchanged.
+- YANG bundle unchanged from 0.4.2.
+
 ## 0.4.2
 
 - **Bundles xcespserver 0.4.2** with NetconfAgent's `/ietf-routing:routing`
