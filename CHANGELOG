@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.1
+
+- **Bundles xcespserver 0.4.1** with NetconfAgent's ietf-interfaces +
+  ietf-ip operational subtrees.  xcespcli 0.3.1, xcespproc 0.2.15,
+  xcespwdog 0.2.0 unchanged.
+- **Bundled YANG: ietf-interfaces@2014-05-08, ietf-ip@2014-06-16,
+  iana-if-type@2014-05-19.**  Sourced from Fedora's `libsmi-yang`
+  package; bundled so xcesp-activate's existing `sysrepoctl --install`
+  loop picks them up at activate time without adding a runtime
+  dependency on libsmi-yang.  xcesp-activate's NETCONF block iterates
+  `$MAINSW/yang/ietf/*.yang` — no script change needed.
+
 ## 0.4.0
 
 - **NETCONF support (first 0.4.x release)** — bundles xcespserver 0.4.0
