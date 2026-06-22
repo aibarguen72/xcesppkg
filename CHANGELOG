@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.4.2
+
+- **Bundles xcespserver 0.4.2** with NetconfAgent's `/ietf-routing:routing`
+  operational subtree.  xcespcli 0.3.1, xcespproc 0.2.15, xcespwdog
+  0.2.0 unchanged.
+- **Bundled YANG: ietf-routing@2018-03-13, ietf-ipv4-unicast-routing
+  @2018-03-13, ietf-ipv6-unicast-routing@2018-03-13,
+  ietf-routing-types@2017-12-04.**  RFC 8349 + RFC 8294 modules; not
+  shipped by Fedora's `libsmi-yang` (that package only carries the
+  older 2014-era IETF modules), so we fetch from upstream YangModels
+  and bundle here.  xcesp-activate's NETCONF block iterates
+  `$MAINSW/yang/ietf/*.yang` — picks them up automatically.
+
 ## 0.4.1
 
 - **Bundles xcespserver 0.4.1** with NetconfAgent's ietf-interfaces +
