@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.4.5
+
+- **Bundles xcesp-on-rtr 0.2.16 IPsec PSK fix** — GRE-over-IPsec (and any
+  PSK-scoped connection) now loads.  The config-to-objects `ipsec.py` rule
+  no longer emits dotted swanctl identity keys (`id-10.101.1.1`) that made
+  the `secrets {}` block unparseable and caused `swanctl --load-all` to
+  abort the whole connection load (`<ns> config misses local/remote
+  address` / `NO_PROPOSAL_CHOSEN`).  Now emits `id-1`, `id-2`, …; wildcard
+  ids emit a clean catch-all; secret values are quoted.  Rules are copied
+  directly from the xcesp-on-rtr tree, so no binary rebuild was required.
+- Bundles xcespserver 0.4.4, xcespcli 0.3.1, xcespproc 0.2.15,
+  xcespwdog 0.2.0 — all unchanged from 0.4.4 (no C++ changed).
+- YANG bundle unchanged from 0.4.2 (8 modules).
+
 ## 0.4.4
 
 - **Bundles xcespserver 0.4.4 hotfix** — fixes the empty
