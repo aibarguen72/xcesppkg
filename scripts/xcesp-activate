@@ -2443,29 +2443,92 @@ SYSDDROPIN
 
             if [ -n "$desired_hash" ] && [ "$desired_hash" != "$current_hash" ]; then
                 log "  installing bundled YANG modules into sysrepo"
+
+                # Build the pending list: any *.yang file that is a MODULE
+                # (not a submodule) and not already Implemented in sysrepo.
+                # Submodules are loaded transitively by libyang through their
+                # `belongs-to` parent module and MUST NOT be given to
+                # `sysrepoctl --install` directly.
+                pending=""
                 for yang in "$YANG_SRC_DIR"/*.yang; do
                     [ -f "$yang" ] || continue
+                    # First non-comment/whitespace token: "module" vs "submodule"
+                    first_kw=$(awk 'BEGIN{skip=1}
+                                     /^[[:space:]]*(\/\*|\/\/|$)/ { next }
+                                     skip { for(i=1;i<=NF;i++) if ($i!~/^[[:space:]]*$/) {
+                                                print $i; exit
+                                            } }' "$yang" 2>/dev/null)
+                    if [ "$first_kw" = "submodule" ]; then
+                        continue   # skipped — parent module include pulls it in
+                    fi
                     mod_name=$(basename "$yang" | sed 's/@.*$//; s/\.yang$//')
-                    # Skip if module is already Implemented (flag column shows "I")
                     if sysrepoctl --list 2>/dev/null | \
                            awk -v m="$mod_name" 'BEGIN{ok=0} $1==m && index($5,"I")>0 {ok=1} END{exit !ok}'; then
                         log "    $mod_name already Implemented — perms-only refresh"
-                    else
-                        if sysrepoctl --install "$yang" >/dev/null 2>&1; then
-                            log "    installed $(basename "$yang")"
-                        else
-                            log "    WARNING: sysrepoctl --install failed for $yang"
-                            continue
-                        fi
+                        sysrepoctl --change "$mod_name" --permissions 660 >/dev/null 2>&1 || \
+                            log "    WARNING: sysrepoctl --change $mod_name --permissions 660 failed"
+                        continue
                     fi
-                    # Required permissions: 660 so xcesp (via sysrepo group)
-                    # has WRITE access for sr_oper_get_subscribe.
-                    sysrepoctl --change "$mod_name" --permissions 660 >/dev/null 2>&1 || \
-                        log "    WARNING: sysrepoctl --change $mod_name --permissions 660 failed"
+                    pending="$pending $yang"
                 done
-                printf "%s\n" "$desired_hash" > "$NETCONF_MODULES_STATE.tmp"
-                chmod 0644 "$NETCONF_MODULES_STATE.tmp" 2>/dev/null
-                mv "$NETCONF_MODULES_STATE.tmp" "$NETCONF_MODULES_STATE"
+
+                # Multi-pass install: repeat until no forward progress.  Fixes
+                # the alphabetical-order-dependency trap where an augment
+                # module (ietf-ipv4-unicast-routing) comes before its imported
+                # base (ietf-routing) and fails first-pass.  Each failed
+                # module gets retried after a pass that installs at least
+                # one other module (which may satisfy the previously-missing
+                # import).  Loop terminates when a full pass makes no
+                # progress — the remaining files are then hard-failed.
+                all_installed=true
+                while [ -n "$pending" ]; do
+                    still_pending=""
+                    progress=false
+                    for yang in $pending; do
+                        mod_name=$(basename "$yang" | sed 's/@.*$//; s/\.yang$//')
+                        # Capture stderr so failures are visible in the log
+                        # (previously swallowed by >/dev/null 2>&1, hiding
+                        # "Data model X not found in local searchdirs" etc.).
+                        err=$(sysrepoctl --install "$yang" \
+                              --search-dirs "$YANG_SRC_DIR" 2>&1 >/dev/null)
+                        if [ $? -eq 0 ]; then
+                            log "    installed $(basename "$yang")"
+                            sysrepoctl --change "$mod_name" --permissions 660 >/dev/null 2>&1 || \
+                                log "    WARNING: sysrepoctl --change $mod_name --permissions 660 failed"
+                            progress=true
+                        else
+                            still_pending="$still_pending $yang"
+                        fi
+                    done
+                    if [ "$progress" = "false" ]; then
+                        # No forward progress on this pass — persistent
+                        # failures.  Log each with its actual stderr.
+                        for yang in $still_pending; do
+                            mod_name=$(basename "$yang" | sed 's/@.*$//; s/\.yang$//')
+                            err=$(sysrepoctl --install "$yang" \
+                                  --search-dirs "$YANG_SRC_DIR" 2>&1 >/dev/null)
+                            log "    ERROR: sysrepoctl --install $(basename "$yang") failed"
+                            log "           ${err:-<no stderr>}"
+                            all_installed=false
+                        done
+                        break
+                    fi
+                    pending="$still_pending"
+                done
+
+                # Only write the hash sidecar when EVERY bundled module is
+                # successfully Implemented.  Prior behaviour wrote the hash
+                # unconditionally, so a partial failure at first-boot became
+                # a permanent skip on all subsequent boots — the exact bug
+                # that hid the ipv4/ipv6 augment install failures on 0.4.2
+                # through 0.4.5 in production.
+                if [ "$all_installed" = "true" ]; then
+                    printf "%s\n" "$desired_hash" > "$NETCONF_MODULES_STATE.tmp"
+                    chmod 0644 "$NETCONF_MODULES_STATE.tmp" 2>/dev/null
+                    mv "$NETCONF_MODULES_STATE.tmp" "$NETCONF_MODULES_STATE"
+                else
+                    log "  WARNING: some YANG modules failed; NOT writing hash sidecar (retry next boot)"
+                fi
             elif [ -z "$desired_hash" ]; then
                 log "  WARNING: no bundled YANG modules under $YANG_SRC_DIR"
             fi

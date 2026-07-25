@@ -1,5 +1,54 @@
 # Changelog - xcesppkg
 
+## 0.4.6
+
+- **xcesp-activate NETCONF install-loop rewrite** — fixes silent
+  install failures for YANG augment modules (ipv4/ipv6-unicast-routing)
+  that depend on modules coming LATER alphabetically (ietf-routing).
+  On any router with `management/netconf enabled true` at 0.4.2..0.4.5
+  install time, `/ietf-routing:routing` returned empty or partial
+  responses because the augment modules failed first-pass install
+  (`import not found`), yet the hash sidecar
+  `/var/lib/xcesp/netconf-modules.state` was written UNCONDITIONALLY
+  — turning the failure into a permanent skip on subsequent boots.
+  Three concrete fixes:
+    1. **Multi-pass install** — retry failed modules after any
+       successful install in the same pass may have satisfied their
+       imports.  Loop terminates when no forward progress in a full
+       pass; the remaining failures are then hard-errored to the log
+       with the actual `sysrepoctl` stderr.
+    2. **`sysrepoctl` stderr captured into the log** — previously
+       `>/dev/null 2>&1` swallowed messages like *"Data model X not
+       found in local searchdirs"*, making the root cause invisible.
+    3. **Hash written only on full success** — a partial failure now
+       leaves the sidecar stale, so the next boot retries.  Prevents
+       the "install failed once, hidden forever" trap.
+- **Skip submodules in the install loop** — YANG submodules (files
+  starting with `submodule ...`) are loaded transitively by libyang
+  through their parent module's `belongs-to` relationship and MUST
+  NOT be passed to `sysrepoctl --install` directly.  The install
+  loop now detects submodules by checking the file's first
+  non-comment keyword and skips them.
+- **Bundle `ietf-ipv6-router-advertisements@2018-03-13.yang`** — the
+  submodule that `ietf-ipv6-unicast-routing` `include`s.  Without it
+  bundled in `yang/ietf/`, libyang couldn't compile
+  `ietf-ipv6-unicast-routing` and the install failed with *"Data
+  model ietf-ipv6-router-advertisements@2018-03-13 not found in
+  local searchdirs"*.
+- Bundles xcesp-on-rtr 0.2.16 unchanged from 0.4.5.  xcespserver
+  0.4.4, xcespcli 0.3.1, xcespproc 0.2.15, xcespwdog 0.2.0 all
+  unchanged.
+- **Post-install action for operators upgrading from 0.4.2..0.4.5**:
+  after installing 0.4.6 and rebooting, delete
+  `/var/lib/xcesp/netconf-modules.state` before the next boot to
+  force xcesp-activate to retry the install loop.  If left in place,
+  the sidecar still matches the (unchanged) bundled YANG hash and
+  the install loop will skip — which is fine if modules are already
+  Implemented, but skips the retry that would recover partial-fail
+  state.  Or simply `sudo rm /var/lib/xcesp/netconf-modules.state &&
+  sudo systemctl restart xcesp` post-install to trigger a clean
+  reinstall.
+
 ## 0.4.5
 
 - **Bundles xcesp-on-rtr 0.2.16 IPsec PSK fix** — GRE-over-IPsec (and any
