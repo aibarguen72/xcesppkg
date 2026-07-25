@@ -23,6 +23,7 @@ VER_MAP     := $(call ver,xcespmap)
 VER_SCHEMA  := $(call ver,xcespschema)
 VER_CONFIG  := $(call ver,xcespconfig)
 VER_PY      := $(call ver,xcesppy)
+VER_L2TPV3D := $(call ver,xcesp-l2tpv3d)
 
 # ---------------------------------------------------------------------------
 # Source paths
@@ -60,6 +61,11 @@ RULES_ONXC      := ../xcesp-on-xc/rules
 # xcesppy source
 XCESPPY_SRC := ../xcesppy/xcesppy
 
+# xcesp-l2tpv3d source (top-level Python daemon subproject)
+XCESPL2TP_SRC   := ../xcesp-l2tpv3d
+XCESPL2TP_UNIT  := ../xcesp-l2tpv3d/contrib/systemd/xcesp-l2tpv3d@.service
+XCESPL2TP_LAUNCH := ../xcesp-l2tpv3d/contrib/scripts/xcesp-l2tpv3d-launch
+
 # ---------------------------------------------------------------------------
 
 .PHONY: all clean check-bins
@@ -82,7 +88,10 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
             cfg/xcespserver.conf cfg/xcesp-snmpd.conf \
             mib/XCESP-MIB.txt \
             yang/ietf/ietf-system@2014-08-06.yang \
-            python/pyproject.toml
+            python/pyproject.toml \
+            $(XCESPL2TP_SRC)/pyproject.toml \
+            $(XCESPL2TP_UNIT) \
+            $(XCESPL2TP_LAUNCH)
 	@echo "Building package $(TARBALL) ..."
 	rm -rf $(PKG_NAME)
 
@@ -178,6 +187,21 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp -r $(XCESPPY_SRC)/. $(PKG_NAME)/python/xcesppy/
 	find $(PKG_NAME)/python -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
+	# --- xcesp-l2tpv3d Python daemon (0.5.0+) ---
+	# Whole subproject ships so `pip install` sees pyproject.toml + package
+	# source together.  install.sh's PYTHON_MODE=venv branch runs
+	# `pip install $MAINSW_DIR/python-l2tpv3d` which reads xcesp-l2tpv3d's
+	# own pyproject.toml.
+	mkdir -p $(PKG_NAME)/python-l2tpv3d $(PKG_NAME)/services $(PKG_NAME)/scripts
+	cp $(XCESPL2TP_SRC)/pyproject.toml $(PKG_NAME)/python-l2tpv3d/
+	cp $(XCESPL2TP_SRC)/README.md      $(PKG_NAME)/python-l2tpv3d/ 2>/dev/null || true
+	cp -r $(XCESPL2TP_SRC)/xcesp_l2tpv3d $(PKG_NAME)/python-l2tpv3d/
+	find $(PKG_NAME)/python-l2tpv3d -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
+	# Systemd template unit + launcher wrapper (installed by install.sh)
+	cp $(XCESPL2TP_UNIT)   $(PKG_NAME)/services/xcesp-l2tpv3d@.service
+	cp $(XCESPL2TP_LAUNCH) $(PKG_NAME)/scripts/xcesp-l2tpv3d-launch
+	chmod +x $(PKG_NAME)/scripts/xcesp-l2tpv3d-launch
+
 	# --- Documentation (mkdocs-built static site) ---
 	# Bundled only if ../doc/site/ exists — gracefully skipped if the doc
 	# tree has not been rebuilt locally (the doc subproject is authored
@@ -225,6 +249,7 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 		printf "%-22s %s\n" "xcespschema"    "$(VER_SCHEMA)"; \
 		printf "%-22s %s\n" "xcespconfig"    "$(VER_CONFIG)"; \
 		printf "%-22s %s\n" "xcesppy"        "$(VER_PY)"; \
+		printf "%-22s %s\n" "xcesp-l2tpv3d"  "$(VER_L2TPV3D)"; \
 	} > $(PKG_NAME)/VERSION
 
 	# --- Installer script ---

@@ -335,6 +335,32 @@ chmod 0440 "$SUDOERS_FILE"
 info "  $SUDOERS_FILE installed"
 
 # ---------------------------------------------------------------------------
+# sudoers rule — allow xcesp to drive xcesp-l2tpv3d@ template units (0.5.0+)
+# ---------------------------------------------------------------------------
+# RtrL2tpv3dPObj in xcespproc calls `sudo -n systemctl enable/reload/disable
+# xcesp-l2tpv3d@<router>.service` at commit time.  The pattern is scoped
+# tightly to the template's instance form so this drop-in cannot be used
+# to control unrelated units.
+info "Installing sudoers rule for xcesp-l2tpv3d template unit control..."
+L2TPV3D_SUDOERS=/etc/sudoers.d/xcesp-l2tpv3d
+cat > "$L2TPV3D_SUDOERS" <<'SUDOERS'
+# Allow xcespproc (RtrL2tpv3dPObj) to enable/disable/reload per-router
+# xcesp-l2tpv3d@ template instances.  Also permits the mkdir/chgrp/chmod
+# calls used to lazily create /var/xcesp/cfg/l2tpv3d when xcespproc
+# runs against a pre-existing install whose activate script hasn't
+# been re-run yet.
+xcesp ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now xcesp-l2tpv3d@.service, \
+                            /usr/bin/systemctl disable --now xcesp-l2tpv3d@.service, \
+                            /usr/bin/systemctl reload  xcesp-l2tpv3d@.service, \
+                            /usr/bin/systemctl restart xcesp-l2tpv3d@.service, \
+                            /usr/bin/mkdir -p /var/xcesp/cfg/l2tpv3d, \
+                            /usr/bin/chgrp xcesp /var/xcesp/cfg/l2tpv3d, \
+                            /usr/bin/chmod 2775 /var/xcesp/cfg/l2tpv3d
+SUDOERS
+chmod 0440 "$L2TPV3D_SUDOERS"
+info "  $L2TPV3D_SUDOERS installed"
+
+# ---------------------------------------------------------------------------
 # Pre-load kernel modules
 # ---------------------------------------------------------------------------
 # We are root in install.sh, so do the modprobe here directly.  This sidesteps
@@ -466,6 +492,17 @@ info "Installing xcesppy source to $MAINSW_DIR/python ..."
 cp -rT "$INSTALL_DIR/python" "$MAINSW_DIR/python"
 
 # ---------------------------------------------------------------------------
+# xcesp-l2tpv3d daemon source → mainsw/python-l2tpv3d/ (0.5.0+)
+# ---------------------------------------------------------------------------
+# Only present in packages built with the xcesp-l2tpv3d subproject
+# available.  install.sh's venv block below runs `pip install` against
+# this dir so the daemon entry point lands at $VENV_DIR/bin/xcesp-l2tpv3d.
+if [ -d "$INSTALL_DIR/python-l2tpv3d" ]; then
+    info "Installing xcesp-l2tpv3d source to $MAINSW_DIR/python-l2tpv3d ..."
+    cp -rT "$INSTALL_DIR/python-l2tpv3d" "$MAINSW_DIR/python-l2tpv3d"
+fi
+
+# ---------------------------------------------------------------------------
 # Documentation → mainsw/doc/  (activated to /var/xcesp/doc/ below).
 # Only present when the package was built with ../doc/site/ available; the
 # doc-httpd server slot in xcespserver.ini gracefully no-ops if DOC_DIR is
@@ -570,6 +607,13 @@ if [ "$PYTHON_MODE" = "venv" ]; then
         "$VENV_DIR/bin/pip" install --quiet -r "$MAINSW_DIR/python/requirements.txt"
     fi
 
+    # 0.5.0+: xcesp-l2tpv3d daemon.  Optional (only present when the
+    # subproject was available at package build time).
+    if [ -f "$MAINSW_DIR/python-l2tpv3d/pyproject.toml" ]; then
+        info "  Installing xcesp-l2tpv3d into virtual environment..."
+        "$VENV_DIR/bin/pip" install --quiet "$MAINSW_DIR/python-l2tpv3d"
+    fi
+
     chown -R "$XCESP_USER:$XCESP_GROUP" "$VENV_DIR"
     chmod -R o-rwx "$VENV_DIR"
     info "  Virtual environment ready: $VENV_DIR"
@@ -645,6 +689,41 @@ install -o root -g root -m 0644 \
 systemctl daemon-reload
 systemctl enable xcesp.service
 info "  xcesp.service installed and enabled"
+
+# ---------------------------------------------------------------------------
+# xcesp-l2tpv3d template unit + launcher wrapper (0.5.0+)
+# ---------------------------------------------------------------------------
+# Template unit + wrapper are optional: only present in packages built
+# with the xcesp-l2tpv3d subproject.  Skip cleanly if absent so pre-0.5.0
+# feature use is unaffected.
+if [ -f "$INSTALL_DIR/services/xcesp-l2tpv3d@.service" ]; then
+    info "Installing xcesp-l2tpv3d systemd template unit ..."
+    install -o root -g root -m 0644 \
+        "$INSTALL_DIR/services/xcesp-l2tpv3d@.service" \
+        "$SYSTEMD_DIR/xcesp-l2tpv3d@.service"
+
+    install -d -o root -g root -m 0755 /usr/lib/xcesp
+    install -o root -g root -m 0755 \
+        "$INSTALL_DIR/scripts/xcesp-l2tpv3d-launch" \
+        /usr/lib/xcesp/xcesp-l2tpv3d-launch
+
+    # Per-router TOML config dir.  xcespproc's RtrL2tpv3dPObj (writing
+    # as the xcesp uid) rewrites <router>.toml on every commit; setgid
+    # keeps inherited group ownership.
+    install -d -o root -g "$XCESP_GROUP" -m 2775 /var/xcesp/cfg/l2tpv3d
+
+    systemctl daemon-reload
+    info "  xcesp-l2tpv3d@.service installed"
+    info "  /usr/lib/xcesp/xcesp-l2tpv3d-launch installed"
+    info "  /var/xcesp/cfg/l2tpv3d/ created"
+
+    # Verify daemon binary landed in the venv (best-effort sanity check).
+    if [ -x "$VENV_DIR/bin/xcesp-l2tpv3d" ]; then
+        info "  Daemon entry point: $VENV_DIR/bin/xcesp-l2tpv3d"
+    else
+        warn "  Daemon binary NOT found at $VENV_DIR/bin/xcesp-l2tpv3d — pip install may have failed"
+    fi
+fi
 
 # Restart the service if it is currently running so the upgraded binaries
 # take effect immediately.  `try-restart` is a no-op when the service is

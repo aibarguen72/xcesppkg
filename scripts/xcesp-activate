@@ -2598,5 +2598,66 @@ else
     log "  fleet.key absent (machine-id mode — per-router secrets)"
 fi
 
+# ---------------------------------------------------------------------------
+# 0.5.0 — xcesp-l2tpv3d per-router lifecycle sync
+# ---------------------------------------------------------------------------
+#
+# The xcesppkg install.sh drops the systemd template unit
+# /etc/systemd/system/xcesp-l2tpv3d@.service and the launcher wrapper
+# /usr/lib/xcesp/xcesp-l2tpv3d-launch when the package includes the
+# xcesp-l2tpv3d subproject.  From then on, xcespproc's RtrL2tpv3dPObj is
+# the runtime authority — it writes /var/xcesp/cfg/l2tpv3d/<router>.toml
+# on every commit and calls `systemctl {enable,reload,disable}
+# xcesp-l2tpv3d@<router>.service` via sudoers.
+#
+# This block runs at activate time (install / upgrade / manual re-run)
+# and does two things:
+#   1. Ensures /var/xcesp/cfg/l2tpv3d exists with correct perms (idempotent).
+#   2. Reconciles the systemd enable-set with the current TOML set —
+#      disables any template instance whose TOML was removed between the
+#      previous xcespproc lifetime and this activate.
+#
+# We do NOT enable-on-behalf-of a live TOML: xcespproc does that at
+# runtime.  This is only about cleaning up orphaned instances that
+# might otherwise leak systemd state across upgrades.
+
+if [ -x /usr/lib/xcesp/xcesp-l2tpv3d-launch ] && \
+   systemctl list-unit-files 'xcesp-l2tpv3d@.service' \
+       --no-legend 2>/dev/null | grep -q xcesp-l2tpv3d@; then
+
+    log "L2TPv3d: template unit + launcher detected — reconciling instances"
+
+    install -d -o root -g xcesp -m 2775 /var/xcesp/cfg/l2tpv3d 2>/dev/null || true
+
+    # Enumerate live TOML routers (basename minus .toml)
+    live_routers=""
+    for toml in /var/xcesp/cfg/l2tpv3d/*.toml; do
+        [ -f "$toml" ] || continue
+        rtr=$(basename "$toml" .toml)
+        live_routers="$live_routers $rtr"
+    done
+
+    # Enumerate enabled template instances (systemd names have the form
+    # xcesp-l2tpv3d@<router>.service — split on '@' and '.').
+    enabled_instances=$(systemctl list-units --type=service --all --no-legend \
+        'xcesp-l2tpv3d@*.service' 2>/dev/null | awk '{print $1}')
+
+    for unit in $enabled_instances; do
+        # Extract instance name: strip prefix + suffix
+        rtr_from_unit=${unit#xcesp-l2tpv3d@}
+        rtr_from_unit=${rtr_from_unit%.service}
+        found=false
+        for rtr in $live_routers; do
+            if [ "$rtr" = "$rtr_from_unit" ]; then
+                found=true; break
+            fi
+        done
+        if [ "$found" = "false" ]; then
+            log "L2TPv3d: disabling orphaned instance $unit (no TOML)"
+            systemctl disable --now "$unit" 2>/dev/null || true
+        fi
+    done
+fi
+
 log "activation complete"
 exit 0
