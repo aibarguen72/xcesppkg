@@ -1,5 +1,32 @@
 # Changelog - xcesppkg
 
+## 0.4.10
+
+- **Fix: xcesp-activate skipped `restorecon` on daemon upgrades**,
+  leaving the freshly-installed venv binary at its create-time
+  `var_t` label — which SELinux init_t is denied from executing.
+  0.4.9 upgrade on XCESPFC hit exactly this: `pip install --upgrade`
+  succeeded, produced a new `/var/xcesp/venv/bin/xcesp-l2tpv3d` file
+  with `var_t`, and the launcher wrapper's `test -x` returned false
+  because SELinux blocked the access check.  Symptom was the same
+  "daemon binary not found" message from 2026-07-28 — misleadingly,
+  because the file WAS on disk.
+
+  Fix: restorecon now runs whenever pip install ran (new files always
+  need relabelling to bin_t), not only when semanage adds a new
+  fcontext rule.  0.4.8-0.4.9 skipped restorecon on upgrades whose
+  fcontext rules had already been installed by an earlier activate —
+  exactly the pattern that breaks daemon upgrades.
+
+- **Fix: dropped `--quiet` from the activate-side pip install and
+  removed the `head -5 | while log` pipeline that ate errors**.  pip
+  stderr now reaches the journal directly, so future install failures
+  are diagnosable from `journalctl -u xcesp` without a hand
+  reproduction.
+
+- No packaging-side changes beyond activate.  xcesp-l2tpv3d 0.5.1
+  daemon bundled verbatim from 0.4.9.
+
 ## 0.4.9
 
 - **Bundle xcesp-l2tpv3d 0.5.1** — first Cisco AVP interop fix.
