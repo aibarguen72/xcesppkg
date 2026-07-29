@@ -2610,24 +2610,111 @@ fi
 # on every commit and calls `systemctl {enable,reload,disable}
 # xcesp-l2tpv3d@<router>.service` via sudoers.
 #
-# This block runs at activate time (install / upgrade / manual re-run)
-# and does two things:
-#   1. Ensures /var/xcesp/cfg/l2tpv3d exists with correct perms (idempotent).
-#   2. Reconciles the systemd enable-set with the current TOML set —
-#      disables any template instance whose TOML was removed between the
-#      previous xcespproc lifetime and this activate.
-#
-# We do NOT enable-on-behalf-of a live TOML: xcespproc does that at
-# runtime.  This is only about cleaning up orphaned instances that
-# might otherwise leak systemd state across upgrades.
+# 0.4.8 additions (this block):
+#   * Promote systemd unit + launcher + venv daemon from mainsw.
+#     software-install (in-CLI upgrade path) swaps mainsw ↔ backupsw
+#     and re-runs xcesp-activate, but NOT install.sh.  Without this
+#     promotion, an operator upgrading via `copy sw latest` +
+#     `software-install` would land the new tarball in mainsw but
+#     not deploy the systemd unit / launcher / venv daemon to
+#     runtime paths — the exact gap operators hit on 0.4.7.
+#   * SELinux fcontext for the venv daemon binary + config dir on
+#     Fedora enforcing.  Without these rules the daemon crashes with
+#     `init_t → var_t: execute/read denied` — the exact denial hit on
+#     0.4.7 tonight.  See project_selinux_l2tpv3d_var_bin_t memory.
+#   * Ensures /var/xcesp/cfg/l2tpv3d exists with correct perms.
+#   * Reconciles the systemd enable-set with the current TOML set —
+#     disables any template instance whose TOML was removed between the
+#     previous xcespproc lifetime and this activate.  We do NOT
+#     enable-on-behalf-of a live TOML: xcespproc does that at runtime.
 
+# --- 0.4.8 --- Promote from mainsw to runtime.  Runs unconditionally
+# whenever mainsw ships an xcesp-l2tpv3d payload; a stale runtime unit
+# is silently replaced by cp+chown, so re-running is idempotent.
+if [ -f "$MAINSW/services/xcesp-l2tpv3d@.service" ]; then
+    if ! cmp -s "$MAINSW/services/xcesp-l2tpv3d@.service" \
+                /etc/systemd/system/xcesp-l2tpv3d@.service 2>/dev/null; then
+        install -o root -g root -m 0644 \
+            "$MAINSW/services/xcesp-l2tpv3d@.service" \
+            /etc/systemd/system/xcesp-l2tpv3d@.service
+        systemctl daemon-reload 2>/dev/null || true
+        log "L2TPv3d: template unit updated from mainsw"
+    fi
+fi
+
+if [ -f "$MAINSW/scripts/xcesp-l2tpv3d-launch" ]; then
+    install -d -o root -g root -m 0755 /usr/lib/xcesp
+    if ! cmp -s "$MAINSW/scripts/xcesp-l2tpv3d-launch" \
+                /usr/lib/xcesp/xcesp-l2tpv3d-launch 2>/dev/null; then
+        install -o root -g root -m 0755 \
+            "$MAINSW/scripts/xcesp-l2tpv3d-launch" \
+            /usr/lib/xcesp/xcesp-l2tpv3d-launch
+        log "L2TPv3d: launcher wrapper updated from mainsw"
+    fi
+fi
+
+if [ -d "$MAINSW/python-l2tpv3d" ] && \
+   [ -f "$MAINSW/python-l2tpv3d/pyproject.toml" ] && \
+   [ -x "$XCESP_BASE/venv/bin/pip" ]; then
+    # Read the shipped daemon version + compare to the venv-installed
+    # one.  Skip pip when they already match — pip install takes 5-10s
+    # and every activate is invoked at least once per boot.
+    shipped_ver=$(awk -F'"' '/^version/{print $2}' \
+                  "$MAINSW/python-l2tpv3d/pyproject.toml" 2>/dev/null)
+    installed_ver=$("$XCESP_BASE/venv/bin/pip" show xcesp-l2tpv3d 2>/dev/null | \
+                    awk '/^Version:/{print $2}')
+    if [ "$shipped_ver" != "$installed_ver" ]; then
+        log "L2TPv3d: upgrading daemon in venv ($installed_ver -> $shipped_ver)"
+        "$XCESP_BASE/venv/bin/pip" install --quiet --upgrade \
+            "$MAINSW/python-l2tpv3d" 2>&1 | \
+            grep -v '^Successfully' | head -5 | while IFS= read -r line; do
+                log "  $line"
+            done
+    fi
+fi
+
+install -d -o root -g xcesp -m 2775 /var/xcesp/cfg/l2tpv3d 2>/dev/null || true
+
+# --- 0.4.8 --- SELinux fcontext rules for Fedora enforcing.  Silently
+# skipped on distros without semanage (Debian, older Fedora without
+# policycoreutils-python-utils) or when SELinux is disabled entirely.
+# Rules are additive + idempotent: `semanage fcontext -a` errors if the
+# pattern already exists, so guard with `-l | grep`.  Also restorecon
+# any files that already exist to relabel them without waiting for the
+# next kernel type-transition.
+if command -v semanage >/dev/null 2>&1 && \
+   [ "$(getenforce 2>/dev/null)" != "Disabled" ]; then
+    # Format: "<type> <pattern>" pairs — bin_t for executables in the
+    # venv, etc_t for TOML config files (both readable by init_t).
+    relabel_needed=false
+    for pair in \
+        "bin_t=/var/xcesp/venv/bin/xcesp-l2tpv3d" \
+        "bin_t=/var/xcesp/venv/bin/python3(\.[0-9]+)?" \
+        "etc_t=/var/xcesp/cfg/l2tpv3d(/.*)?"
+    do
+        setype="${pair%%=*}"
+        pattern="${pair#*=}"
+        if ! semanage fcontext -l 2>/dev/null | grep -qF "$pattern "; then
+            if semanage fcontext -a -t "$setype" "$pattern" 2>/dev/null; then
+                log "L2TPv3d SELinux: added fcontext $setype $pattern"
+                relabel_needed=true
+            fi
+        fi
+    done
+    if [ "$relabel_needed" = "true" ]; then
+        # First-time application on a fresh install — relabel the runtime
+        # paths.  On steady-state (rules already present) skip the
+        # restorecon walk to avoid churning file mtimes needlessly.
+        restorecon -R /var/xcesp/venv/bin /var/xcesp/cfg/l2tpv3d 2>/dev/null || true
+    fi
+fi
+
+# --- Runtime reconcile (present since 0.4.7) ---
 if [ -x /usr/lib/xcesp/xcesp-l2tpv3d-launch ] && \
    systemctl list-unit-files 'xcesp-l2tpv3d@.service' \
        --no-legend 2>/dev/null | grep -q xcesp-l2tpv3d@; then
 
     log "L2TPv3d: template unit + launcher detected — reconciling instances"
-
-    install -d -o root -g xcesp -m 2775 /var/xcesp/cfg/l2tpv3d 2>/dev/null || true
 
     # Enumerate live TOML routers (basename minus .toml)
     live_routers=""

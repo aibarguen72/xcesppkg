@@ -344,18 +344,26 @@ info "  $SUDOERS_FILE installed"
 info "Installing sudoers rule for xcesp-l2tpv3d template unit control..."
 L2TPV3D_SUDOERS=/etc/sudoers.d/xcesp-l2tpv3d
 cat > "$L2TPV3D_SUDOERS" <<'SUDOERS'
-# Allow xcespproc (RtrL2tpv3dPObj) to enable/disable/reload per-router
-# xcesp-l2tpv3d@ template instances.  Also permits the mkdir/chgrp/chmod
-# calls used to lazily create /var/xcesp/cfg/l2tpv3d when xcespproc
-# runs against a pre-existing install whose activate script hasn't
-# been re-run yet.
-xcesp ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now xcesp-l2tpv3d@.service, \
-                            /usr/bin/systemctl disable --now xcesp-l2tpv3d@.service, \
-                            /usr/bin/systemctl reload  xcesp-l2tpv3d@.service, \
-                            /usr/bin/systemctl restart xcesp-l2tpv3d@.service, \
+# Allow xcespproc (RtrL2tpv3dPObj) to enable/disable/reload/restart
+# per-router xcesp-l2tpv3d@<router>.service template instances.  Also
+# permits the mkdir/chgrp/chmod calls used to lazily create
+# /var/xcesp/cfg/l2tpv3d when xcespproc runs against a pre-existing
+# install whose activate script hasn't been re-run yet, and the
+# restorecon call inside RtrL2tpv3dPObj::writeTomlConf that keeps
+# per-router TOMLs labelled etc_t on Fedora SELinux enforcing.
+#
+# 0.4.8: fixed `@*.service` wildcard (0.4.7 had `@.service` which
+# fnmatch(3) treats as a literal dot — never matched actual router
+# instances).  See also: /var/xcesp/venv/bin/xcesp-l2tpv3d and the
+# venv python interpreter both labelled bin_t by activate.
+xcesp ALL=(root) NOPASSWD: /usr/bin/systemctl enable --now xcesp-l2tpv3d@*.service, \
+                            /usr/bin/systemctl disable --now xcesp-l2tpv3d@*.service, \
+                            /usr/bin/systemctl reload  xcesp-l2tpv3d@*.service, \
+                            /usr/bin/systemctl restart xcesp-l2tpv3d@*.service, \
                             /usr/bin/mkdir -p /var/xcesp/cfg/l2tpv3d, \
                             /usr/bin/chgrp xcesp /var/xcesp/cfg/l2tpv3d, \
-                            /usr/bin/chmod 2775 /var/xcesp/cfg/l2tpv3d
+                            /usr/bin/chmod 2775 /var/xcesp/cfg/l2tpv3d, \
+                            /usr/sbin/restorecon -F /var/xcesp/cfg/l2tpv3d/*.toml
 SUDOERS
 chmod 0440 "$L2TPV3D_SUDOERS"
 info "  $L2TPV3D_SUDOERS installed"
@@ -722,6 +730,33 @@ if [ -f "$INSTALL_DIR/services/xcesp-l2tpv3d@.service" ]; then
         info "  Daemon entry point: $VENV_DIR/bin/xcesp-l2tpv3d"
     else
         warn "  Daemon binary NOT found at $VENV_DIR/bin/xcesp-l2tpv3d — pip install may have failed"
+    fi
+
+    # 0.4.8: SELinux fcontext rules for Fedora enforcing.  init_t (the
+    # systemd context xcesp-l2tpv3d@ runs under) rejects execute on the
+    # venv daemon binary and read on the config TOMLs unless we relabel
+    # them from the default `var_t`.  Silently skipped on distros
+    # without semanage or when SELinux is Disabled.  Idempotent: the
+    # -l | grep guard avoids the noisy "rule already defined" error on
+    # re-runs.  restorecon relabels files that already exist so we do
+    # not have to wait for kernel type-transition on next write.
+    if command -v semanage >/dev/null 2>&1 && \
+       [ "$(getenforce 2>/dev/null)" != "Disabled" ]; then
+        info "Applying SELinux fcontext rules for xcesp-l2tpv3d..."
+        for pair in \
+            "bin_t=$VENV_DIR/bin/xcesp-l2tpv3d" \
+            "bin_t=$VENV_DIR/bin/python3(\.[0-9]+)?" \
+            "etc_t=/var/xcesp/cfg/l2tpv3d(/.*)?"
+        do
+            setype="${pair%%=*}"
+            pattern="${pair#*=}"
+            if ! semanage fcontext -l 2>/dev/null | grep -qF "$pattern "; then
+                if semanage fcontext -a -t "$setype" "$pattern" 2>/dev/null; then
+                    info "  fcontext $setype $pattern"
+                fi
+            fi
+        done
+        restorecon -R "$VENV_DIR/bin" /var/xcesp/cfg/l2tpv3d 2>/dev/null || true
     fi
 fi
 

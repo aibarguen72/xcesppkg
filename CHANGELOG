@@ -1,5 +1,41 @@
 # Changelog - xcesppkg
 
+## 0.4.8
+
+- **Fix: `software-install` didn't deploy xcesp-l2tpv3d runtime bits.**
+  First upgrade of an XCESPFC install via `copy sw latest` +
+  `software-install` on 0.4.7 left `/etc/systemd/system/xcesp-l2tpv3d@.service`,
+  `/usr/lib/xcesp/xcesp-l2tpv3d-launch`, and `$VENV_DIR/bin/xcesp-l2tpv3d`
+  MISSING — those were installed only by `install.sh`, which
+  `software-install` does not re-run.  Root cause: xcesp-activate copied
+  daemon source into `mainsw/` but never promoted it to runtime paths.
+  Fix: `xcesp-activate` now promotes systemd unit + launcher +
+  venv-installed daemon from `mainsw/` on every run, guarded by
+  `cmp -s` (unit + launcher) and version comparison (daemon pip
+  install skipped when installed version matches shipped version).
+  Idempotent; safe to re-run.
+- **Fix: SELinux fcontext rules never applied.**  Fedora enforcing denies
+  `init_t → var_t: file execute/read`, meaning the daemon couldn't be
+  exec'd or its TOML read.  Yesterday's install required the operator
+  to hand-run `semanage fcontext -a -t bin_t /var/xcesp/venv/bin/...`
+  and `-t etc_t /var/xcesp/cfg/l2tpv3d(/.*)?`.  Fix: both `install.sh`
+  and `xcesp-activate` now install these rules idempotently (guarded
+  by `semanage fcontext -l | grep`) and `restorecon -R` the affected
+  trees.  Silently skipped when `semanage` is absent or SELinux is
+  Disabled.  See `project_selinux_l2tpv3d_var_bin_t` memory.
+- **Fix: sudoers `xcesp-l2tpv3d@.service` matched nothing.**  0.4.7's
+  install.sh dropped a sudoers rule with pattern
+  `xcesp-l2tpv3d@.service` — sudo uses `fnmatch(3)` which treats `.`
+  literally, so `systemctl enable xcesp-l2tpv3d@HA.service` would have
+  failed the sudoers check.  (XCESPFC's copy worked yesterday only
+  because the operator manually replaced it with the correct
+  `@*.service` form in an inline `sudo tee ...` block during
+  debugging.)  Fix: install.sh now writes `@*.service` wildcards
+  matching the actual instance names xcespproc uses.  Also adds
+  `restorecon -F /var/xcesp/cfg/l2tpv3d/*.toml` to the same sudoers
+  entry — RtrL2tpv3dPObj in xcesp-on-rtr 0.2.18 calls this after
+  every atomic TOML write.
+
 ## 0.4.7
 
 - **Bundle `xcesp-l2tpv3d` daemon (0.5.0) into the installer tarball.**
