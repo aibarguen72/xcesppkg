@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.4.9
+
+- **Bundle xcesp-l2tpv3d 0.5.1** — first Cisco AVP interop fix.
+  ICRQ now includes the Remote Session ID AVP (value 0) that RFC
+  3931 §3.4.3 mandates.  Fixes the "unsupported mandatory vendor
+  AVP" StopCCN that Cisco emitted after the SCCRQ/SCCRP/SCCCN
+  reached ESTABLISHED on 0.4.8.  See xcesp-l2tpv3d 0.5.1 CHANGELOG
+  for the full write-up.
+- No xcesppkg-side changes; this is a pure daemon rebundle.
+  `software-install` from an XCESPFC on 0.4.8 will replace the venv
+  daemon (xcesp-activate detects the version bump and pip-upgrades)
+  and RtrL2tpv3dPObj will restart the template instance
+  automatically on the next config apply.
+
 ## 0.4.8
 
 - **Fix: `software-install` didn't deploy xcesp-l2tpv3d runtime bits.**
