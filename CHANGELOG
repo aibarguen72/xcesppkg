@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.4.11
+
+- **Ship `/usr/lib/xcesp/xcesp-ipsec-vip-installer`** — POSIX-sh
+  updown script invoked by strongSwan's charon per CHILD_SA
+  install/uninstall for connections that use the
+  `install-vip-on <iface>` schema attr added in xcesp-on-rtr 0.2.19.
+  Reads `PLUTO_MY_SOURCEIP` (the IKEv2-assigned virtual IP) and
+  `PLUTO_VERB` to add/remove the VIP on the caller-designated
+  loopback interface.  Idempotent (`ip addr add/del || true`), so
+  duplicate up-client on SA rekey is harmless.
+- install.sh drops the script into `/usr/lib/xcesp/` (off PATH, matches
+  the pattern used for other charon/dhcp/AAA helper scripts).
+- xcesp-activate self-refreshes the script from `mainsw/lib/xcesp/` on
+  every activation so `software-install` upgrades pick up new versions
+  without re-running install.sh.
+- makefile bundles `scripts/xcesp-ipsec-vip-installer` into the tarball
+  under `scripts/` (source-of-truth) and `mainsw/lib/xcesp/` (runtime).
+- No changes to the CHILD_SA lifecycle or the RtrStrongswan PObj
+  bundled binary — xcespproc 0.2.18 relink handles the C++ side.
+
 ## 0.4.10
 
 - **Fix: xcesp-activate skipped `restorecon` on daemon upgrades**,

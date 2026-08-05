@@ -97,6 +97,20 @@ if [ -d "$MAINSW/scripts" ]; then
             log "  refreshed $dst"
         fi
     fi
+    # 0.4.11: same self-refresh for the IPsec VIP installer script.  It
+    # is invoked by charon's updown hook for connections that use the
+    # `install-vip-on <iface>` schema attr — installs the IKEv2-assigned
+    # virtual IP on a caller-declared loopback so multi-hub topologies
+    # can distinguish per-hub VIPs.
+    if [ -f "$MAINSW/lib/xcesp/xcesp-ipsec-vip-installer" ]; then
+        mkdir -p /usr/lib/xcesp
+        src="$MAINSW/lib/xcesp/xcesp-ipsec-vip-installer"
+        dst="/usr/lib/xcesp/xcesp-ipsec-vip-installer"
+        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+            install -o root -g root -m 0755 "$src" "$dst"
+            log "  refreshed $dst"
+        fi
+    fi
 fi
 
 # ---------------------------------------------------------------------------

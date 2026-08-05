@@ -171,6 +171,25 @@ else
     warn "xcesp-radius-auth not in package — RADIUS authentication will be unavailable"
 fi
 
+# 0.4.11: xcesp-ipsec-vip-installer → /usr/lib/xcesp/ (NOT on PATH).
+# POSIX-sh updown script invoked by strongSwan's charon per CHILD_SA
+# install/uninstall for connections that use the `install-vip-on <iface>`
+# schema attr.  Handles the IKEv2 CFG_REPLY virtual IP by installing it
+# on a caller-designated loopback interface (multi-hub scenarios where
+# each hub assigns a distinct VIP — charon's global install_virtual_ip_on
+# can't pin per-connection).  See xcesp-on-rtr/schema/ipsec-connection.schema.
+info "Installing xcesp-ipsec-vip-installer..."
+src="$INSTALL_DIR/scripts/xcesp-ipsec-vip-installer"
+if [ -f "$src" ]; then
+    install -d -o root -g root -m 0755 /usr/lib/xcesp
+    install -o root -g root -m 0755 "$src" /usr/lib/xcesp/xcesp-ipsec-vip-installer
+    install -d -o root -g root -m 0755 "$MAINSW_DIR/lib/xcesp"
+    install -o root -g root -m 0755 "$src" "$MAINSW_DIR/lib/xcesp/xcesp-ipsec-vip-installer"
+    info "  /usr/lib/xcesp/xcesp-ipsec-vip-installer (and $MAINSW_DIR/lib/xcesp/)"
+else
+    warn "xcesp-ipsec-vip-installer not in package — IPsec VIP-on-loopback install-vip-on schema attr will be inert"
+fi
+
 # ---------------------------------------------------------------------------
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------

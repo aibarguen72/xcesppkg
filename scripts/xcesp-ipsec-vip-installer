@@ -1,0 +1,65 @@
+#!/bin/sh
+# xcesp-ipsec-vip-installer — per-connection IPsec virtual-IP installer
+#
+# Called by strongSwan's `updown` hook when a CHILD_SA is installed or
+# removed for a connection that has `install-vip-on <ifname>` set in
+# its XCESP config.  Adds the assigned virtual IP (PLUTO_MY_SOURCEIP)
+# to <ifname> on `up-*` and removes it on `down-*`.
+#
+# Usage (invoked by charon, not directly):
+#     xcesp-ipsec-vip-installer <target-ifname>
+#
+# Environment variables set by strongSwan:
+#     PLUTO_VERB            up-client | up-host | down-client | down-host | ...
+#     PLUTO_MY_SOURCEIP     the IKEv2-assigned virtual IP (empty if none)
+#     PLUTO_CONNECTION      connection name (for logging only)
+#     PLUTO_UNIQUEID        SA unique id (for logging only)
+#
+# Bypasses strongSwan's global `charon.install_virtual_ip_on` (which
+# accepts only ONE interface per charon instance and therefore can't
+# support multi-hub topologies where each hub assigns a distinct VIP).
+# Paired with `charon.install_virtual_ip = no` in strongswan.conf so
+# charon does NOT also install the VIP on `lo` (avoiding double-install
+# / duplicate route conflicts).
+#
+# Runs inside the router's network namespace (charon executes there),
+# so `ip` commands target the correct netns without nsenter.
+
+set -eu
+
+IFACE="${1:?target interface name required as argv[1]}"
+VERB="${PLUTO_VERB:-}"
+VIP="${PLUTO_MY_SOURCEIP:-}"
+CONN="${PLUTO_CONNECTION:-<no-conn>}"
+
+# No VIP assigned for this SA — nothing to install.  Happens for
+# initiator connections whose peer isn't configured with a pool,
+# and for the tunnel-level up-host event before the IKE_AUTH
+# CFG_REPLY has been processed.  Silent no-op.
+[ -n "$VIP" ] || exit 0
+
+# Match only the events that map to an SA transition we care about.
+# up-client / down-client fire per CHILD_SA and are the standard place
+# for VIP install; up-host / down-host fire per IKE_SA and appear on
+# some strongSwan builds for the initial exchange.  Handling both is
+# defensive — the address ops below are idempotent.
+case "$VERB" in
+    up-client|up-host)
+        # Add /32 (IPv4) or /128 (IPv6) — assume v4 for now; extend when
+        # xcesp exposes v6 virtual-address requests.  || true so a
+        # duplicate add (SA re-key without down first) is silent.
+        ip addr add "$VIP/32" dev "$IFACE" 2>/dev/null || true
+        logger -t xcesp-vip \
+            "installed $VIP on $IFACE (conn=$CONN verb=$VERB)"
+        ;;
+    down-client|down-host)
+        ip addr del "$VIP/32" dev "$IFACE" 2>/dev/null || true
+        logger -t xcesp-vip \
+            "removed $VIP from $IFACE (conn=$CONN verb=$VERB)"
+        ;;
+    *)
+        # Other verbs (up-client-v6, migrate-*, etc.) — ignore.
+        ;;
+esac
+
+exit 0
