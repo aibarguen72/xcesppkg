@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.4.12
+
+- **Rebundle xcesp-on-rtr 0.2.20 + xcespproc 0.2.19** — 0.4.11 shipped
+  the vip-installer script but the install-vip-on emission it depended
+  on was inert due to router.py's parallel swanctl.conf renderer
+  overwriting ipsec.py's SWAN_LINE_* output.  0.2.20 mirrors the
+  updown emission into router.py so the multi-hub VIP install
+  actually reaches charon.  No packaging changes; the installer
+  script itself is unchanged from 0.4.11.
+
 ## 0.4.11
 
 - **Ship `/usr/lib/xcesp/xcesp-ipsec-vip-installer`** — POSIX-sh
