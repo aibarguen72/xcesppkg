@@ -22,43 +22,60 @@
 # charon does NOT also install the VIP on `lo` (avoiding double-install
 # / duplicate route conflicts).
 #
-# Runs inside the router's network namespace (charon executes there),
-# so `ip` commands target the correct netns without nsenter.
-
-set -eu
+# Capability handling (0.4.12+):
+# `ip addr add/del` requires CAP_NET_ADMIN.  charon does NOT reliably
+# pass its own caps to forked child processes (xcesptest observed
+# CapPrm=0 on the running charon despite the binary having file caps,
+# because `ip netns exec` in the launch chain sets `no_new_privs`
+# which suppresses subsequent file-cap application).  Instead we
+# exec through `/usr/lib/xcesp/xcesp-ip` — a tiny C wrapper shipped
+# by xcesppkg install.sh with file caps `cap_net_admin,cap_net_raw=ep`
+# that raises them ambient before exec'ing the real `ip`.  Its own
+# file caps apply regardless of what the forking parent has.
+#
+# Fallback to plain `ip` when the wrapper isn't installed — useful for
+# standalone strongSwan setups outside XCESP where charon typically
+# runs as root and the caps issue doesn't arise.
 
 IFACE="${1:?target interface name required as argv[1]}"
 VERB="${PLUTO_VERB:-}"
 VIP="${PLUTO_MY_SOURCEIP:-}"
 CONN="${PLUTO_CONNECTION:-<no-conn>}"
 
-# No VIP assigned for this SA — nothing to install.  Happens for
-# initiator connections whose peer isn't configured with a pool,
-# and for the tunnel-level up-host event before the IKE_AUTH
-# CFG_REPLY has been processed.  Silent no-op.
+# No VIP assigned for this SA — nothing to install.
 [ -n "$VIP" ] || exit 0
 
-# Match only the events that map to an SA transition we care about.
-# up-client / down-client fire per CHILD_SA and are the standard place
-# for VIP install; up-host / down-host fire per IKE_SA and appear on
-# some strongSwan builds for the initial exchange.  Handling both is
-# defensive — the address ops below are idempotent.
+# Pick the ip binary — prefer the caps-raising wrapper.
+if [ -x /usr/lib/xcesp/xcesp-ip ]; then
+    IP=/usr/lib/xcesp/xcesp-ip
+else
+    IP=ip
+fi
+
 case "$VERB" in
     up-client|up-host)
-        # Add /32 (IPv4) or /128 (IPv6) — assume v4 for now; extend when
-        # xcesp exposes v6 virtual-address requests.  || true so a
-        # duplicate add (SA re-key without down first) is silent.
-        ip addr add "$VIP/32" dev "$IFACE" 2>/dev/null || true
-        logger -t xcesp-vip \
-            "installed $VIP on $IFACE (conn=$CONN verb=$VERB)"
+        OUT=$("$IP" addr add "$VIP/32" dev "$IFACE" 2>&1)
+        RC=$?
+        # RC=2 with 'File exists' → already installed (idempotent, benign).
+        # Any other non-zero → log the actual error so operators can debug.
+        if [ $RC -ne 0 ] && ! printf '%s' "$OUT" | grep -q "File exists"; then
+            logger -t xcesp-vip \
+                "FAILED add $VIP on $IFACE (conn=$CONN rc=$RC): $OUT"
+        else
+            logger -t xcesp-vip \
+                "installed $VIP on $IFACE (conn=$CONN verb=$VERB)"
+        fi
         ;;
     down-client|down-host)
-        ip addr del "$VIP/32" dev "$IFACE" 2>/dev/null || true
-        logger -t xcesp-vip \
-            "removed $VIP from $IFACE (conn=$CONN verb=$VERB)"
-        ;;
-    *)
-        # Other verbs (up-client-v6, migrate-*, etc.) — ignore.
+        OUT=$("$IP" addr del "$VIP/32" dev "$IFACE" 2>&1)
+        RC=$?
+        if [ $RC -ne 0 ] && ! printf '%s' "$OUT" | grep -q "Cannot assign"; then
+            logger -t xcesp-vip \
+                "FAILED del $VIP from $IFACE (conn=$CONN rc=$RC): $OUT"
+        else
+            logger -t xcesp-vip \
+                "removed $VIP from $IFACE (conn=$CONN verb=$VERB)"
+        fi
         ;;
 esac
 

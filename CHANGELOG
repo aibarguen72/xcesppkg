@@ -1,5 +1,40 @@
 # Changelog - xcesppkg
 
+## 0.4.13
+
+- **Fix: xcesp-ipsec-vip-installer's `ip addr add` was silently
+  failing with EPERM** on live xcesptest, so the VIPs never actually
+  landed on the target loopbacks despite the script logging
+  "installed …" and 0.4.12's swanctl.conf correctly containing the
+  `updown = …` line.
+
+  Root cause: charon on the test box has file capabilities
+  (`cap_net_admin,cap_net_raw=ep`) on the binary but its RUNNING
+  process shows `CapPrm=0` — because xcespproc launches charon via
+  `ip netns exec` which sets `no_new_privs` on the exec chain,
+  causing the kernel to suppress file-cap application for the
+  charon exec.  With CapPrm=0, charon's forked updown-script
+  children inherit zero caps, and their `ip addr add` gets EPERM.
+
+  Fix: the installer script now prefers `/usr/lib/xcesp/xcesp-ip`
+  (a tiny C wrapper shipped by install.sh with file caps
+  `cap_net_admin,cap_net_raw=ep` that raises them ambient before
+  exec'ing the real `ip`).  xcesp-ip's own file caps apply
+  regardless of the forking parent's caps — same
+  privilege-escalation trick used by the DHCP client wrapper.
+  Falls back to bare `ip` when the wrapper isn't installed, so
+  standalone strongSwan setups outside XCESP (where charon
+  typically runs as root) still work.
+
+- Also: the script now differentiates between benign "File exists" /
+  "Cannot assign requested address" errors (idempotent no-ops on
+  duplicate up-client or down-client for an already-cleaned-up SA)
+  and real failures, and logs the actual error on real failures
+  instead of silently swallowing them.  0.4.11 / 0.4.12 hid this
+  bug for two release cycles by silencing every error.
+
+- xcesp-on-rtr / xcespproc bundled versions unchanged from 0.4.12.
+
 ## 0.4.12
 
 - **Rebundle xcesp-on-rtr 0.2.20 + xcespproc 0.2.19** — 0.4.11 shipped
