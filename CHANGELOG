@@ -1,5 +1,36 @@
 # Changelog - xcesppkg
 
+## 0.4.14
+
+- **Fix: xcesp-activate probed the wrong mainsw path for the IPsec VIP
+  installer script.**  0.4.11-0.4.13's promotion logic only checked
+  `$MAINSW/lib/xcesp/xcesp-ipsec-vip-installer` — which is populated
+  ONLY when install.sh runs (it copies the tarball's
+  `scripts/xcesp-ipsec-vip-installer` into both `/usr/lib/xcesp/`
+  and `$MAINSW_DIR/lib/xcesp/`).  The tarball itself puts the script
+  under `scripts/`, so a bare `software-install` (no install.sh
+  re-run) extracts to `$MAINSW/scripts/` and nowhere else — activate
+  then never sees a source to promote from.  Result: after
+  `copy sw latest` + `software-install`, the installer script never
+  reaches `/usr/lib/xcesp/`, charon's updown points at a missing
+  file, VIPs don't install, and the operator has to manually copy
+  the script from `mainsw/scripts/` to unblock (as debugged live on
+  XCESPFC 2026-08-10).
+  Fix: activate now probes `$MAINSW/scripts/` first (always present
+  after software-install), with a fallback to `$MAINSW/lib/xcesp/`
+  for hand-installed boxes.
+
+- **Cosmetic: xcesp-ipsec-vip-installer now recognises "Address not
+  found" as benign on down-client.**  0.4.13 only filtered "Cannot
+  assign" (older iproute2 wording for `ip addr add` idempotent
+  failure); Fedora 41 / iproute2 >= 6.9 uses "Address not found"
+  for `ip addr del` when the address isn't installed.  Without this
+  extra filter, every charon SIGTERM logs a FAILED del line for
+  addresses that were never installed in the first place.  Now
+  logs a normal "removed" line instead.
+
+- Bundled xcesp-on-rtr / xcespproc versions unchanged from 0.4.13.
+
 ## 0.4.13
 
 - **Fix: xcesp-ipsec-vip-installer's `ip addr add` was silently

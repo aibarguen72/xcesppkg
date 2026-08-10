@@ -69,7 +69,16 @@ case "$VERB" in
     down-client|down-host)
         OUT=$("$IP" addr del "$VIP/32" dev "$IFACE" 2>&1)
         RC=$?
-        if [ $RC -ne 0 ] && ! printf '%s' "$OUT" | grep -q "Cannot assign"; then
+        # Benign errors on down-client: the address was never installed
+        # (e.g. charon received down-client for an SA whose up-client
+        # failed, or a bounce where the previous session's addresses
+        # got flushed with the interface).  Match both the iproute2
+        # 'Cannot assign' wording (older kernels) and the 'Address not
+        # found' wording (Fedora 41+ / iproute2 >= 6.9) so operators
+        # don't see false-positive FAILED lines in the journal.
+        if [ $RC -ne 0 ] \
+           && ! printf '%s' "$OUT" | grep -q "Cannot assign" \
+           && ! printf '%s' "$OUT" | grep -q "Address not found"; then
             logger -t xcesp-vip \
                 "FAILED del $VIP from $IFACE (conn=$CONN rc=$RC): $OUT"
         else

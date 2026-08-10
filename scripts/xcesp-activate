@@ -102,13 +102,26 @@ if [ -d "$MAINSW/scripts" ]; then
     # `install-vip-on <iface>` schema attr — installs the IKEv2-assigned
     # virtual IP on a caller-declared loopback so multi-hub topologies
     # can distinguish per-hub VIPs.
-    if [ -f "$MAINSW/lib/xcesp/xcesp-ipsec-vip-installer" ]; then
+    #
+    # 0.4.14: probe BOTH mainsw/scripts/ (always populated by the tarball
+    # extract, so it survives a bare `software-install`) AND mainsw/lib/xcesp/
+    # (only populated by install.sh, present on hand-installed boxes).
+    # 0.4.11-0.4.13 only looked at lib/xcesp/, so operators who upgraded
+    # via `copy sw latest` + `software-install` never got the script
+    # promoted to /usr/lib/xcesp/ — leaving charon's updown pointing at
+    # a non-existent path, VIPs never installed.
+    ipsec_vip_src=""
+    if [ -f "$MAINSW/scripts/xcesp-ipsec-vip-installer" ]; then
+        ipsec_vip_src="$MAINSW/scripts/xcesp-ipsec-vip-installer"
+    elif [ -f "$MAINSW/lib/xcesp/xcesp-ipsec-vip-installer" ]; then
+        ipsec_vip_src="$MAINSW/lib/xcesp/xcesp-ipsec-vip-installer"
+    fi
+    if [ -n "$ipsec_vip_src" ]; then
         mkdir -p /usr/lib/xcesp
-        src="$MAINSW/lib/xcesp/xcesp-ipsec-vip-installer"
         dst="/usr/lib/xcesp/xcesp-ipsec-vip-installer"
-        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
-            install -o root -g root -m 0755 "$src" "$dst"
-            log "  refreshed $dst"
+        if [ ! -f "$dst" ] || ! cmp -s "$ipsec_vip_src" "$dst"; then
+            install -o root -g root -m 0755 "$ipsec_vip_src" "$dst"
+            log "  refreshed $dst (from $ipsec_vip_src)"
         fi
     fi
 fi
