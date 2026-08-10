@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.4.15
+
+- Bundles:
+  - **xcespserver 0.4.5** — new `slog-stream` action-type: streaming
+    tail of `journalctl -f --no-pager -t <systemd-tag>` for an
+    operator-selected daemon.  Target allowlist in
+    `FileActionHandler.cpp::kSlogTargets` (MVP: `charon`).
+  - **xcespcli 0.3.2** — new `show slog <target>` command exposing
+    the above; tab-completion for `slog` sub-verb and target names.
+  - **xcesp-on-rtr 0.2.21** — emit `0.0.0.0/0` instead of `%any` in
+    swanctl `local_addrs` / `remote_addrs`.  Fixes
+    NO_PROPOSAL_CHOSEN / "no IKE config found" on strongSwan 5.9.x
+    for any-remote hub configs (`remote-address *`).  Kept `%any` in
+    id / secret contexts where it's the officially-supported wildcard.
+
+- Post-install: to make `show slog` useful on a production XCESPFC
+  (where xcespserver runs as the unprivileged `xcesp` user), that
+  user needs read access to the system journal.  Fedora / Debian:
+  `sudo usermod -aG systemd-journal xcesp && sudo systemctl restart
+  xcesp`.  Without it, journalctl runs but returns only the xcesp
+  user's own log entries.  Follow-up: fold this usermod into
+  install.sh in a subsequent release once field-verified.
+
 ## 0.4.14
 
 - **Fix: xcesp-activate probed the wrong mainsw path for the IPsec VIP
