@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.4.16
+
+- Bundles:
+  - **xcesp-on-rtr 0.2.22** — fix cold-boot NO_PROPOSAL_CHOSEN race.
+    The RtrStrongswanPObj watchdog (retryInitiate every
+    CHARON_RETRY_INTERVAL seconds when a `start_action=start`
+    connection is not ESTABLISHED) was silently disabled because only
+    ipsec.py emitted the SWAN_INITIATE_* keys and router.py's
+    authoritative renderer overwrote the section without them.  Now
+    router.py mirrors the emission — spokes auto-retry after every
+    NO_PROP, including the cold-boot race where the spoke initiates
+    before the hub has loaded its config.
+- Operator-visible: after upgrade, spokes with
+  `router X ipsec retry-interval 30` (or any positive value) will
+  recover from reboot without manual `swanctl -i`.
+
 ## 0.4.15
 
 - Bundles:
