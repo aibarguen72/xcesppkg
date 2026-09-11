@@ -1,5 +1,30 @@
 # Changelog - xcesppkg
 
+## 0.4.18
+
+- **fix: xcesp-activate now emits every process role from
+  xcespserver.conf, not only routing.**  The bootstrap generator that
+  writes `/run/xcesp/xcespwdog_proc.ini` before xcespwdog starts only
+  parsed `processes routing / count N` and never emitted a `-r <role>`
+  flag on the launch line.  Any config declaring a second role
+  (`processes tdm-pw / count M`) had its M processes silently dropped —
+  wdog spawned N routing procs (defaulting `role=routing` in xcespproc),
+  and every domain object mapped to procId 101+ (tdm-pw offset) sat
+  orphaned with no process to run it.  Symptom: `ps -ef | grep
+  xcespproc` showed only routing instances and the tdm-pw dataplane
+  never came up.
+- The parser now iterates every `processes <role>` block inside the
+  `server N` block, emitting one `[process.X]` entry per instance with
+  `-r <role>` on the launch line so xcespproc applies the correct
+  procId offset (routing=+0, tdm-pw=+100).  Fallback for legacy configs
+  with no processes block is unchanged: routing count derived from the
+  number of top-level `router <name>` blocks (default 2).
+- No binary changes; xcesppkg still bundles the same subproject
+  versions as 0.4.17 (xcespserver 0.4.6, xcespproc 0.2.20, xcespwdog
+  0.2.0, xcespcli 0.3.3, xcesp-on-xc 0.2.1, xcesp-on-rtr 0.2.22,
+  xcesp-on-pw 0.2.0, xcespschema 0.2.1, xcespconfig 0.2.0, xcespmap
+  0.2.0).
+
 ## 0.4.17
 
 - Bundles:
