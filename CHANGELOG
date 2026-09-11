@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.4.20
+
+- **fix: xcesp-activate now chowns `/var/xcesp/backupsw/` to
+  `xcesp:xcesp` on every activation.**  install.sh keeps files under
+  the swap tree root-owned by design (file caps on xcespproc, setuid
+  on charon/hostapd, etc.).  But pip install — run as root — leaves
+  `build/` and `*.egg-info/` trees inside `python/` and `python-l2tpv3d/`
+  that then migrate to `backupsw` on the first software-install swap.
+  Same category: files under `scripts/`.  Because these were root-owned
+  and xcespserver runs as the xcesp user, `copy sw latest backup-sw`
+  and `software-install` failed the cleanup phase with `rm: cannot
+  remove '/var/xcesp/backupsw/.../xcesppy.egg-info/PKG-INFO': Permission
+  denied` (many lines), and the follow-on `tar -x` then failed with
+  `tar: scripts/xcesp-l2tpv3d-launch: Cannot open: Permission denied`.
+- The chown is safe because `backupsw` is by definition the inactive
+  shelf copy — no live capabilities are consumed from it, no service
+  reads it.  `mainsw/` remains root-owned (unchanged).  Idempotent,
+  self-heals legacy installations on the next restart.
+- No binary changes; xcesppkg 0.4.20 bundles the same subproject
+  versions as 0.4.19.
+
 ## 0.4.19
 
 - **fix: xcesp-activate now adds `xcesp` to the `dialout` (and `uucp`)

@@ -179,6 +179,31 @@ install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 "/home/$XCESP_USER"
 install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0700 "/home/$XCESP_USER/.ssh"
 
 # ---------------------------------------------------------------------------
+# backupsw ownership — self-heal legacy root-owned artifacts
+# ---------------------------------------------------------------------------
+# /var/xcesp/backupsw/ is the inactive shelf-copy of the previous software
+# release.  xcespserver (running as $XCESP_USER) must be able to rm-and-
+# replace it during `copy sw latest backup-sw` / `software-install`.
+#
+# install.sh deliberately keeps files under mainsw/backupsw root-owned
+# (setgid dirs 2775, files 0644/0755) so file-capabilities on binaries
+# survive across swaps.  But pip install (run as root during initial
+# install) leaves build/ and *.egg-info/ trees inside python/ and
+# python-l2tpv3d/ that migrate to backupsw on the first swap — and those
+# trees are root:root, so xcespserver-as-xcesp cannot rm them.  Same
+# category: scripts/ files.  Symptom: `copy sw latest backup-sw` fails
+# with "rm: cannot remove '/var/xcesp/backupsw/.../xcesppy.egg-info/...':
+# Permission denied" followed by "tar: ...: Cannot open: Permission
+# denied" at extraction.
+#
+# Fix: since backupsw is by definition inactive (no capabilities in use,
+# no live binaries), it is safe and correct to make everything under it
+# xcesp-owned so the swap machinery can clean it.  Idempotent, cheap.
+if [ -d /var/xcesp/backupsw ]; then
+    chown -R "$XCESP_USER:$XCESP_GROUP" /var/xcesp/backupsw 2>/dev/null || true
+fi
+
+# ---------------------------------------------------------------------------
 # Binaries
 # ---------------------------------------------------------------------------
 if [ -d "$MAINSW/bin" ]; then
