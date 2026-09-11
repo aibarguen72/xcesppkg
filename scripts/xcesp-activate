@@ -713,6 +713,24 @@ if getent group frr > /dev/null 2>&1 && [ -d /etc/frr ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Serial-port group access — needed so ModemXc can open /dev/tty{S,USB}*
+# ---------------------------------------------------------------------------
+# /dev/ttyS* and /dev/ttyUSB* are owned by root:dialout on Debian/Ubuntu/
+# Fedora; some older RHEL variants use uucp instead.  xcespproc runs as
+# the xcesp user, so it must belong to whichever group owns the device
+# for open() to succeed — otherwise ModemXc bring-up fails with EACCES
+# on the physical DTE endpoint.  Add to every group that exists on this
+# host; idempotent, safe to re-run on every start.
+for tty_grp in dialout uucp; do
+    if getent group "$tty_grp" > /dev/null 2>&1; then
+        if ! id -Gn "$XCESP_USER" 2>/dev/null | grep -qw "$tty_grp"; then
+            usermod -aG "$tty_grp" "$XCESP_USER"
+            log "  added $XCESP_USER to $tty_grp group (serial-port access)"
+        fi
+    fi
+done
+
+# ---------------------------------------------------------------------------
 # Reboot / xcesp-service-restart sudoers rule — refresh on every activation
 # ---------------------------------------------------------------------------
 # `reboot`, `reboot light`, and `software-install` ultimately need to call

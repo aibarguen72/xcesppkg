@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.4.19
+
+- **fix: xcesp-activate now adds `xcesp` to the `dialout` (and `uucp`)
+  group so ModemXc can open `/dev/ttyS*` and `/dev/ttyUSB*`.**  Without
+  this, `dte-endpoint serial` fails at bring-up with
+  `open(/dev/ttyUSB0) failed: Permission denied` and the modem object
+  never reaches ACTIVE.  The dev/test path (`xcesptest/scripts/
+  activate.sh`) already did this; the packaged activate script did not.
+- Mirrors the existing FRR group-membership pattern: idempotent check,
+  adds to every serial-device group that exists on the host (both
+  `dialout` and `uucp` are tried — different distros use different
+  names), logs a message on first addition.
+- No binary changes; xcesppkg 0.4.19 bundles the same subproject
+  versions as 0.4.18 (xcespserver 0.4.6, xcespproc 0.2.20, xcespwdog
+  0.2.0, xcespcli 0.3.3, xcesp-on-xc 0.2.1, xcesp-on-rtr 0.2.22,
+  xcesp-on-pw 0.2.0, xcespschema 0.2.1, xcespconfig 0.2.0, xcespmap
+  0.2.0).
+
 ## 0.4.18
 
 - **fix: xcesp-activate now emits every process role from
