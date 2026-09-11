@@ -1,5 +1,44 @@
 # Changelog - xcesppkg
 
+## 0.4.17
+
+- Bundles:
+  - **xcesp-on-xc 0.2.1** — first real ProcObject in on-xc: the ModemXc
+    2G/GSM modem emulator.  Wavecom WISMO Q2403A DCE-side emulation
+    over serial (`/dev/tty*`) or TCP-listen DTE endpoint; SMS carried
+    over UDP and CSD data calls over TCP between peer emulator
+    instances.  Full V.25ter + WISMO AT command surface, compound-
+    line dispatcher, AT&V byte-for-byte match with real Q2403A,
+    AT&W-backed EEPROM persistence, CSD `SETUP`/`CONNECT` handshake
+    so caller waits for peer answer, S0 ring cadence, AT&D policy on
+    both physical DTR-drop and TCP-listen close, runtime +IPR/+ICF/
+    +IFC termios reprogramming, per-line HAL to primary/secondary
+    TTY TIOCM bits or GPIO sysfs.
+  - **xcespproc 0.2.20** — new `modem-at-inject` action handler that
+    routes an AT command to a ModemXcPObj by node instance name and
+    returns the parser's captured response.  Extends `handleAction`
+    signature with an `output` parameter; `CtrlLink` emits the
+    optional body after a blank-line separator.  Relinks against
+    on-xc 0.2.1.
+  - **xcespserver 0.4.6** — action router gains an object-scoped
+    branch (`ACTION_TYPE=modem-at-inject` → `MODEM=<name>` →
+    `findProcForModem()`) alongside the existing router-scoped path.
+    `forwardActionResult` now forwards an optional response body to
+    the CLI (same blank-line convention as SHOW_QUERY_RESULT).
+  - **xcespcli 0.3.3** — new `do-modem <name> at-inject "<AT>"`
+    operator command (Cisco-style "do-" prefix to avoid shadowing
+    the `modem` schema-node navigation).  Auto-strips surrounding
+    quotes.  linenoise `?` handler now suppresses the help
+    callback when the cursor is inside a double-quoted string so
+    operators can type queries like `at-inject "AT+CBST?"`.
+  - **xcesptest 0.4.6** — modem test fixture (schema graft under
+    `domain`, cfg with two loopback modems, peer-map, activate.sh
+    adds user to `dialout` for `/dev/ttyUSB*` access, `xcespproc.ini`
+    disables console-log path to avoid double-writes with the wdog
+    syslog forwarder).
+- Existing bundled versions carry over: xcesp-on-rtr 0.2.22,
+  xcesp-on-pw current, xcespwdog current.
+
 ## 0.4.16
 
 - Bundles:
