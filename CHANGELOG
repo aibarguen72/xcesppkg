@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.4.21
+
+- **Bundles xcesp-on-xc 0.2.2 + xcespproc 0.2.21** — ModemXc byte-
+  pipe now queues on EAGAIN and drains via EPOLLOUT (registered
+  through `EvApplication::setSocketWriteCallback`) instead of
+  dropping the tail.  Fixes truncated CSD responses at 9600 baud
+  when HW flow control is bypassed on the wire (self-loopback on
+  RTS/CTS at either end).  Queue cap 256 KB per direction; beyond
+  the cap a WARNING is logged with a running dropped-byte total.
+- All other bundled versions unchanged from 0.4.20 (xcespserver
+  0.4.6, xcespwdog 0.2.0, xcespcli 0.3.3, xcesp-on-rtr 0.2.22,
+  xcesp-on-pw 0.2.0, xcespschema 0.2.1, xcespconfig 0.2.0, xcespmap
+  0.2.0).
+
 ## 0.4.20
 
 - **fix: xcesp-activate now chowns `/var/xcesp/backupsw/` to
