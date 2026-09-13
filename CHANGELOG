@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.4.22
+
+- **New: tdm-pw xcespproc can be pinned to a router's netns** via
+  `domain <n> / router R` in the server config.
+  * `xcesp-activate` now parses every `domain <n>` block, collects
+    (affinity, router) pairs, and — for each tdm-pw `[process.N]`
+    entry whose affinity has a router bound — appends `-N R` to the
+    `WDOG_LAUNCH` line.  xcespproc 0.2.22 opens `/run/netns/R` and
+    calls `setns(CLONE_NEWNET)` at startup so every socket it opens
+    lives in that netns.
+  * Domains without `router` continue to run in the root netns
+    (backwards-compatible; nothing changes for existing configs).
+  * Sanity is enforced by the new `domain.validate.py` at commit
+    time: router must exist, router requires affinity, two domains
+    at the same affinity must agree on the router.
+- Now bundles the packaged `domain.validate.py` alongside
+  `domain.schema` (extra entry in `SCHEMA_DIRECT` in the makefile).
+- **Bundled versions bumped**: xcespproc 0.2.22 (new `-N` flag),
+  xcesptest 0.4.8 (schema + validator).  All other subprojects
+  unchanged from 0.4.21.
+
 ## 0.4.21
 
 - **Bundles xcesp-on-xc 0.2.2 + xcespproc 0.2.21** — ModemXc byte-

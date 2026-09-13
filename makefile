@@ -39,6 +39,7 @@ XCESPWDOG   := ../xcespwdog/bin/xcespwdog
 # (xcesptest/schema uses broken relative symlinks for on-rtr/on-pw/on-xc —
 #  we bypass those and copy from the actual source trees instead.)
 SCHEMA_DIRECT := ../xcesptest/schema/domain.schema \
+                 ../xcesptest/schema/domain.validate.py \
                  ../xcesptest/schema/_types.schema  \
                  ../xcesptest/schema/udpbert.schema  \
                  ../xcesptest/schema/udpbert.status  \
