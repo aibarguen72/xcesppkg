@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.4.24
+
+- Bundles xcespserver 0.4.7 + xcespcli 0.3.5 (fixes for the TDM-PW
+  show verbs identified by the operator during pre-lab exploration):
+    * xcespserver 0.4.7 routes `QUERY_TYPE=tdm-pw-{summary,detail}` by
+      DOMAIN through a new `findProcForDomain()` — fixes
+      "missing ROUTER parameter" when running `show tdm-pw ...`.
+    * xcespcli 0.3.5 completion offers `domain` (not router/vrf) for
+      `show tdm-pw` and `show tdm-pw-summary`, expands the domain and
+      PW instance names, and errors client-side with a clear
+      "'domain' parameter required" when the operator isn't inside a
+      domain and hasn't supplied one.
+- xcespproc (0.2.23) and xcesp-on-pw (0.3.0) unchanged from 0.4.23.
+
 ## 0.4.23
 
 - Bundles xcespserver 0.4.6, xcespcli 0.3.4, xcespproc 0.2.23,
