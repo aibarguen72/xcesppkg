@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.4.23
+
+- Bundles xcespserver 0.4.6, xcespcli 0.3.4, xcespproc 0.2.23,
+  xcespwdog 0.2.0 with the Phase-1 TDM-PW landing:
+    * xcesp-on-pw 0.3.0 — CESoPSN pseudowire objects (`pw-endpoint`,
+      `tdm-pw`), source-mode UDP RX/TX with per-domain RT thread
+      (SCHED_FIFO opt-in), full CW / sequence / LOS state machine,
+      `bind none` and `bind loopback`.
+    * xcespproc 0.2.23 — `show tdm-pw-summary` / `show tdm-pw <name>`
+      dispatch in `handleShowQuery` (domain-scoped, short-circuits
+      before router-namespace resolution).
+    * xcespcli 0.3.4 — `show tdm-pw-summary [domain D]` and
+      `show tdm-pw <name> [domain D]` verbs with formatters + TAB
+      completion.
+- Schema tree carries the two new nodes (`tdm-pw`, `pw-endpoint`)
+  plus the new domain attrs (`rt-processing`, `rt-priority`) via
+  xcesptest 0.4.9 and the on-pw symlink.
+
 ## 0.4.22
 
 - **New: tdm-pw xcespproc can be pinned to a router's netns** via
