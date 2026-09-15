@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.4.28
+
+- Bundles **xcespproc 0.2.26** (relink) + **xcesp-on-pw 0.3.2** —
+  TdmPw state-transition INFO logging + LLD/LOS/RDI alarm raising.
+  Operators now see `pw state: UP` / `LOS set: 12/1000 pkt/s below
+  threshold` / `LOS clear` etc. as they happen in the log, and the
+  same events show up in `show event` / `show active-alarm`.
+- All other bundled versions unchanged from 0.4.27: xcespserver 0.4.9,
+  xcespcli 0.3.5, xcespwdog 0.2.0, xcesp-on-xc 0.2.3.
+
 ## 0.4.27
 
 - Bundles **xcespserver 0.4.9** — new tdm-pw object-license
