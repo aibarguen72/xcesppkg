@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.4.25
+
+- Bundles **xcespproc 0.2.24** (relink against xcesp-on-pw 0.3.1)
+  so `show tdm-pw-summary` and `show tdm-pw` render the correct
+  Domain (was blank) and Name (was the mangled internal id
+  "tdmpw-<domain>-<name>").  No other component changes from
+  0.4.24.
+- Bundled versions: xcespserver 0.4.7, xcespcli 0.3.5,
+  xcespproc 0.2.24, xcespwdog 0.2.0, xcesp-on-pw 0.3.1.
+
 ## 0.4.24
 
 - Bundles xcespserver 0.4.7 + xcespcli 0.3.5 (fixes for the TDM-PW
