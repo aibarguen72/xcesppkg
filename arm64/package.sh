@@ -113,15 +113,23 @@ else
 fi
 
 # --- Management scripts ---
+# install.sh calls scripts/xcesp-login unconditionally, so this one must be
+# present.  xcesp-ipsec-vip-installer is optional (install.sh WARNs when
+# missing) but shipping it costs nothing and makes IPsec VIP-on-loopback
+# work out of the box.
 mkdir -p "$STAGING/scripts"
-cp "$PKGDIR/scripts/xcesp-activate"         "$STAGING/scripts/"
-cp "$PKGDIR/scripts/xcesp-swap.sh"          "$STAGING/scripts/"
-cp "$PKGDIR/scripts/xcesp-dhclient-script"  "$STAGING/scripts/"
-cp "$PKGDIR/scripts/chrony-install.sh"      "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-activate"              "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-swap.sh"               "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-dhclient-script"       "$STAGING/scripts/"
+cp "$PKGDIR/scripts/chrony-install.sh"           "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-login"                 "$STAGING/scripts/"
+cp "$PKGDIR/scripts/xcesp-ipsec-vip-installer"   "$STAGING/scripts/"
 chmod +x "$STAGING/scripts/xcesp-activate" \
          "$STAGING/scripts/xcesp-swap.sh"  \
          "$STAGING/scripts/xcesp-dhclient-script" \
-         "$STAGING/scripts/chrony-install.sh"
+         "$STAGING/scripts/chrony-install.sh" \
+         "$STAGING/scripts/xcesp-login" \
+         "$STAGING/scripts/xcesp-ipsec-vip-installer"
 
 # --- Systemd service ---
 mkdir -p "$STAGING/services"

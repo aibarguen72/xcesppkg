@@ -1,5 +1,32 @@
 # Changelog - xcesppkg
 
+## 0.4.26
+
+- Bundles xcespserver 0.4.8, xcespcli 0.3.5, xcespproc 0.2.25
+  (relink), xcespwdog 0.2.0, xcesp-on-pw 0.3.1, xcesp-on-xc 0.2.3,
+  xcesp-on-rtr 0.2.22, xcespmap 0.2.0, xcespschema 0.2.1,
+  xcespconfig 0.2.0.
+- **fix: `arm64/package.sh` ships `xcesp-login` +
+  `xcesp-ipsec-vip-installer`.**  The ARM64 packager was
+  bundling only 4 of the 6 shell/binary helpers.  `install.sh`
+  calls `xcesp-login` unconditionally, so its absence aborted
+  the installer at 95% on ARM.  `xcesp-ipsec-vip-installer` is
+  optional (WARN-only) but shipping it makes IPsec VIP-on-loopback
+  work out of the box.
+- **fix: `scripts/xcesp-activate` seeds the `tdm_router`
+  associative array.**  Under `set -u`, older bash (< 5.1) treats
+  a `declare -A` array as unset until an element has been
+  assigned — `${#tdm_router[@]}` then aborted with
+  "unbound variable" whenever the running config had no `domain`
+  block referencing a router.  Fixed by assigning + immediately
+  unsetting a sentinel element to materialise the array on every
+  bash version.  Symptom on the ARM lab box: `xcesp.service`
+  looping with `ExecStartPre=/usr/bin/xcesp-activate` returning
+  status 1 before xcespwdog ever launched.
+- Companion binary/library changes (already released in their own
+  projects): xcesp-on-xc 0.2.3 CRTSCTS-vs-source-mapping fix,
+  xcespserver 0.4.8 no-SNMP build fix.
+
 ## 0.4.25
 
 - Bundles **xcespproc 0.2.24** (relink against xcesp-on-pw 0.3.1)
