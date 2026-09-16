@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.4.29
+
+- Bundles **xcespproc 0.2.27** (relink) + **xcesp-on-pw 0.3.3** —
+  CESoPSN `udp-mode destination` is now a first-class wire mode.
+  Per-PW RX socket + peer-port math derived from
+  `udp-base-destination`; kernel routes by UDP dst-port so the
+  endpoint's demux table isn't touched.
+- All other bundled versions unchanged from 0.4.28: xcespserver 0.4.9,
+  xcespcli 0.3.5, xcespwdog 0.2.0, xcesp-on-xc 0.2.3.
+
 ## 0.4.28
 
 - Bundles **xcespproc 0.2.26** (relink) + **xcesp-on-pw 0.3.2** —
