@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.4.30
+
+- Bundles **xcespproc 0.2.28** (relink) + **xcesp-on-xc 0.2.4** —
+  four modem improvements driven by real customer-RTU lab testing:
+    * DIAL / answer / ATH log lines all name the target msisdn +
+      peer IP:port so a `journalctl` scroll actually says what was
+      dialled and to where.
+    * Called-side call-up log ("handshake: DTE answered — call up")
+      mirrors the calling-side "CONNECT received" line.
+    * ATH tear-down does `shutdown(SHUT_RDWR)` before `close()` on
+      the CSD socket, guaranteeing the peer sees FIN immediately.
+    * Every CSD socket (dial + accept + byte-pipe promotion) sets
+      SO_KEEPALIVE + TCP_KEEPIDLE=30 + TCP_KEEPINTVL=10 +
+      TCP_KEEPCNT=3 — zombie sockets from peer reboots torn down
+      within ~60 s instead of the kernel default (~2 h).
+- All other bundled versions unchanged from 0.4.29: xcespserver 0.4.9,
+  xcespcli 0.3.5, xcespwdog 0.2.0, xcesp-on-pw 0.3.3.
+
 ## 0.4.29
 
 - Bundles **xcespproc 0.2.27** (relink) + **xcesp-on-pw 0.3.3** —
