@@ -1,5 +1,35 @@
 # Changelog - xcesppkg
 
+## 0.4.33
+
+- Bundles **xcesp-on-pw 0.3.5** + **xcespproc 0.2.30** +
+  **xcespcli 0.3.6** — 1+1 PW protection runtime lands.  A
+  `pw-protection { type 1plus1 backup-* revertive wait-to-restore }`
+  block on a `tdm-pw` node now activates real dual-TX + per-leg
+  RX + prefer-main selector, replacing the "phase1: not supported
+  yet" commit-time rejection.
+
+      tdm-pw pw1
+        ...
+        pw-protection
+          type 1plus1
+          backup-label 2
+          backup-ipsource 192.168.23.1
+          backup-ipdestination 192.168.23.202
+          revertive true
+          wait-to-restore 10
+          !
+        !
+      !
+
+  See xcesp-on-pw 0.3.5 CHANGELOG for the full runtime, alarm, log,
+  and status-JSON surface.  `show tdm-pw pw1 domain tdm` grows a
+  protection block + per-leg counter blocks; `show tdm-pw-summary`
+  grows a `Prot` column showing `1+1/M` or `1+1/B`.
+- **1:1** and **HA** protection remain rejected at commit
+  (`phase2: 1:1 protection not supported yet` / `phase2: HA
+  protection not supported yet`).  Land in xcespkg 0.4.34 / 0.4.35.
+
 ## 0.4.32
 
 - Bundles **xcesp-on-pw 0.3.4** — PW protection is now a proper
