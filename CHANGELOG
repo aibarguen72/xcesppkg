@@ -1,5 +1,33 @@
 # Changelog - xcesppkg
 
+## 0.4.32
+
+- Bundles **xcesp-on-pw 0.3.4** — PW protection is now a proper
+  child sub-block on `tdm-pw` rather than four flat `backup-*`
+  attrs.  New shape:
+
+      tdm-pw pw1
+        ...
+        pw-protection
+          type 1plus1
+          backup-label 200
+          backup-ipsource 192.168.1.1
+          backup-ipdestination 192.168.1.2
+          !
+        !
+      !
+
+  Absence of the sub-block ⇒ no protection.  Presence enforces
+  `type ∈ {1plus1, 1to1, ha}` at commit.  Runtime still rejects
+  any non-none PROTECTION with `phase1: protection not supported
+  yet` — the schema is in place for the actual protection
+  flavours that land in Phase 2 part 2.
+- `libon-pw.a` byte-identical; xcespproc, xcespcli, xcespserver,
+  xcespwdog, xcesp-on-xc, xcesp-on-rtr all unchanged from 0.4.31.
+- Schema and rule files ship directly in this bundle (they are
+  data, not code, and xcesppkg copies them straight from
+  `xcesp-on-pw/schema` and `xcesp-on-pw/rules`).
+
 ## 0.4.31
 
 - Bundles **xcespproc 0.2.29** (relink) + **xcesp-on-xc 0.2.5** —
