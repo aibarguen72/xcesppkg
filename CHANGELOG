@@ -1,5 +1,55 @@
 # Changelog - xcesppkg
 
+## 0.4.35
+
+- Bundles **xcesp-on-pw 0.3.7** + **xcespproc 0.2.32** +
+  **xcespcli 0.3.7** — HA PW protection runtime.  Two `tdm-pw`
+  nodes in two separate domains, cross-domain awareness via CW
+  L-bit signalling.  This closes the full three-flavour matrix
+  (1+1 / 1:1 / HA).
+
+      domain tdm1
+        pw-endpoint pe1
+          ipsource 172.16.122.137
+        !
+        tdm-pw pw1
+          label 100
+          ipsource 172.16.122.137
+          ipdestination 172.16.122.240
+          pw-protection
+            type ha
+            backup-label 200
+            backup-ipsource 172.16.122.137
+            backup-ipdestination 172.16.122.138   ! peer HA node
+            !
+          !
+        !
+      !
+      domain tdm2
+        pw-endpoint pe2
+          ipsource 172.16.122.138
+        !
+        tdm-pw pw2
+          label 100
+          ipsource 172.16.122.138
+          ipdestination 172.16.122.241
+          pw-protection
+            type ha
+            backup-label 200
+            backup-ipsource 172.16.122.138
+            backup-ipdestination 172.16.122.137   ! peer HA node
+            !
+          !
+        !
+      !
+
+  New JSON fields (`dataSource`, `peerLocalUp`) surface as
+  `data-source=local|peer` + `Local AC:` / `Peer (via HA):` in
+  `show tdm-pw`.  Summary column shows `ha/L` / `ha/P`.
+
+  See xcesp-on-pw 0.3.7 CHANGELOG for the wire-shape + alarm
+  matrix (HA_LOCAL_LOS MAJOR / HA_PEER_LOS MINOR).
+
 ## 0.4.34
 
 - Bundles **xcesp-on-pw 0.3.6** + **xcespproc 0.2.31** — 1:1 PW
