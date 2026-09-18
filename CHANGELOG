@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.4.40
+
+- Bundles **xcesp-on-pw 0.3.12** + **xcespproc 0.2.37** — HA
+  design change: silence-based peer-dead detection replaces the
+  reactive reply-to-idle model.  A node with a dead local AC now
+  goes silent on the interconnect; peer detects via backup-LOS
+  after ~ 1 LOS window and correctly declares PW DOWN.  The
+  "both dead" case is now self-terminating — no more ping-pong
+  keeping an artificial interconnect alive.
+
 ## 0.4.39
 
 - Diagnostic release for the pw2-doesn't-see-L=1 issue reported
