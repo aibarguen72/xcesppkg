@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.37
+
+- Bundles **xcesp-on-pw 0.3.9** + **xcespproc 0.2.34** — fixes
+  the HA reduced-rate idle-heartbeat RX path from 0.4.36.  In
+  0.4.36 heartbeats were rejected by the size check (L=0 idles
+  failed `isEmpty` guard) and there was no reply-to-idle emit
+  when a node's local AC died — so peer-status signalling never
+  worked end-to-end.  Both fixed in 0.3.9.
+
+  Same config as 0.4.36; no operator-visible change.  Existing
+  0.4.36 deployments should upgrade.
+
 ## 0.4.36
 
 - Bundles **xcesp-on-pw 0.3.8** + **xcespproc 0.2.33** +
