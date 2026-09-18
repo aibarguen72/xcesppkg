@@ -1,5 +1,31 @@
 # Changelog - xcesppkg
 
+## 0.4.34
+
+- Bundles **xcesp-on-pw 0.3.6** + **xcespproc 0.2.31** — 1:1 PW
+  protection runtime.  A `pw-protection { type 1to1 backup-* … }`
+  block on a `tdm-pw` node now activates bidirectional-switchover
+  protection: RX runs both legs, TX follows the selected leg.  Same
+  `revertive` / `wait-to-restore` semantics as 1+1.
+
+      tdm-pw pw1
+        ...
+        pw-protection
+          type 1to1
+          backup-label 2
+          backup-ipsource 192.168.23.1
+          backup-ipdestination 192.168.23.202
+          !
+        !
+      !
+
+  See xcesp-on-pw 0.3.6 CHANGELOG for the full wire-shape and
+  behaviour matrix.  `show tdm-pw-summary` now shows `1to1/M` or
+  `1to1/B` in the `Prot` column; the detail view names the flavour
+  in its header.
+- **HA** still rejected at commit (`phase2: HA protection not
+  supported yet`).  Lands in xcesppkg 0.4.35.
+
 ## 0.4.33
 
 - Bundles **xcesp-on-pw 0.3.5** + **xcespproc 0.2.30** +
