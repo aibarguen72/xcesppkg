@@ -1,5 +1,37 @@
 # Changelog - xcesppkg
 
+## 0.4.41
+
+- Bundles **xcesp-on-pw 0.3.13** + **xcespproc 0.2.38** +
+  **xcespcli 0.3.10** — cross-endpoint 1+1 / 1:1 PW protection.
+  A `tdm-pw` with `backup-ipsource != ipsource` now resolves each
+  leg to its own `pw-endpoint` within the same domain, enabling
+  path-diversity setups (main via LAN, backup via leased-line WAN
+  on a different NIC / VRF).
+
+      pw-endpoint pe-lan
+        ipsource 172.16.122.137
+      !
+      pw-endpoint pe-wan
+        ipsource 10.20.0.5
+      !
+      tdm-pw pw1
+        ipsource 172.16.122.137
+        ipdestination 172.16.122.240
+        label 100
+        pw-protection
+          type 1plus1
+          backup-label 200
+          backup-ipsource 10.20.0.5      ! WAN NIC
+          backup-ipdestination 10.20.0.99
+          !
+        !
+      !
+
+  Same-ipsource deployments continue to work byte-identically.
+  HA keeps its same-endpoint-per-PW constraint (its cross-domain
+  aspect is expressed differently).
+
 ## 0.4.40
 
 - Bundles **xcesp-on-pw 0.3.12** + **xcespproc 0.2.37** — HA
