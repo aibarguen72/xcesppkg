@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.38
+
+- Bundles **xcesp-on-pw 0.3.10** + **xcespproc 0.2.35** — two HA
+  fixes visible in test C.5 (both generators stopped):
+    * `Status: LOS` (not UP) when both local ACs are dead.  Overall
+      LOS derivation now HA-aware; backup leg is a signalling
+      channel, not a redundant data source.
+    * `HA idle divisor: … (interconnect mode: …)` display stays
+      fresh even when `txPacket` isn't firing.  Previously the mode
+      indicator got stuck at the last value from before the local
+      RX died.
+
 ## 0.4.37
 
 - Bundles **xcesp-on-pw 0.3.9** + **xcespproc 0.2.34** — fixes
