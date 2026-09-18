@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.4.36
+
+- Bundles **xcesp-on-pw 0.3.8** + **xcespproc 0.2.33** +
+  **xcespcli 0.3.8** — HA reduced-rate interconnect idle mode.
+  A new `ha-idle-divisor N` attr on `pw-protection` (HA only)
+  turns the backup-leg TX into a rate-limited heartbeat in steady
+  state.  Backup traffic drops to `1/N` of the data rate; peer
+  auto-detects our L=1 and ramps back to full rate.
+
+      pw-protection
+        type ha
+        backup-*  ...
+        ha-idle-divisor 100     ! ~100ms failover @ E1 data rate
+        !
+
+  See xcesp-on-pw 0.3.8 CHANGELOG for the full wire-shape matrix.
+  Both HA nodes must use the same divisor value.
+
 ## 0.4.35
 
 - Bundles **xcesp-on-pw 0.3.7** + **xcespproc 0.2.32** +
