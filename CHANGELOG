@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.4.39
+
+- Diagnostic release for the pw2-doesn't-see-L=1 issue reported
+  on 0.4.38.  Bundles **xcesp-on-pw 0.3.11** + **xcespproc 0.2.36**
+  + **xcespcli 0.3.9**, which surfaces new L-bit TX/RX counters in
+  the HA detail view of `show tdm-pw`:
+
+      HA L-bit TX:      L0=…  L1=…
+      HA L-bit RX:      L0=…  L1=…
+
+  Run C.5 (both generators stopped) with the new build, wait 30
+  seconds after both are stopped, then `show tdm-pw pw1 domain tdm`
+  and `show tdm-pw pw2 domain tdm2`.  The counters isolate whether
+  the bug is on the TX side (a node emits L=0 despite local LOS)
+  or the RX side (frames arrive but peerLocalUp not updated).
+
 ## 0.4.38
 
 - Bundles **xcesp-on-pw 0.3.10** + **xcespproc 0.2.35** — two HA
