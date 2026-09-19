@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.44
+
+- Bundles **xcesp-on-xc 0.2.8** + **xcespproc 0.2.41** — **the
+  static `peer-map-file` is now capped at 10 entries** to force
+  larger deployments onto the licensed PSTNRVP path.
+
+  Rationale: the previous "no `rvp-ip` on the modem = no license
+  gate" backdoor was fine for a two-modem demo but scaled to any
+  number of unlicensed modems if the operator hand-populated the
+  file.  With the cap, small demos keep working (a handful of
+  peers in the file), and anything larger produces a visible
+  WARNING plus dropped entries — forcing PSTNRVP + a license
+  bundle for real deployments.
+
+  No config change required.  Existing sub-10-entry configs are
+  byte-identical to 0.4.43.
+
 ## 0.4.43
 
 - Bundles **xcesp-on-xc 0.2.7** + **xcespproc 0.2.40** + **xcespcli
