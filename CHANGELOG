@@ -1,5 +1,33 @@
 # Changelog - xcesppkg
 
+## 0.4.42
+
+- Bundles **xcesp-on-xc 0.2.6** + **xcespproc 0.2.39** + **xcespserver
+  0.4.10** + **xcespcli 0.3.11** — new PSTN Rendez-vous Point
+  (PSTNRVP) object and the surrounding modem changes.
+  * New `pstn-rvp` config node under `domain` — TCP listen service
+    at a fixed `(listen-ip, listen-port)` (default 3142).
+  * Modems register periodically (default 1 h) with their MSISDN +
+    transport ports.  Successful registration lights the modem's
+    `licensed` flag; without it the modem refuses to send SMS or
+    dial CSD and logs a WARNING.
+  * License slots are sold in bundles of 1/25/100 (or any u16 value)
+    via `genlic.py --obj pstn-rvp --count N`.
+  * PSTNRVP also answers `LOOKUP msisdn=…` — modems fall back to it
+    when the local `peer-map-file` misses a destination.  Successful
+    lookups are cached per-modem with a configurable TTL
+    (`msisdn-cache-ttl`, default 1 h) so a peer's dynamic IP
+    change propagates without any modem restart.
+  * New CLI verbs: `show pstn-rvp[-summary]` and
+    `show modem[-summary]`, both domain-scoped.
+
+  Backward-compatible: modems with `rvp-ip` unset behave exactly as
+  they did in 0.4.41 (file-only peer map, no license gate).
+
+  Wire protocol is plain TCP with LF-terminated `key=value` lines
+  — TLS / SSH tunnelling is a separate feature (planned next
+  week).
+
 ## 0.4.41
 
 - Bundles **xcesp-on-pw 0.3.13** + **xcespproc 0.2.38** +
