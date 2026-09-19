@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.4.43
+
+- Bundles **xcesp-on-xc 0.2.7** + **xcespproc 0.2.40** + **xcespcli
+  0.3.12** — PSTNRVP NAT support.  Two new optional modem attrs:
+
+      modem <name>
+        ...
+        rvp-ip 203.0.113.10        ! reachable from behind NAT
+        rvp-port 3142
+        external-tcp-port 45002    ! declare NAT-mapped port
+        external-udp-port 45001    ! declare NAT-mapped port
+        !
+
+  When set, the REGISTER advertises those instead of the local
+  `transport-*-port`.  The RVP-observed IP (from the TCP peer) is
+  used as-is — no client-side declaration of the external IP is
+  needed.  Leave unset for LAN / port-preserving-NAT deployments
+  (identical behaviour to 0.4.42).
+
+  Covers the common "modem behind SNAT with explicit port
+  forwards" case.  Symmetric-NAT / random-port-CGN deployments
+  would still need a hole-punching mechanism (deferred).
+
 ## 0.4.42
 
 - Bundles **xcesp-on-xc 0.2.6** + **xcespproc 0.2.39** + **xcespserver
