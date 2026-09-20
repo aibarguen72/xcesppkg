@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.52
+
+- Bundles **xcesp-on-xc 0.2.15** + **xcespproc 0.2.48** — closes
+  the last leg of the co-located PSTNRVP register loop.  0.4.51's
+  log confirmed the server side is fully wired (recv 69 bytes,
+  handleLine ×2, MSISDN registered) but the client's `onReadable`
+  never fired for the OK reply — a mirror of the server-side
+  "already readable at EPOLL_CTL_ADD" quirk that already needed
+  a workaround.
+
+  `PstnRvpClient::poll()` is now called from the modem's ~100 ms
+  `process()` heartbeat, running `onReadable` inline when the
+  client is in `Receiving` state.  If EPOLLIN did fire the fd is
+  already drained and `poll()` is a cheap no-op; otherwise the
+  OK is picked up on the next tick and the register loop
+  completes.
+
 ## 0.4.51
 
 - Bundles **xcesp-on-xc 0.2.14** + **xcespproc 0.2.47** — matches
