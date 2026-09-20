@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.45
+
+- Bundles **xcespserver 0.4.11** — PSTNRVP `LICENSE_COUNT` is
+  no longer force-zeroed in test mode.  Fixes the `xcesptest`
+  fallout where operators disable license enforcement (`server 1 /
+  no license-enforce` or omit it entirely), start a `pstn-rvp`
+  node, and hit `ERROR code=LICENSE_EXHAUSTED` on every modem
+  `REGISTER` because 0.4.10 injected `LICENSE_COUNT=0` regardless
+  of `licenseEnforce_`.  0.4.11 shorts to an effectively-unlimited
+  ceiling (`1'000'000`) when enforcement is off, matching the
+  behaviour of the other license-gated counters.
+
 ## 0.4.44
 
 - Bundles **xcesp-on-xc 0.2.8** + **xcespproc 0.2.41** — **the
