@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.50
+
+- Bundles **xcesp-on-xc 0.2.13** + **xcespproc 0.2.46** — another
+  turn on the PSTNRVP client to close the same-process
+  register-doesn't-complete case.  0.4.49's log showed
+  `connect_rc=-1` (EINPROGRESS) and neither an EPOLLOUT-driven
+  onConnectComplete nor the 2 s hard-timeout ever fired; a subtle
+  `EPOLL_CTL_MOD`-doesn't-re-scan-state kernel behaviour on
+  same-tick writability caused the client to sit forever.
+
+  Rather than fight the quirk, the client now uses **blocking
+  connect + blocking send** (both are kernel-only on loopback,
+  safe against the deadlock — the kernel completes handshakes
+  and buffers sends independent of the peer's `accept()` / `recv()`)
+  followed by an **async recv**.  On a genuinely unreachable RVP a
+  500 ms `SO_SNDTIMEO` on the client-side send fails fast.
+
 ## 0.4.49
 
 - Bundles **xcesp-on-xc 0.2.12** + **xcespproc 0.2.45** —
