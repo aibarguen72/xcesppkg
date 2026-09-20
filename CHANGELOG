@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.54
+
+- Bundles **xcesp-on-xc 0.2.17** + **xcespproc 0.2.50** — the
+  PSTNRVP register loop is now driven by its own repeating
+  100 ms poll timer.  0.4.53's log confirmed the server side
+  is 100 % working (`Registered: 2`) but the client-side
+  poll trace never appeared: `ModemXcPObj::process()` isn't
+  reaching us on the heartbeat we expected in this xcesptest
+  topology, even though *timers* clearly do fire (the initial
+  1 s kick timer is what launches the register attempt).  So
+  `startAttempt()` now arms a repeating 100 ms timer that
+  drains the fd; `closeAttempt()` disarms it alongside the
+  socket and the hard timeout.  Recovery latency for the OK
+  reply is bounded by the poll interval, so the modem is
+  licensed within ~100 ms of the RVP's OK regardless of
+  epoll's state-check behaviour.
+
 ## 0.4.53
 
 - Bundles **xcesp-on-xc 0.2.16** + **xcespproc 0.2.49** — fixes
