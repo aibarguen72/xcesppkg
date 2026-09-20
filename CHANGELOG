@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.4.55
+
+- Bundles **xcesp-on-xc 0.2.18** + **xcespproc 0.2.51** — closes
+  the "timer added inside a timer callback doesn't fire"
+  variant of the pollTimer bug.  0.4.54's log showed
+  `poll: call#1/#2 state=0 fd=-1` (process() heartbeat driving
+  us twice before the register), then silence — the pollTimer
+  added in `startAttempt()` (inside a timer callback) never
+  fired.  The kick timer, which is added in `start()` from
+  `bringUp() / process()` context, does fire.  Move the
+  pollTimer arm alongside it — same context, same reliability.
+  Timer lives across attempts (no-op when state != Receiving),
+  disarmed only by `stop()`.
+
 ## 0.4.54
 
 - Bundles **xcesp-on-xc 0.2.17** + **xcespproc 0.2.50** — the
