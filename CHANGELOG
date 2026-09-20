@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.4.48
+
+- Bundles **xcesp-on-xc 0.2.11** + **xcespproc 0.2.44** — fixes
+  the same-process modem↔RVP deadlock exposed by 0.4.47's
+  diagnostic build.  The modem's REGISTER round-trip is now a
+  proper event-loop state machine (nonblocking connect / send /
+  recv driven by EPOLLOUT + EPOLLIN with a 2 s hard-timeout),
+  so a co-located `pstn-rvp` can actually accept the connection
+  and reply while the register attempt is in flight.
+
+  Side effect: the previous "AT commands hang on `nc`" symptom
+  is gone — with a 500 ms blocking recv no longer holding the
+  event-loop thread, DTE reads and accepts stay responsive.
+
 ## 0.4.47
 
 - Bundles **xcesp-on-xc 0.2.10** + **xcespproc 0.2.43** — adds
