@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.47
+
+- Bundles **xcesp-on-xc 0.2.10** + **xcespproc 0.2.43** — adds
+  end-to-end PSTNRVP wire-trace logging to diagnose the
+  `accepts=2 / register-ok=0` case still seen after 0.4.46.
+  On boot each modem now logs `pstn-rvp[client]: REGISTER attempt`
+  and either the OK reply text or the failure reason; on the
+  server side the RVP logs each accepted fd, every `recv` return
+  value + errno, and every `handleLine 'ᴡɪʀᴇ'` invocation.  The
+  next lab run's log will reveal whether the client is sending,
+  whether the server is reading, and where the round-trip breaks.
+
 ## 0.4.46
 
 - Bundles **xcesp-on-xc 0.2.9** + **xcespproc 0.2.42** — fixes the
