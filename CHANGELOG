@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.51
+
+- Bundles **xcesp-on-xc 0.2.14** + **xcespproc 0.2.47** — matches
+  the blocking-connect+send client fix (0.4.50) with a mirror on
+  the server side.  0.4.50's log showed the client's `send()`
+  succeeded (`sent REGISTER fd=X bytes=69`) and the server logged
+  `accepted fd=17/18`, but the accepted fd's `EPOLLIN` never
+  fired afterwards — Linux epoll misses the "already readable at
+  add" state when data is queued before `EPOLL_CTL_ADD`.  The
+  RVP now drains each accepted fd inline right after `addSocket`,
+  so the greeting+REGISTER is processed on the same tick it lands.
+
 ## 0.4.50
 
 - Bundles **xcesp-on-xc 0.2.13** + **xcespproc 0.2.46** — another
