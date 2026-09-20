@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.4.46
+
+- Bundles **xcesp-on-xc 0.2.9** + **xcespproc 0.2.42** — fixes the
+  PSTNRVP client startup race that left both lab modems flagged
+  "unlicensed" after a fresh boot with a local RVP:
+
+  * The modem `ProcObject`s init before the sibling `pstn-rvp`
+    object in the same event-loop pass; the very first REGISTER
+    used to fire inline from `bringUp()` and hit `connect refused`,
+    so `rvpLicensed_` stayed pessimistic and DIAL/SMS were blocked
+    until the next renewal (default 3600 s).  0.2.9 defers the
+    first REGISTER by 1 s (short one-shot timer) so peer bind-up
+    completes first.
+  * After any failed REGISTER (transport-level or `ERROR`
+    response), the client now retries every 10 s instead of every
+    `renewalSec_`.  A modem that briefly loses the RVP recovers in
+    ~10 s regardless of the operator-configured renewal cadence.
+
 ## 0.4.45
 
 - Bundles **xcespserver 0.4.11** — PSTNRVP `LICENSE_COUNT` is
