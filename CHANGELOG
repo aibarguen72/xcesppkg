@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.4.49
+
+- Bundles **xcesp-on-xc 0.2.12** + **xcespproc 0.2.45** —
+  follow-up on 0.4.48 for the case where the client still
+  couldn't complete a REGISTER round-trip against the co-located
+  RVP (state stuck in Connecting, hard-timeout never observed).
+  Two shifts:
+
+  * If `connect()` returns 0 (localhost's usual synchronous case),
+    the client now sends `greeting+REGISTER` inline instead of
+    waiting for an EPOLLOUT tick that may never notice a
+    same-tick transition.
+  * Extra client trace lines at every state transition
+    (`started attempt fd=X connect_rc=Y timeoutId=Z`,
+    `onConnectComplete fd=X state=N`, `onReadable fd=X state=N`,
+    `onAttemptTimeout fd=X state=N`).  A stuck round-trip now
+    prints the exact handler that did fire and the one that did
+    not.
+
 ## 0.4.48
 
 - Bundles **xcesp-on-xc 0.2.11** + **xcespproc 0.2.44** — fixes
