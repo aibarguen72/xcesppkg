@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.53
+
+- Bundles **xcesp-on-xc 0.2.16** + **xcespproc 0.2.49** — fixes
+  the poll-fallback bug landed in 0.4.52.  The client-side
+  `onReadable` drain was treating an empty rxBuf + EAGAIN as
+  "peer closed early" — so the very first `poll()` invocation
+  (called before the RVP's OK reply arrived) silently dropped
+  the attempt back to Idle, and subsequent polls became no-ops
+  waiting for a state that never came.  The drain loop now
+  distinguishes peer-FIN from EAGAIN and only treats a real
+  peer-close as transport failure.
+
 ## 0.4.52
 
 - Bundles **xcesp-on-xc 0.2.15** + **xcespproc 0.2.48** — closes
