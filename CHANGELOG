@@ -1,5 +1,31 @@
 # Changelog - xcesppkg
 
+## 0.4.58
+
+- Bundles **xcesp-on-xc 0.2.20** + **xcespproc 0.2.54** —
+  post-mortem cleanup after 0.4.57 confirmed the same-process
+  register loop works end-to-end.  Retires the debug-era
+  workarounds:
+
+  * `PstnRvpClient`: dropped the always-on 100 ms repeating
+    pollTimer, the public `poll()` method that `process()` used to
+    call, the `pollCalls_` / `call#N` diagnostic counter, and the
+    dead `onConnectComplete` / `fdWriteTrampoline` async-connect
+    scaffolding.  Register loop is a clean state machine again:
+    blocking connect+send (kernel-only on loopback) → async recv
+    via EPOLLIN.
+  * `ModemXcPObj::process()`: removed the `rvp_.poll()` fallback
+    call.
+  * `PstnRvpPObj::onAccept`: removed the inline `onConnReadable`
+    drain that ran right after `addSocket` — the library
+    handles that case now.
+  * Silenced the per-recv / per-handleLine INFO trace lines on
+    the RVP server side; REGISTER accept / register-ok logs
+    remain.
+
+  Behavioural: identical to 0.4.57 (which fixed the real bug).
+  This release is code-quality only.
+
 ## 0.4.57
 
 - Bundles **xcesp-on-xc 0.2.19** + **xcespproc 0.2.53** — the
