@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.59
+
+- Bundles **xcesp-on-xc 0.2.21** + **xcespproc 0.2.55** — fixes
+  two ATH-disconnect bugs the operator reported:
+  * **Case A** — the DTE that issued `+++ ATH` now sees `NO
+    CARRIER` in addition to `OK`.  Previously the peer got the
+    URC but the local side didn't.
+  * **Case B** — a callee that answered with ATA and then hung
+    up with `+++ ATH` no longer gets a fresh burst of `RING`
+    afterwards.  `endCall()` was leaving `state.call.incoming =
+    true` set, so the ring cadence started firing again the
+    moment `call.up` flipped to false.
+
+  Both bugs fixed by routing ATH through `AtParser::onCallDown()`
+  (same URC + state path as a peer-initiated disconnect) instead
+  of the old bespoke `endCall()` helper (now deleted).
+
 ## 0.4.58
 
 - Bundles **xcesp-on-xc 0.2.20** + **xcespproc 0.2.54** —
