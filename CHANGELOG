@@ -1,5 +1,30 @@
 # Changelog - xcesppkg
 
+## 0.4.57
+
+- Bundles **xcesp-on-xc 0.2.19** + **xcespproc 0.2.53** — the
+  *real* last bug in the modem/RVP path.  procThread was stalled
+  in a blocking `accept4()` call after processing modem1's
+  REGISTER — `/proc/<procThread>/stack` on 0.4.56 showed
+  `inet_csk_accept` at the top of the wait chain.
+
+  All three TCP listeners (`PstnRvpPObj` for RVP, `ModemXcPObj`
+  for the DTE port, `CsdTransport` for the CSD port) were
+  created without `SOCK_NONBLOCK`.  The `accept4(...,
+  SOCK_NONBLOCK)` used inside `PstnRvpPObj::onAccept`'s
+  `while(true)` loop only puts the *returned* fd in non-blocking
+  mode — the listener stays blocking.  After my new
+  `EvApplication::addSocket` drained the first pending accept
+  inline via `poll(POLLIN, 0)` + callback fire, the accept-loop
+  looped back and called `accept4` on an empty queue.  Listener
+  blocking + no more queue = kernel `accept4()` sleeps forever.
+  procThread frozen ⇒ modem2's kick never fires, modem2's DTE
+  `nc` never answers.
+
+  Fix on all three creation sites: `SOCK_STREAM | SOCK_NONBLOCK`.
+  With the listener non-blocking, `accept4` returns `-1/EAGAIN`
+  when the queue is empty and the accept-loop exits cleanly.
+
 ## 0.4.56
 
 - Bundles **evapplication 0.1.0** + **xcespproc 0.2.52** — real
