@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.4.56
+
+- Bundles **evapplication 0.1.0** + **xcespproc 0.2.52** — real
+  fix for yesterday's xcesptest failure mode.  `EvApplication::runLoop()`
+  timer processing is now reentrancy-safe: a callback that calls
+  `addTimer` / `removeTimer` (or `addSocket` / `removeSocket`) no
+  longer corrupts subsequent dispatch.  `addSocket()` also runs
+  one synchronous `poll(fd, POLLIN, 0)` after `EPOLL_CTL_ADD`, so
+  data queued into the fd's receive buffer before the add is
+  drained inline — no more "EPOLLIN never fires for
+  already-readable state" trap.
+- Eight new reentrancy + initial-readiness unit tests in the
+  evapplication library lock the behaviour so this class of
+  regression is caught before it reaches xcesptest.
+- Once this build is proven end-to-end, the belts-and-braces
+  workarounds accumulated across 0.4.48–0.4.55 in `PstnRvpClient`
+  (poll fallback from `process()`, always-on repeating pollTimer)
+  and `PstnRvpPObj::onAccept` (inline drain after `addSocket`)
+  can go — deferred to a follow-up release.
+
 ## 0.4.55
 
 - Bundles **xcesp-on-xc 0.2.18** + **xcespproc 0.2.51** — closes
