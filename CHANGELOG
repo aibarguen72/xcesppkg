@@ -1,5 +1,67 @@
 # Changelog - xcesppkg
 
+## 0.4.61
+
+- Bundles **xcespserver 0.4.12**, **xcespcli 0.3.12**,
+  **xcespproc 0.2.62**, **xcespwdog 0.2.0**, **xcesp-on-xc
+  0.2.29**, **evapplication 0.1.1** — Phases 1-7 of the PSK
+  encryption plan.  Cumulative summary since 0.4.59:
+    * **P1**: `CryptoEnvelope` (libsodium ChaCha20-Poly1305 +
+      HKDF-SHA256, role-bound AAD, replay counter) with unit
+      tests.
+    * **P2**: schema attrs `crypto-passphrase` / `crypto-mode`
+      on modem, repeatable `crypto-peer <MSISDN>` on
+      pstn-rvp, commit-time gates in xcespserver
+      (runs regardless of `LICENSE_ENFORCE`).
+    * **P3**: PSTNRVP client + server switch to base64+AEAD
+      after a plaintext `XCESP-RVP 1 crypto=v1 msisdn=<M>`
+      greeting.
+    * **P4**: LOOKUP OK carries the destination's PSK inline
+      as `psk=<64-hex>` (in the encrypted line), cached in
+      `ModemXcPObj::peerCache_` for the SMS/CSD send paths.
+    * **P4.5**: `EvApplication::runOnce(int maxWaitMs)`
+      factored out of `runLoop`; sync `PstnRvpClient::lookup`
+      now nested-pumps the loop instead of blocking `recv` —
+      fixes the deadlock against a co-located `PstnRvpPObj`
+      that P4 first exposed.
+    * **P5**: SMS UDP v2 wire (`[0x02][sender 32B][nonce
+      12B][ct+tag]`) alongside legacy v1 plaintext; sender
+      identity in AAD; recipient decrypts with its own PSK.
+    * **P6**: CSD TCP AEAD framing (`[4B length][nonce+ct+
+      tag]`); handshake piggybacked on the existing SETUP /
+      CONNECT exchange with `crypto=v1` tag; role-bound AAD
+      (Client / Server) closes reflection; frames capped at
+      4 KiB plaintext each.
+    * **P7**: `crypto-mode = required` runtime enforcement —
+      plaintext inbound SMS silently dropped, plaintext SETUP
+      refused with `cancelPendingCall`, outbound SMS / CSD to
+      a keyless peer fails cleanly with a WARNING.
+  Phases 8 (rotation-during-active-call commit gate) and 9
+  (show verbs + status JSON) still to come.
+
+## 0.4.60
+
+- Bundles **xcesp-on-xc 0.2.25** + **xcespproc 0.2.58** +
+  **xcespserver 0.4.12** — Phases 1-4 of the PSK encryption plan:
+    * CryptoEnvelope (libsodium ChaCha20-Poly1305 + HKDF-SHA256,
+      Role-bound AAD, replay-safe counter) with 11 unit tests.
+    * New schema attrs `crypto-passphrase` / `crypto-mode` on
+      `modem`; repeatable `crypto-peer <MSISDN>` child on
+      `pstn-rvp`.
+    * PSTNRVP wire encryption end-to-end: greeting stays
+      plaintext with `crypto=v1 msisdn=<M>`, everything after is
+      base64+AEAD.  Server + client both switch on `crypto-peer`
+      / `crypto-passphrase` presence; plaintext-only clients
+      still work for backwards compat.
+    * LOOKUP OK carries `psk=<64-hex>` when the destination has
+      a crypto-peer; caller caches the derived key in
+      `peerCache_` for use in the SMS/CSD paths (Phases 5-6).
+    * Commit-time gate rejects `crypto-mode=required` without
+      `crypto-passphrase`; runs regardless of `LICENSE_ENFORCE`.
+  Runtime enforcement of `crypto-mode=required` (Phase 7) and
+  SMS/CSD envelope framing (Phases 5-6) still to come; this cut
+  is the config-and-broker foundation.
+
 ## 0.4.59
 
 - Bundles **xcesp-on-xc 0.2.21** + **xcespproc 0.2.55** — fixes
