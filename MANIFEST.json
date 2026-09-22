@@ -1,7 +1,7 @@
 {
-  "version": "0.4.61",
-  "x86_64": "xcespkg-0.4.61.tar.gz",
+  "version": "0.4.62",
+  "x86_64": "xcespkg-0.4.62.tar.gz",
   "sha256": {
-    "x86_64": "b282e1e7ddb3dd871f90663c888407e1851ef9fa12f0cfa1cebd63b85082f93f"
+    "x86_64": "0e46be0b073dc12da5c969703666e0cf9af26296a84656870eae40120029cbf7"
   }
 }

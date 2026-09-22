@@ -1,5 +1,34 @@
 # Changelog - xcesppkg
 
+## 0.4.62
+
+- Bundles **xcespserver 0.4.13**, **xcespcli 0.3.13**,
+  **xcespproc 0.2.63**, **xcespwdog 0.2.0**, **xcesp-on-xc
+  0.2.31**, **evapplication 0.1.1** — Phases 8 and 9 of the
+  PSK encryption plan on top of the P1-P7 baseline shipped in
+  0.4.61.  Delta since 0.4.61:
+    * **P8** (xcespserver 0.4.13): `applyNewConfig` refuses a
+      `crypto-passphrase` change on a modem whose runtime
+      status says a call is up
+      (`ERROR: crypto-passphrase change refused: call active
+      on modem <n>`).  Runs regardless of `LICENSE_ENFORCE`.
+    * **P8 dep fix** (xcesp-on-xc 0.2.30): `rules/config-to-
+      objects/modem.py` now emits `NODE_TYPE` /
+      `NODE_INSTANCE` / `NODE_PATH` so modem status paths
+      actually surface in `ServerStatus` at
+      `domain/<d>/modem/<n>/*` — required for the P8 gate to
+      find the `call-up` key.
+    * **P9** (xcesp-on-xc 0.2.31 + xcespcli 0.3.13): modem +
+      pstn-rvp status JSON gain crypto posture fields
+      (`crypto_configured`, `crypto_mode`, per-registration
+      `crypto`, `cryptoPeersConfigured`), and the CLI show
+      formatters render a `Crypto:` line on `show modem` and
+      a `Crypto` column on `show pstn-rvp`.
+    * **status-to-global rule** (xcesp-on-xc 0.2.31): the
+      modem rule surfaces `crypto-mode`, `crypto-configured`,
+      and cache counters at ServerStatus paths.
+  Encryption plan complete — no P10 planned.
+
 ## 0.4.61
 
 - Bundles **xcespserver 0.4.12**, **xcespcli 0.3.12**,
