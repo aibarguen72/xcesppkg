@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.63
+
+- Bundles **xcesp-on-xc 0.2.32** + **xcespproc 0.2.64** — HKDF-SHA256
+  in `CryptoEnvelope` rewritten via the primitive `crypto_auth_
+  hmacsha256_*` API so the ARM64 builder (Ubuntu 22.04, libsodium
+  1.0.18) compiles the encryption sprint.  Byte-identical key
+  derivation, no wire / behaviour change.
+- **First ARM64 build since the encryption sprint** — ships
+  alongside the x86_64 tarball.  `arm64/Dockerfile` gains
+  `libsodium-dev` in the builder image; a single upstream key
+  derivation contract now works across Fedora 41 (host, 1.0.20)
+  and Ubuntu 22.04 (ARM builder, 1.0.18).
+- Component versions (unchanged from 0.4.62 except xcesp-on-xc
+  and xcespproc): xcespserver 0.4.13, xcespcli 0.3.13,
+  xcespproc 0.2.64, xcespwdog 0.2.0, xcesp-on-xc 0.2.32,
+  evapplication 0.1.1.
+
 ## 0.4.62
 
 - Bundles **xcespserver 0.4.13**, **xcespcli 0.3.13**,
