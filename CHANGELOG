@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.4.64
+
+- Bundles **xcesp-on-xc 0.2.33**, **xcespcli 0.3.14**, **xcespproc
+  0.2.65** — RVP `crypto-peer *` wildcard mode (single shared PSK
+  as a fleet-wide fallback for un-matched MSISDNs) + CLI wildcard
+  visibility (`Crypto wildcard: yes (crypto-peer *)` on `show
+  pstn-rvp`).  Mixed mode supported: explicit `crypto-peer <M>`
+  entries take precedence, wildcard catches the rest.
+- Component versions (unchanged from 0.4.63 except xcesp-on-xc,
+  xcespproc, xcespcli): xcespserver 0.4.13, xcespcli 0.3.14,
+  xcespproc 0.2.65, xcespwdog 0.2.0, xcesp-on-xc 0.2.33,
+  evapplication 0.1.1.
+- Ships both x86_64 and arm64 tarballs.
+
 ## 0.4.63
 
 - Bundles **xcesp-on-xc 0.2.32** + **xcespproc 0.2.64** — HKDF-SHA256
