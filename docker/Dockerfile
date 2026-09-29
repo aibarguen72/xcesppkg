@@ -80,7 +80,9 @@ COPY xcespwdog.ini   /var/xcesp/cfg/xcespwdog.ini
 # changes made via xcespcli are lost on container restart (persistent
 # state should live in /var/lib/xcesp which is bind-mounted).
 COPY entrypoint.sh /usr/local/bin/xcesp-entrypoint
-RUN chmod 0755 /usr/local/bin/xcesp-entrypoint
+COPY xcesp-log-rotator.sh /usr/local/bin/xcesp-log-rotator
+RUN chmod 0755 /usr/local/bin/xcesp-entrypoint \
+              /usr/local/bin/xcesp-log-rotator
 
 # xcespcli control ports.  Host mode (--network=host) is the default
 # runtime topology, so these EXPOSEs are documentation only — the

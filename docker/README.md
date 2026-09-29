@@ -109,6 +109,34 @@ Two bind mounts survive container restart:
 new image tag, `remove` + fresh `start` (with the same
 `--state-dir`) reuses the same mount so state carries over cleanly.
 
+## Log rotation
+
+`xcespwdog` inside the container writes to `/var/xcesp/log/xcesp.log`
+(bind-mounted to `<state-dir>/log/xcesp.log` on the host).  A shell
+rotator runs as a supervised process alongside xcespserver / xcespproc
+and caps the file in place — no host-side logrotate or cron needed.
+
+Defaults: 10 MB per file × 4 archives (`xcesp.log.1` … `.4`) = 40 MB
+worst-case per device.  On a modem with only 5-minute REGISTER
+traffic that never rotates.  Under sustained call activity it rolls
+without operator intervention.
+
+Override via `xcesp-modem.sh start` flags:
+
+```
+--log-max-mb <N>    cap in MB (default 10; 0 disables rotation)
+--log-keep <N>      archives to keep (default 4)
+```
+
+Rotation uses in-place truncation (`: > xcesp.log`) so xcespwdog's
+open fd stays valid — same effect as `logrotate --copytruncate` but
+shell-only with no external dependencies.  When rotation fires, a
+line lands in `xcesp.log` itself:
+
+```
+[xcesp-log-rotator] rotated at 2026-09-30T02:13:41Z — was 10485760 B, now 0
+```
+
 ## Persistent config (RVP-hosting device only)
 
 By default `xcespserver.conf` is regenerated from `--msisdn` /
@@ -176,7 +204,7 @@ effectively a no-op.
 ## Version stamping
 
 The image tag encodes the bundled xcesppkg version
-(`xcesp-modem:0.4.70-arm64`).  `build.sh` reads `../PROJECT`'s
+(`xcesp-modem:0.4.71-arm64`).  `build.sh` reads `../PROJECT`'s
 `PRJVERSION` and picks a matching tarball name — no manual version
 juggling.  For a container-only release (same binaries, new
 entrypoint / wdog INI), pass the previous version's tarball

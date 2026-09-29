@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.4.71
+
+- **Container-only release** — bundled binaries byte-identical to
+  0.4.68-0.4.70 (xcespserver 0.4.13, xcespcli 0.3.14, xcespproc
+  0.2.67, xcespwdog 0.2.0, xcesp-on-xc 0.2.34, xcesp-on-pw 0.3.13,
+  xcesp-on-rtr 0.2.22, evapplication 0.1.2).
+- **In-container log rotation for `/var/xcesp/log/xcesp.log`.**  On
+  restricted-root devices where the operator can't add anything to
+  `/etc/logrotate.d/` and can't rely on host cron, the previous
+  bind-mounted `xcesp.log` grew unbounded across long deployments.
+  New: a shell rotator (`xcesp-log-rotator`) runs as a supervised
+  process alongside xcespserver / xcespproc via xcespwdog's
+  `[process.3]` block.  Rotation is in-place (`: > xcesp.log`)
+  so xcespwdog's open fd stays valid — same effect as
+  `logrotate --copytruncate` but shell-only, no external deps,
+  no host cooperation.  Defaults: 10 MB × 4 archives.
+- New `xcesp-modem.sh start` flags: `--log-max-mb <N>` (default
+  10; `0` disables rotation) and `--log-keep <N>` (default 4).
+  Both forward as `LOG_MAX_MB` / `LOG_KEEP` env vars the rotator
+  reads on startup.
+
 ## 0.4.70
 
 - **Container-only release** — bundled binaries byte-identical to

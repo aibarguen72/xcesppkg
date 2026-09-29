@@ -20,7 +20,7 @@
 #   help                    this help
 set -euo pipefail
 
-DEFAULT_IMAGE="xcesp-modem:0.4.70-arm64"
+DEFAULT_IMAGE="xcesp-modem:0.4.71-arm64"
 DEFAULT_NAME="xcesp-modem"
 
 die() { echo "$@" >&2; exit 1; }
@@ -46,7 +46,7 @@ Actions:
   help                    this help
 
 Typical first-time deployment:
-  ./xcesp-modem.sh load xcesp-modem-0.4.70-arm64.tar
+  ./xcesp-modem.sh load xcesp-modem-0.4.71-arm64.tar
   ./xcesp-modem.sh start --msisdn +34600000001 --rvp 169.254.1.2 \\
        --transport-ip 169.254.1.1 --serial /dev/ttyMV1 \\
        --state-dir /USERFS/rados_user_files/xcesp \\
@@ -112,7 +112,7 @@ Optional:
   --state-dir <DIR>       root for persistent state (default
                           /var/lib + /var/log — pick a caller-writable
                           path on restricted-root devices)
-  --image <TAG>           docker image tag (default xcesp-modem:0.4.70-arm64)
+  --image <TAG>           docker image tag (default xcesp-modem:0.4.71-arm64)
   --name <N>              container name (default xcesp-modem)
   --foreground            run attached instead of detached
   --dry-run               print the docker command without running it
@@ -125,6 +125,12 @@ DTE serial line overrides (mvebu-uart-on-ONT typically needs
   --ri-source  <SPEC>     re-source RI egress
   --dtr-source <SPEC>     re-source DTR ingress
   --rts-source <SPEC>     re-source RTS ingress
+
+Log rotation (inside the container, no host cron/logrotate needed):
+  --log-max-mb <N>        cap /var/xcesp/log/xcesp.log at N MB
+                          (default 10; 0 = disable rotation)
+  --log-keep <N>          keep N rotated archives .1, .2, ..., .N
+                          (default 4)
 
 Licensing (RVP-hosting device only — ordinary fleet devices are
 licensed centrally at the RVP and need nothing here):
@@ -172,6 +178,9 @@ action_start() {
     # ordinary fleet devices don't need licensing).  Otherwise
     # `system-mac` or an interface name.
     local LICENSE_AUTH=""
+    # In-container log rotator caps (empty = use rotator's own
+    # defaults of 10 MB × 4 archives).  Set LOG_MAX_MB=0 to disable.
+    local LOG_MAX_MB="" LOG_KEEP=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -199,6 +208,8 @@ action_start() {
             --foreground)    DETACH=""; shift ;;
             --dry-run)       DRY_RUN=1; shift ;;
             --license-auth)  LICENSE_AUTH=$2; shift 2 ;;
+            --log-max-mb)    LOG_MAX_MB=$2; shift 2 ;;
+            --log-keep)      LOG_KEEP=$2;   shift 2 ;;
             --persist-config)
                 # Accept optional PATH argument.  If the next token starts
                 # with '-' or is absent, use the "auto" sentinel; else
@@ -275,6 +286,8 @@ action_start() {
         fi
         env_args+=(-e "LICENSE_AUTH=$LICENSE_AUTH")
     fi
+    [ -n "$LOG_MAX_MB" ] && env_args+=(-e "LOG_MAX_MB=$LOG_MAX_MB")
+    [ -n "$LOG_KEEP" ]   && env_args+=(-e "LOG_KEEP=$LOG_KEEP")
     for src in DCD DSR CTS RI DTR RTS; do
         local var="DTE_${src}_SOURCE"
         [ -n "${!var}" ] && env_args+=(-e "${var}=${!var}")
