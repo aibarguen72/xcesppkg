@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.4.73
+
+- **Fix (real): rotator writes straight to `xcesp.log`.**  0.4.72's
+  `logger -n 127.0.0.1 -P 1514 --udp` still didn't surface messages
+  on the live customer container — either a startup race (rotator
+  runs before xcespwdog's SyslogReader binds) or the syslog datagram
+  is silently dropped somewhere between the two.  Rather than debug
+  syslog timing, the rotator now writes directly to
+  `/var/xcesp/log/xcesp.log` in the same
+  `YYYY-MM-DD HH:MM:SS [INFO] xcesp-log-rotator: <msg>` format
+  xcespwdog uses.  Kernel-atomic O_APPEND guarantees for single-line
+  writes prevent interleaving with xcespwdog's own writes.  Zero
+  dependencies (no logger, no UDP), always works.
+- Bundled binaries byte-identical to 0.4.71/0.4.72.
+
 ## 0.4.72
 
 - **Fix: `xcesp-log-rotator` messages now reach `xcesp.log`.**  0.4.71

@@ -20,7 +20,7 @@
 #   help                    this help
 set -euo pipefail
 
-DEFAULT_IMAGE="xcesp-modem:0.4.72-arm64"
+DEFAULT_IMAGE="xcesp-modem:0.4.73-arm64"
 DEFAULT_NAME="xcesp-modem"
 
 die() { echo "$@" >&2; exit 1; }
@@ -46,7 +46,7 @@ Actions:
   help                    this help
 
 Typical first-time deployment:
-  ./xcesp-modem.sh load xcesp-modem-0.4.72-arm64.tar
+  ./xcesp-modem.sh load xcesp-modem-0.4.73-arm64.tar
   ./xcesp-modem.sh start --msisdn +34600000001 --rvp 169.254.1.2 \\
        --transport-ip 169.254.1.1 --serial /dev/ttyMV1 \\
        --state-dir /USERFS/rados_user_files/xcesp \\
@@ -112,7 +112,7 @@ Optional:
   --state-dir <DIR>       root for persistent state (default
                           /var/lib + /var/log — pick a caller-writable
                           path on restricted-root devices)
-  --image <TAG>           docker image tag (default xcesp-modem:0.4.72-arm64)
+  --image <TAG>           docker image tag (default xcesp-modem:0.4.73-arm64)
   --name <N>              container name (default xcesp-modem)
   --foreground            run attached instead of detached
   --dry-run               print the docker command without running it

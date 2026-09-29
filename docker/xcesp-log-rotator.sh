@@ -27,23 +27,25 @@
 
 LOG=/var/xcesp/log/xcesp.log
 
+# Emit a line into xcesp.log directly, using the same
+# `YYYY-MM-DD HH:MM:SS [LEVEL] TAG: message` format xcespwdog uses.
+# Direct file append (with kernel-atomic O_APPEND guarantees for
+# <4 KiB writes) is more reliable than routing through xcespwdog's
+# SyslogReader on UDP :1514 — that path is subject to startup-order
+# races (rotator can fire before the listener binds) and to `logger`
+# ECONNREFUSED silently swallowing messages.  The bind-mounted log
+# file, on the other hand, is always writable.
+log() {
+    printf '%s [INFO] xcesp-log-rotator: %s\n' \
+        "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG"
+}
+
 if [ "$LOG_MAX_MB" = "0" ] || [ "$LOG_MAX_MB" -le 0 ] 2>/dev/null; then
-    logger -n 127.0.0.1 -P 1514 --udp -t xcesp-log-rotator \
-        "LOG_MAX_MB=$LOG_MAX_MB — rotation disabled, sleeping" 2>/dev/null || true
+    log "LOG_MAX_MB=$LOG_MAX_MB — rotation disabled, sleeping"
     exec sleep infinity
 fi
 
 MAX_BYTES=$((LOG_MAX_MB * 1024 * 1024))
-log() {
-    # Route into xcespwdog's SyslogReader on UDP :1514 so the message
-    # lands in /var/xcesp/log/xcesp.log next to xcespserver + xcespproc
-    # output.  Plain `echo` would go to the container's stdout (visible
-    # only via `docker logs`), which is easy to miss on a device where
-    # the operator is following the persistent log file.
-    logger -n 127.0.0.1 -P 1514 --udp -t xcesp-log-rotator "$@" 2>/dev/null || \
-        echo "[xcesp-log-rotator] $*"      # fallback if logger fails
-}
-
 log "active: cap=${LOG_MAX_MB} MB keep=${LOG_KEEP} archives check-interval=${LOG_CHECK_INTERVAL_SEC}s"
 
 while true; do
@@ -67,6 +69,8 @@ while true; do
             # before the truncate takes effect — a small race that
             # loses at worst a few lines, never the archive.
             cp "$LOG" "$LOG.1" && : > "$LOG"
+            # This first line after truncate appears at the top of the
+            # fresh file — proof the rotator did the work.
             log "rotated (was ${size} B, ${LOG_KEEP} archives kept)"
         fi
     fi
