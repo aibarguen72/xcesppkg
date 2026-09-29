@@ -1,3 +1,7 @@
 xcespkg-*/
 *.tar.gz
 *.tgz
+# Container-image tarballs produced by docker/save.sh — large binary
+# artifacts, distributed alongside GitHub releases if needed, never
+# committed to source control.
+docker/*.tar

@@ -1,5 +1,90 @@
 # Changelog - xcesppkg
 
+## 0.4.68
+
+- **Bundles xcespserver 0.4.13, xcespcli 0.3.14, xcespproc 0.2.67,
+  xcespwdog 0.2.0, xcesp-on-xc 0.2.34, xcesp-on-pw 0.3.13,
+  xcesp-on-rtr 0.2.22, evapplication 0.1.2.**
+- **CRITICAL FIX** for bidirectional CSD bulk transfers: the
+  AtParser silently dropped every `+` (`0x2B`) byte that arrived
+  in `OnlineData` mode without a preceding 1-second idle.  In a
+  binary CSD stream (SCADA config downloads, RTU firmware, any
+  BER-encoded payload) that translated to ~3-5 % observable loss
+  with cascading resync damage — the exact symptom the customer
+  reported.  See xcesp-on-xc 0.2.34 for the details; xcespproc
+  0.2.67 relinks against it.  0.00 % loss verified end-to-end in
+  xcesptest 0.4.17's new CSD bidirectional stress lab across
+  four scenarios (50 %, 70 %, asymmetric 100/720 B/s, and 50 %
+  with `crypto-mode=required`).
+- **Container rollup** (from the interim 0.4.66 and 0.4.67 local
+  builds that never made it to a GitHub release): the xcesp-modem
+  arm64 container's `entrypoint.sh` now waits up to 60 s for
+  `TRANSPORT_IP` to become bindable before launching xcespwdog
+  (fixes the boot-race where docker `--restart unless-stopped`
+  starts the container before the host finishes assigning the
+  link-local address on the operator's lanN interface), and the
+  entrypoint + `run.sh` grew `--dcd-source / --dsr-source /
+  --cts-source / --ri-source / --dtr-source / --rts-source` flags
+  that forward to a `dte-lines` sub-block in the generated
+  config — needed on boards whose UART doesn't wire every RS-232
+  pin (Wistron ONT with mvebu-uart on `/dev/ttyMV1`).  `run.sh`
+  also gains `--rvp-renewal <SEC>` for tuning REGISTER cadence.
+
+## 0.4.67
+
+- **Container-only release** — bundled binaries byte-identical to
+  0.4.65/0.4.66.  Only the container's `entrypoint.sh` and `run.sh`
+  change.
+- **DTE line-source overrides in the container.**  The entrypoint's
+  generated `xcespserver.conf` now emits an optional `dte-lines`
+  child of `modem` when any of six new env vars is set:
+  `DTE_{DCD,DSR,CTS,RI,DTR,RTS}_SOURCE`.  Each maps 1:1 to the
+  corresponding schema attr (`dcd-source primary:rts`, etc.).
+  `run.sh` gains matching `--dcd-source / --dsr-source / --cts-
+  source / --ri-source / --dtr-source / --rts-source` flags that
+  forward as `-e DTE_*_SOURCE=...`.  Needed on boards whose UART
+  doesn't wire every RS-232 pin — e.g. Wistron ONT with mvebu-uart
+  on `/dev/ttyMV1` exposes RTS/CTS to the DB9 but not DCD/DSR/DTR/
+  RI, so operators pass `--dcd-source primary:rts` to re-source
+  the modem's DCD egress onto RTS (making AT&C1 behave sensibly).
+- Unset overrides emit no `dte-lines` block at all, so an operator
+  who doesn't need re-sourcing sees no config change from 0.4.66.
+
+## 0.4.66
+
+- **Container-only release** — bundled binaries are byte-identical to
+  0.4.65 (evapplication 0.1.2, xcespproc 0.2.66, xcespserver 0.4.13,
+  xcespcli 0.3.14, xcespwdog 0.2.0, xcesp-on-xc 0.2.33).  No change
+  to the x86_64 tarball; the arm64 tarball is unchanged.  Only the
+  xcesp-modem container image is rebuilt.
+- **entrypoint waits for `TRANSPORT_IP` to appear** before launching
+  `xcespwdog`.  On a cold boot with `--restart=unless-stopped`, docker
+  can start the container before the host has finished configuring
+  the interface that carries the transport IP (typical on Wistron
+  ONTs where the link-local /16 on `lanN` only lands after the boot's
+  network stage completes).  If we launched xcespwdog before that,
+  `SmsTransport`'s `bind(TRANSPORT_IP:UDP)` failed with
+  `EADDRNOTAVAIL`, `ModemXc` bring-up errored out, and wdog never
+  retried (a soft LLD isn't a process-crash so respawn didn't fire).
+  Container ended up `docker ps Up` but with no working modem —
+  silent failure mode.  Fix: 60-second bind-test loop in the
+  entrypoint (`bind()` on a UDP socket via python3; skipped when
+  `TRANSPORT_IP=0.0.0.0` under bridge mode).  Overridable via env
+  `TRANSPORT_IP_WAIT_SECONDS`.  Observed and root-caused live on
+  the Wistron ONT with `169.254.1.1/16` on `lan3`.
+
+## 0.4.65
+
+- Bundles **evapplication 0.1.2** + **xcespproc 0.2.66** — the
+  container-hosted xcespproc heartbeat fix.  Every xcespproc
+  running inside the xcesp-modem docker image (xcespwdog as PID 1)
+  now sends heartbeats to its parent instead of silently skipping
+  them; watchdog no longer kills the process every ~10 s.
+- No changes to xcespserver, xcespcli, xcesp-on-xc.  A bare-metal
+  install upgrading through 0.4.65 sees no behavioural difference
+  (the old ppid>1 guard was a bare-metal-only concern; the new
+  startupPpid_ snapshot is a superset).
+
 ## 0.4.64
 
 - Bundles **xcesp-on-xc 0.2.33**, **xcespcli 0.3.14**, **xcespproc
