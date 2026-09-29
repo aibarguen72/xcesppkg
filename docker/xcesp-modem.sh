@@ -20,7 +20,7 @@
 #   help                    this help
 set -euo pipefail
 
-DEFAULT_IMAGE="xcesp-modem:0.4.69-arm64"
+DEFAULT_IMAGE="xcesp-modem:0.4.70-arm64"
 DEFAULT_NAME="xcesp-modem"
 
 die() { echo "$@" >&2; exit 1; }
@@ -46,7 +46,7 @@ Actions:
   help                    this help
 
 Typical first-time deployment:
-  ./xcesp-modem.sh load xcesp-modem-0.4.69-arm64.tar
+  ./xcesp-modem.sh load xcesp-modem-0.4.70-arm64.tar
   ./xcesp-modem.sh start --msisdn +34600000001 --rvp 169.254.1.2 \\
        --transport-ip 169.254.1.1 --serial /dev/ttyMV1 \\
        --state-dir /USERFS/rados_user_files/xcesp \\
@@ -112,7 +112,7 @@ Optional:
   --state-dir <DIR>       root for persistent state (default
                           /var/lib + /var/log — pick a caller-writable
                           path on restricted-root devices)
-  --image <TAG>           docker image tag (default xcesp-modem:0.4.69-arm64)
+  --image <TAG>           docker image tag (default xcesp-modem:0.4.70-arm64)
   --name <N>              container name (default xcesp-modem)
   --foreground            run attached instead of detached
   --dry-run               print the docker command without running it
@@ -125,6 +125,19 @@ DTE serial line overrides (mvebu-uart-on-ONT typically needs
   --ri-source  <SPEC>     re-source RI egress
   --dtr-source <SPEC>     re-source DTR ingress
   --rts-source <SPEC>     re-source RTS ingress
+
+Licensing (RVP-hosting device only — ordinary fleet devices are
+licensed centrally at the RVP and need nothing here):
+  --license-auth <SPEC>   emit a `license-auth` line inside the
+                          generated server 1 block.  SPEC values:
+                            system-mac        -> license-auth system-mac
+                            <iface-name>      -> license-auth mac-device <iface>
+                          e.g. `--license-auth wan1` on the
+                          Wistron ONT.  Under --network=host the
+                          container can read /sys/class/net/<iface>
+                          from the host.  Pair with --persist-config
+                          so operator-added license-code lines
+                          survive restart.
 
 Config persistence (opt-in, for the one fleet device that also
 hosts pstn-rvp / carries fleet license-code lines):
@@ -155,6 +168,10 @@ action_start() {
     # with default host path <state-dir>/xcespserver.conf; explicit
     # absolute path = enabled + use that path.
     local PERSIST_CONFIG=""
+    # License-auth: empty = no license-auth line emitted (default —
+    # ordinary fleet devices don't need licensing).  Otherwise
+    # `system-mac` or an interface name.
+    local LICENSE_AUTH=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -181,6 +198,7 @@ action_start() {
             --name)          CONTAINER_NAME=$2; shift 2 ;;
             --foreground)    DETACH=""; shift ;;
             --dry-run)       DRY_RUN=1; shift ;;
+            --license-auth)  LICENSE_AUTH=$2; shift 2 ;;
             --persist-config)
                 # Accept optional PATH argument.  If the next token starts
                 # with '-' or is absent, use the "auto" sentinel; else
@@ -242,6 +260,21 @@ action_start() {
     [ -n "$SYSTEM_NAME" ]        && env_args+=(-e "SYSTEM_NAME=$SYSTEM_NAME")
     [ -n "$CRYPTO_PASSPHRASE" ]  && env_args+=(-e "CRYPTO_PASSPHRASE=$CRYPTO_PASSPHRASE")
     [ -n "$RVP_RENEWAL_SEC" ]    && env_args+=(-e "RVP_RENEWAL_SEC=$RVP_RENEWAL_SEC")
+    if [ -n "$LICENSE_AUTH" ]; then
+        # Fail fast if the interface doesn't exist on the host.  Under
+        # --network=host the container will read the same /sys, so if
+        # it's missing on the host it'll be missing inside too and
+        # authMac will silently stay empty (the classic
+        # "Licensed Features/Objects: [none]" trap).
+        if [ "$LICENSE_AUTH" != "system-mac" ] && [ "$DRY_RUN" = 0 ]; then
+            if [ ! -r "/sys/class/net/$LICENSE_AUTH/address" ]; then
+                die "--license-auth: no host interface '$LICENSE_AUTH' " \
+                    "(no /sys/class/net/$LICENSE_AUTH/address).  Available: " \
+                    "$(ls /sys/class/net | tr '\n' ' ')"
+            fi
+        fi
+        env_args+=(-e "LICENSE_AUTH=$LICENSE_AUTH")
+    fi
     for src in DCD DSR CTS RI DTR RTS; do
         local var="DTE_${src}_SOURCE"
         [ -n "${!var}" ] && env_args+=(-e "${var}=${!var}")

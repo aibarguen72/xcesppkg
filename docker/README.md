@@ -176,7 +176,7 @@ effectively a no-op.
 ## Version stamping
 
 The image tag encodes the bundled xcesppkg version
-(`xcesp-modem:0.4.69-arm64`).  `build.sh` reads `../PROJECT`'s
+(`xcesp-modem:0.4.70-arm64`).  `build.sh` reads `../PROJECT`'s
 `PRJVERSION` and picks a matching tarball name — no manual version
 juggling.  For a container-only release (same binaries, new
 entrypoint / wdog INI), pass the previous version's tarball

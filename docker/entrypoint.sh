@@ -153,7 +153,27 @@ if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
     echo ""
     echo "server 1"
     echo "  hostname $SYSTEM_NAME"
-    echo "  processes routing"
+    # Optional license-auth line — only the RVP-hosting device
+    # needs licensing (fleet licenses live under `pstn-rvp` on
+    # this one box).  Grammar accepted:
+    #   LICENSE_AUTH=system-mac       -> `license-auth system-mac`
+    #   LICENSE_AUTH=<iface-name>     -> `license-auth mac-device <iface>`
+    # Any other value is forwarded as-is (so an operator can pass
+    # a raw `license-auth …` payload if the schema grows options).
+    if [ -n "${LICENSE_AUTH:-}" ]; then
+        case "$LICENSE_AUTH" in
+            system-mac)
+                echo "  license-auth system-mac" ;;
+            *)
+                echo "  license-auth mac-device $LICENSE_AUTH" ;;
+        esac
+    fi
+    # `processes tdm-pw count 1` matches what xcespwdog actually
+    # launches inside the container (see xcespwdog.ini `[process.2]`).
+    # xcespserver only reads this to populate the `show server`
+    # "Processes:" section — nothing dispatches from it — but showing
+    # `routing` here confuses operators expecting the modem role.
+    echo "  processes tdm-pw"
     echo "    count 1"
     echo "  !"
     echo "!"

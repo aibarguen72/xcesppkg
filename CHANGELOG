@@ -1,5 +1,36 @@
 # Changelog - xcesppkg
 
+## 0.4.70
+
+- **Container-only release** — bundled binaries byte-identical to
+  0.4.68/0.4.69 (xcespserver 0.4.13, xcespcli 0.3.14, xcespproc
+  0.2.67, xcespwdog 0.2.0, xcesp-on-xc 0.2.34, xcesp-on-pw 0.3.13,
+  xcesp-on-rtr 0.2.22, evapplication 0.1.2).  Only the xcesp-modem
+  container image is rebuilt.
+- **`--license-auth <SPEC>` flag on `xcesp-modem.sh start`.**  The
+  RVP-hosting device needs a `license-auth …` line under `server 1`
+  for `license-code …` entries to actually take effect (per the
+  long-standing "license-auth is not optional" trap).  New flag
+  accepts either `system-mac` or an interface name; entrypoint
+  emits the matching line into the generated `xcespserver.conf`:
+
+    * `--license-auth system-mac`  -> `license-auth system-mac`
+    * `--license-auth wan1`        -> `license-auth mac-device wan1`
+
+  `xcesp-modem.sh start` refuses to launch if the named interface
+  is missing on the host (listing what's available), so the classic
+  silent-`authMac`-empty → `Licensed Features/Objects: [none]`
+  scenario becomes a fail-fast error at start time.  Under
+  `--network=host` (our default) the container reads the same
+  `/sys/class/net/<iface>/address` the host does, so any stable
+  host interface works.  Pair with `--persist-config` so
+  operator-added `license-code` lines survive restart.
+- **`processes tdm-pw count 1`** (was `routing`) in the generated
+  `xcespserver.conf`.  xcespwdog was already launching xcespproc
+  with `-r tdm-pw`; only `show server`'s "Processes:" display
+  reflected the stale generator hint.  Cosmetic on function,
+  removes operator confusion.
+
 ## 0.4.69
 
 - **Container-only release** — bundled binaries are byte-identical
