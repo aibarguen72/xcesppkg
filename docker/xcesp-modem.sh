@@ -20,7 +20,7 @@
 #   help                    this help
 set -euo pipefail
 
-DEFAULT_IMAGE="xcesp-modem:0.4.68-arm64"
+DEFAULT_IMAGE="xcesp-modem:0.4.69-arm64"
 DEFAULT_NAME="xcesp-modem"
 
 die() { echo "$@" >&2; exit 1; }
@@ -46,7 +46,7 @@ Actions:
   help                    this help
 
 Typical first-time deployment:
-  ./xcesp-modem.sh load xcesp-modem-0.4.68-arm64.tar
+  ./xcesp-modem.sh load xcesp-modem-0.4.69-arm64.tar
   ./xcesp-modem.sh start --msisdn +34600000001 --rvp 169.254.1.2 \\
        --transport-ip 169.254.1.1 --serial /dev/ttyMV1 \\
        --state-dir /USERFS/rados_user_files/xcesp \\
@@ -112,7 +112,7 @@ Optional:
   --state-dir <DIR>       root for persistent state (default
                           /var/lib + /var/log — pick a caller-writable
                           path on restricted-root devices)
-  --image <TAG>           docker image tag (default xcesp-modem:0.4.68-arm64)
+  --image <TAG>           docker image tag (default xcesp-modem:0.4.69-arm64)
   --name <N>              container name (default xcesp-modem)
   --foreground            run attached instead of detached
   --dry-run               print the docker command without running it
@@ -125,6 +125,19 @@ DTE serial line overrides (mvebu-uart-on-ONT typically needs
   --ri-source  <SPEC>     re-source RI egress
   --dtr-source <SPEC>     re-source DTR ingress
   --rts-source <SPEC>     re-source RTS ingress
+
+Config persistence (opt-in, for the one fleet device that also
+hosts pstn-rvp / carries fleet license-code lines):
+  --persist-config [<PATH>]
+                          store xcespserver.conf on the host so
+                          xcespcli's `configure/commit/save` edits
+                          survive container restart.  Default PATH:
+                          <state-dir>/xcespserver.conf.  On first
+                          launch, env vars seed the file; on
+                          subsequent launches, the file is used
+                          as-is and MSISDN/RVP/etc. env vars are
+                          IGNORED (the operator manages config
+                          via CLI at that point).
 EOF
 }
 
@@ -138,6 +151,10 @@ action_start() {
     local NETWORK_MODE="host" STATE_DIR="" DETACH="-d" DRY_RUN=0
     local DTE_DCD_SOURCE="" DTE_DSR_SOURCE="" DTE_CTS_SOURCE=""
     local DTE_RI_SOURCE=""  DTE_DTR_SOURCE="" DTE_RTS_SOURCE=""
+    # Persistent config: empty = disabled (default); "auto" = enabled
+    # with default host path <state-dir>/xcespserver.conf; explicit
+    # absolute path = enabled + use that path.
+    local PERSIST_CONFIG=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -164,6 +181,15 @@ action_start() {
             --name)          CONTAINER_NAME=$2; shift 2 ;;
             --foreground)    DETACH=""; shift ;;
             --dry-run)       DRY_RUN=1; shift ;;
+            --persist-config)
+                # Accept optional PATH argument.  If the next token starts
+                # with '-' or is absent, use the "auto" sentinel; else
+                # consume the token as an absolute path override.
+                if [ $# -ge 2 ] && [ -n "$2" ] && [ "${2#-}" = "$2" ]; then
+                    PERSIST_CONFIG=$2; shift 2
+                else
+                    PERSIST_CONFIG=auto; shift
+                fi ;;
             --help|-h)       start_usage; return 0 ;;
             *) echo "unknown start option: $1" >&2; start_usage >&2; return 2 ;;
         esac
@@ -221,6 +247,40 @@ action_start() {
         [ -n "${!var}" ] && env_args+=(-e "${var}=${!var}")
     done
 
+    # Persistent-config bind mount + entrypoint signal.  Resolve the
+    # host path, ensure it exists as a regular file (docker would
+    # otherwise create a directory at the mount point), then bind it
+    # onto xcespserver's CONFIG_FILE path inside the container.
+    local persist_host_path=""
+    local -a persist_args=()
+    if [ -n "$PERSIST_CONFIG" ]; then
+        if [ "$PERSIST_CONFIG" = auto ]; then
+            # Default path sits next to lib/ and log/ under the state-dir
+            # root — obvious to spot on a running device.  Falls back to
+            # /var/lib/xcesp/xcespserver.conf when --state-dir isn't set.
+            if [ -n "$STATE_DIR" ]; then
+                persist_host_path="$STATE_DIR/xcespserver.conf"
+            else
+                persist_host_path="/var/lib/xcesp/xcespserver.conf"
+            fi
+        else
+            # Explicit path; must be absolute so bind mount is unambiguous.
+            case "$PERSIST_CONFIG" in
+                /*) persist_host_path="$PERSIST_CONFIG" ;;
+                *)  die "--persist-config <PATH> must be absolute (got '$PERSIST_CONFIG')" ;;
+            esac
+        fi
+        # Touch the host file so docker's `-v <file>:<file>` mounts it
+        # as a file rather than creating a directory at the mount point.
+        if [ "$DRY_RUN" = 0 ]; then
+            mkdir -p "$(dirname "$persist_host_path")" || die \
+                "cannot create parent dir for $persist_host_path"
+            [ -e "$persist_host_path" ] || : > "$persist_host_path"
+        fi
+        persist_args+=(-v "$persist_host_path:/var/xcesp/cfg/xcespserver.conf"
+                       -e "CONFIG_PERSIST=1")
+    fi
+
     local -a net_args=()
     if [ "$NETWORK_MODE" = "host" ]; then
         net_args+=(--network=host)
@@ -238,6 +298,7 @@ action_start() {
         --device="$SERIAL_DEV:$SERIAL_DEV"
         -v "$STATE_LIB:/var/lib/xcesp"
         -v "$STATE_LOG:/var/xcesp/log"
+        "${persist_args[@]}"
         "${env_args[@]}"
         "$IMAGE"
     )

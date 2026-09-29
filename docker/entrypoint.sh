@@ -62,12 +62,51 @@ if [ ! -c "$DTE_SERIAL_DEVICE" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Persistent-config mode (opt-in via CONFIG_PERSIST=1).
+#
+# Default behaviour of this container is stateless w.r.t. config: the
+# generator below rewrites /var/xcesp/cfg/xcespserver.conf from env
+# vars on every start, so any `configure/commit/save` the operator
+# runs via xcespcli is discarded on restart.  That's the right posture
+# for a fleet of identical field modems.
+#
+# When CONFIG_PERSIST=1 (set by `xcesp-modem.sh start --persist-config`),
+# the operator also bind-mounts /var/xcesp/cfg/xcespserver.conf from
+# the host.  Two cases:
+#
+#   file is non-empty  → treat it as authoritative; DO NOT regenerate.
+#                        Env vars (MSISDN, RVP_IP, etc.) are effectively
+#                        ignored — the operator is now managing config
+#                        via CLI, and xcespserver's `save` writes back
+#                        through the same bind mount → survives restart.
+#
+#   file is empty      → first launch on this device.  Fall through to
+#                        the env-var-driven generator below; that write
+#                        lands in the host file via the bind mount and
+#                        persists from here on.
+#
+# Intended use: the single fleet device that ALSO hosts pstn-rvp (needs
+# a growing crypto-peer list) or carries `license-code` lines under
+# server 1 (fleet licensing).  Every other device leaves CONFIG_PERSIST
+# unset and gets today's stateless behaviour.
+# ---------------------------------------------------------------------------
+CFG=/var/xcesp/cfg/xcespserver.conf
+if [ "${CONFIG_PERSIST:-0}" = "1" ] && [ -s "$CFG" ]; then
+    echo "[xcesp-modem] persist mode: using existing $CFG ($(wc -l < "$CFG") lines) from host bind mount"
+    echo "[xcesp-modem]   env-var config inputs (MSISDN, RVP_IP, TRANSPORT_IP,"
+    echo "[xcesp-modem]   DTE_*, CRYPTO_PASSPHRASE, DTE_*_SOURCE) are IGNORED —"
+    echo "[xcesp-modem]   edit via 'xcesp-modem.sh cli' and commit+save instead."
+    # Skip the generator and jump straight to the launch section.
+    CFG_SKIP_GEN=1
+fi
+
+# ---------------------------------------------------------------------------
 # Generate xcespserver.conf.  Assembly-by-hand (rather than envsubst)
 # because we want the crypto-passphrase line to conditionally appear;
 # envsubst has no natural way to say "emit this line only if X is set"
 # without leaving a stray blank line.
 # ---------------------------------------------------------------------------
-CFG=/var/xcesp/cfg/xcespserver.conf
+if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
 {
     echo "management"
     echo "  system"
@@ -125,6 +164,7 @@ echo "[xcesp-modem]   MSISDN=$MSISDN  RVP=$RVP_IP:$RVP_PORT" \
      "transport=$TRANSPORT_IP:$TRANSPORT_TCP_PORT/$TRANSPORT_UDP_PORT" \
      "dte=$DTE_SERIAL_DEVICE@$DTE_SERIAL_BAUD" \
      "crypto=$([ -n "${CRYPTO_PASSPHRASE:-}" ] && echo on || echo off)"
+fi   # end of CFG_SKIP_GEN guard
 
 # ---------------------------------------------------------------------------
 # Ensure runtime dirs exist and are writable.  /run/xcesp is tmpfs

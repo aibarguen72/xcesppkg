@@ -109,6 +109,54 @@ Two bind mounts survive container restart:
 new image tag, `remove` + fresh `start` (with the same
 `--state-dir`) reuses the same mount so state carries over cleanly.
 
+## Persistent config (RVP-hosting device only)
+
+By default `xcespserver.conf` is regenerated from `--msisdn` /
+`--rvp` / `--transport-ip` / etc. on every launch — a fleet of
+identical field modems is easier to manage that way, and
+`xcespcli`'s `configure/commit/save` edits get discarded on
+restart.
+
+One device in the fleet typically doubles as the central RVP.
+That device needs to persist:
+* `pstn-rvp` config (a growing `crypto-peer` list as new
+  MSISDNs come online), and
+* `license-code` lines under `server 1` (fleet-wide licensing —
+  the RVP is the license authority).
+
+Both live in `xcespserver.conf`.  Opt into persistence with
+`--persist-config`:
+
+```
+./xcesp-modem.sh start \
+    --msisdn +34600000000 --rvp 127.0.0.1 \
+    --transport-ip 10.0.0.1 --serial /dev/ttyMV1 \
+    --state-dir /USERFS/rados_user_files/xcesp \
+    --passphrase <fleet-secret> \
+    --persist-config              # -> /USERFS/rados_user_files/xcesp/xcespserver.conf
+```
+
+The persisted file sits next to `lib/` and `log/` in the state-dir
+by default (`<state-dir>/xcespserver.conf`).  Override with an
+explicit absolute path: `--persist-config /etc/xcesp-rvp/config.conf`.
+
+Behaviour:
+* **First launch** with an empty host file → env vars seed the
+  file, xcespserver runs from it, and the write persists via the
+  bind mount.
+* **Subsequent launches** with a non-empty host file → the
+  entrypoint uses the file as-is.  `--msisdn`, `--rvp`,
+  `--transport-ip`, `--baud`, `--passphrase`, and the six
+  `--*-source` flags are IGNORED (the entrypoint logs a
+  WARNING listing them).  From here on the operator manages
+  config via `xcesp-modem.sh cli` → `configure` → `commit` →
+  `save`, and every `save` writes through the same bind mount.
+* **Reset** to first-launch behaviour → delete the host file and
+  restart.  Next launch seeds fresh from env vars.
+
+Ordinary fleet devices leave `--persist-config` unset and behave
+exactly as before.
+
 ## What the container does NOT do
 
 - **No routing / VRF / MPLS.**  This is a modem-only container.
@@ -128,7 +176,7 @@ effectively a no-op.
 ## Version stamping
 
 The image tag encodes the bundled xcesppkg version
-(`xcesp-modem:0.4.68-arm64`).  `build.sh` reads `../PROJECT`'s
+(`xcesp-modem:0.4.69-arm64`).  `build.sh` reads `../PROJECT`'s
 `PRJVERSION` and picks a matching tarball name — no manual version
 juggling.  For a container-only release (same binaries, new
 entrypoint / wdog INI), pass the previous version's tarball

@@ -1,5 +1,37 @@
 # Changelog - xcesppkg
 
+## 0.4.69
+
+- **Container-only release** — bundled binaries are byte-identical
+  to 0.4.68 (xcespserver 0.4.13, xcespcli 0.3.14, xcespproc 0.2.67,
+  xcespwdog 0.2.0, xcesp-on-xc 0.2.34, xcesp-on-pw 0.3.13,
+  xcesp-on-rtr 0.2.22, evapplication 0.1.2).  Only the xcesp-modem
+  container image (and its host-side operator script) is rebuilt.
+- **Opt-in `--persist-config` for the RVP-hosting device.**  A
+  single fleet device typically doubles as the central RVP —
+  needs a growing `crypto-peer` list under `pstn-rvp` plus
+  fleet-wide `license-code` lines under `server 1`, both of which
+  operators add over time via `xcespcli`.  Prior versions
+  regenerated `xcespserver.conf` from env vars on every container
+  start, so those CLI edits (`configure/commit/save`) were lost
+  on restart.  Now:
+    * `xcesp-modem.sh start --persist-config [<PATH>]` opts a
+      device into persistence.  Default PATH:
+      `<state-dir>/xcespserver.conf`.
+    * The script bind-mounts that host file at
+      `/var/xcesp/cfg/xcespserver.conf` and sets
+      `-e CONFIG_PERSIST=1`.
+    * On first launch (empty host file), the entrypoint's
+      generator seeds the file from env vars as before, and the
+      write lands on the host through the bind mount.
+    * On subsequent launches, the entrypoint detects the
+      non-empty file and skips regeneration entirely — CLI
+      edits are authoritative from then on.  MSISDN, RVP_IP,
+      DTE_*, and DTE_*_SOURCE env vars become no-ops (a WARNING
+      lists the ignored inputs so it's obvious).
+- Ordinary fleet devices leave `--persist-config` unset and get
+  today's stateless behaviour (byte-for-byte).
+
 ## 0.4.68
 
 - **Bundles xcespserver 0.4.13, xcespcli 0.3.14, xcespproc 0.2.67,
