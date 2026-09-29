@@ -14,13 +14,14 @@ transport ports, PSK) from environment variables at launch.
 - `entrypoint.sh` — runs at container start; validates env, generates
   `/var/xcesp/cfg/xcespserver.conf`, execs `xcespwdog`.
 - `xcespserver.ini` / `xcespwdog.ini` — container-tuned INI files
-  (LICENSE_ENFORCE=false, DOC_HTTPD disabled, wdog launches server +
-  proc directly with no xcesp-activate stage).
+  (`LICENSE_ENFORCE=true`, `DOC_HTTPD` disabled, wdog launches
+  server + proc directly with no xcesp-activate stage).
 - `build.sh` — build the image on THIS host (needs podman + qemu-user).
 - `save.sh` — export the built image to a docker-loadable `.tar`.
-- `load.sh` — run on the TARGET device to `docker load` the tar.
-- `run.sh` — run on the TARGET device to start the container with
-  operator-supplied flags.
+- **`xcesp-modem.sh`** — single operator entry point on the target
+  device.  Replaces the earlier `load.sh` + `run.sh` pair with a
+  `<action> [opts]` dispatcher (`load / start / stop / restart /
+  remove / log / cli / status / shell / version / help`).
 
 ## Build + package (this host)
 
@@ -30,37 +31,58 @@ cd docker
 ./save.sh                      # -> xcesp-modem-<VER>-arm64.tar
 ```
 
-Copy `xcesp-modem-<VER>-arm64.tar`, `load.sh`, and `run.sh` to the
-target device.
+Copy `xcesp-modem-<VER>-arm64.tar` and `xcesp-modem.sh` to the target
+device.
 
 ## Load + run (target device)
 
 ```
-chmod +x load.sh run.sh          # exec bit may not survive scp
-./load.sh xcesp-modem-<VER>-arm64.tar
-./run.sh --msisdn +34600000099 \
-         --rvp 10.0.0.1 \
-         --transport-ip 192.168.1.20 \
-         --serial /dev/ttyMV1 \
-         --passphrase fleet-shared-secret
+chmod +x xcesp-modem.sh          # exec bit may not survive scp
+./xcesp-modem.sh load xcesp-modem-<VER>-arm64.tar
+./xcesp-modem.sh start \
+    --msisdn +34600000099 \
+    --rvp 10.0.0.1 \
+    --transport-ip 192.168.1.20 \
+    --serial /dev/ttyMV1 \
+    --passphrase fleet-shared-secret \
+    --dcd-source primary:rts             # boards without a DCD pin
 ```
 
+The `load` action auto-retags `localhost/xcesp-modem:<VER>-arm64`
+(podman default) to plain `xcesp-modem:<VER>-arm64` so the `start`
+action's default `--image` matches — no manual `docker tag` step.
+
 Container starts detached with `--restart unless-stopped`.  Follow
-the log with `docker logs -f xcesp-modem`.
+the log with `./xcesp-modem.sh log -f` (tails the plain-text file
+on the bind-mount, which survives ungraceful power-off — `docker
+logs`' JSON stream can go corrupt if the host was killed mid-write).
+
+## Everyday operator commands
+
+```
+./xcesp-modem.sh status          # docker ps + `show modem` snapshot
+./xcesp-modem.sh log -f          # tail the modem log (--docker for docker logs)
+./xcesp-modem.sh cli             # interactive xcespcli inside the container
+./xcesp-modem.sh restart         # same-config restart
+./xcesp-modem.sh stop            # docker stop
+./xcesp-modem.sh remove          # docker rm -f
+./xcesp-modem.sh shell           # bash inside the container (diagnostics)
+./xcesp-modem.sh version         # print image tag currently in use
+```
 
 ## Network mode
 
-`run.sh --network host` (the default) is simplest — the container
+`--network host` (the default) is simplest — the container
 binds directly on the host's real interfaces.  Requires the docker
 daemon to permit host networking.
 
-`run.sh --network bridge` is the fallback for hosts where host
-networking is blocked by policy.  The script:
+`--network bridge` is the fallback for hosts where host
+networking is blocked by policy.  The start action:
 
 - Passes `--network=bridge` to docker.
 - Adds `-p <TCP>:<TCP>` and `-p <UDP>:<UDP>/udp` for the transport
   ports so the container is reachable at the host's real IP.
-- Clamps `transport-ip` to `0.0.0.0` (the host IP doesn't exist
+- Clamps `--transport-ip` to `0.0.0.0` (the host IP doesn't exist
   inside the container's netns; docker's `-p` bridges it).
 
 Both modes work identically on both LAN and LTE deployments.  The
@@ -83,27 +105,30 @@ Two bind mounts survive container restart:
   SMS-counter persistence.
 - `/var/log/xcesp` — xcesp.log written by xcespwdog.
 
-`run.sh` creates both on first launch if missing.  On upgrade
-(new image tag), `docker rm -f` + fresh `run.sh` reuses the same
-mount so state carries over cleanly.
+`start` creates both on first launch if missing.  On upgrade to a
+new image tag, `remove` + fresh `start` (with the same
+`--state-dir`) reuses the same mount so state carries over cleanly.
 
 ## What the container does NOT do
 
 - **No routing / VRF / MPLS.**  This is a modem-only container.
   Full router workloads use the systemd `install.sh` from the
   xcesppkg tarball on a bare-metal host.
-- **No local license.**  Set `LICENSE_ENFORCE=false` — the fleet is
-  licensed centrally at the RVP (`license-code` on the pstn-rvp
-  node covers modem slots for every registered MSISDN).
 - **No modem-peers file.**  The RVP is the single source of truth
   for peer discovery (LOOKUP by MSISDN).
 - **No DOC HTTPD.**  Documentation ships on the operator's admin
   host, not inside every device.
 
+`LICENSE_ENFORCE=true` inside the container by default, but a
+modem-only deployment ships no `license-code` lines — the fleet is
+licensed centrally at the RVP (`license-code` on the pstn-rvp node
+covers modem slots for every registered MSISDN) so enforcement is
+effectively a no-op.
+
 ## Version stamping
 
 The image tag encodes the bundled xcesppkg version
-(`xcesp-modem:0.4.67-arm64`).  `build.sh` reads `../PROJECT`'s
+(`xcesp-modem:0.4.68-arm64`).  `build.sh` reads `../PROJECT`'s
 `PRJVERSION` and picks a matching tarball name — no manual version
 juggling.  For a container-only release (same binaries, new
 entrypoint / wdog INI), pass the previous version's tarball
