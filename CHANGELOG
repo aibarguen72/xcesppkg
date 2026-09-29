@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.4.72
+
+- **Fix: `xcesp-log-rotator` messages now reach `xcesp.log`.**  0.4.71
+  used plain shell `echo` which went to the container's stdout
+  (`docker logs`) instead of through xcespwdog's SyslogReader on
+  UDP :1514 — so operators following the persistent log file saw
+  no evidence the rotator was running.  Now uses
+  `logger -n 127.0.0.1 -P 1514 --udp -t xcesp-log-rotator "..."`
+  to route through the same syslog channel xcespserver + xcespproc
+  use, producing lines like:
+
+    2026-09-30 09:14:22 [INFO] xcesp-log-rotator: active: cap=10 MB ...
+    2026-09-30 10:14:22 [INFO] xcesp-log-rotator: rotated (was ...)
+
+  `logger` is already in the Ubuntu 22.04 base image (util-linux);
+  no new deps.  Falls back to stdout if the syslog path fails.
+- Bundled binaries byte-identical to 0.4.71.
+
 ## 0.4.71
 
 - **Container-only release** — bundled binaries byte-identical to
