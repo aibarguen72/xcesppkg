@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.76
+
+- **CAS/CESoPSN plan — Phase 4 lands.**  `bind=loopback-ces` on a
+  `tdm-pw` now supports `signaling=true` when `wire-multiframe ==
+  domain.cas-multiframe` and `payload == wire-multiframe` (whole-
+  multiframe packets, no fragmentation).  RX decodes CAS from the
+  packet tail, delivers via `receivedCasFrame`; TX side stashes
+  and re-encodes at the multiframe flush, sets the CW's F bit.
+  Cross-cadence (Phase 5) and fragmentation stay committed-rejected
+  with phase-specific reasons.
+- Bundled versions: xcespserver 0.4.13, xcespcli 0.3.14, xcespproc
+  **0.2.70** (relink), xcespwdog 0.2.0, xcesp-on-xc 0.2.34,
+  xcesp-on-pw **0.3.17** (Phase 4 code), xcesp-on-rtr 0.2.22,
+  evapplication 0.1.2.
+- x86_64 only per the CESoPSN plan policy — customer modem device
+  stays on xcesp-modem:0.4.73-arm64.
+
 ## 0.4.75
 
 - **CAS/CESoPSN plan — Phase 3 lands.**  `bind=loopback-ces` on a
