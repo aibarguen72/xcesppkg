@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.4.78
+
+- **CAS/CESoPSN plan — Phase 5 lands: fragmentation.**  Reordered
+  ahead of the original Phase-5 (cross-cadence) on operator
+  request.  `tdm-pw` with `bind=loopback-ces + signaling=true`
+  now accepts `payload < wire-multiframe` (payload ∈ {1,2,4,8}).
+  Multiple packets carry one multiframe on the wire, distinguished
+  by the RFC 4623 §4.2.1 2-bit FRG in the CW (byte 1 bits [7:6]).
+  Only the LAST fragment (or the WHOLE unfragmented one) carries
+  the CAS substructure at the tail.
+- Bundled versions: xcespserver 0.4.13, xcespcli 0.3.14, xcespproc
+  **0.2.72** (relink), xcespwdog 0.2.0, xcesp-on-xc 0.2.34,
+  xcesp-on-pw **0.3.19** (fragmentation), xcesp-on-rtr 0.2.22,
+  evapplication 0.1.2.
+- Non-fragmented Phase-4 traffic emits byte-identical wire packets
+  to what 0.4.77 produced (FRG=WHOLE=00 → the same 0-bits at byte
+  1 bits [7:6]).  No regression risk for existing configs.
+- x86_64 only per the CESoPSN plan policy.
+
 ## 0.4.77
 
 - **Fix (Phase-4 follow-up): CAS presence now driven by
