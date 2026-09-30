@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.4.81
+
+- **feat (Phase 8): CESoPSN per-slot snapshot + `show
+  tdm-pw-cesopsn` verb.**  Operator-facing tool to inspect the
+  DATA (last sampled data frame, one hex byte per timeslot) and
+  CAS (last sampled multiframe, one ABCD nibble per timeslot)
+  content of the running pseudowire — both RX (from peer) and
+  TX (to peer).  Snapshot is captured on the RT frame path
+  (seqlock, no lock on the fast path); reader retries up to
+  four times on race and reports `[snapshot read racing writer]`
+  on the header if the retry budget was exhausted.
+- Snapshot cadence:
+    debugrate=1 (normal): every 512 data frames / 64 CAS mfs
+    debugrate>1 (debug):  every 64 data frames / 1 CAS mf
+  Zero cost on hot path when snapshot skip.
+- Bundles xcesp-on-pw 0.3.22, xcespcli 0.3.15, xcespproc 0.2.75,
+  xcesptest 0.4.25.
+- x86_64 only per the CESoPSN plan policy (customer arm64 modem
+  stays on xcesp-modem:0.4.73-arm64).
+
 ## 0.4.80
 
 - **Fix (Phase 5): FRG mapping aligned to the observed TDMoIP peer.**
