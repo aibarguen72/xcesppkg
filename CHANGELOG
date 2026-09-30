@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.4.74
+
+- **CAS/CESoPSN plan — Phase 1 lands.**  New attrs on `domain`
+  (`cas-multiframe`) and `tdm-pw` (`wire-multiframe`, `ts16data`),
+  new `pw-bind` enum value `loopback-ces`, all reachable through
+  the config surface with strict commit-time gates but no runtime
+  behaviour change.  Any real use of these attrs still hits the
+  Phase-1 rejects in `TdmPwPObj::checkPhase1Restrictions`; the
+  attribute space is here so operator configs stay forward-
+  compatible with phases 2–8 of the plan.
+- Bundled versions: xcespserver 0.4.13, xcespcli 0.3.14, xcespproc
+  0.2.68, xcespwdog 0.2.0, xcesp-on-xc 0.2.34, xcesp-on-pw 0.3.14,
+  xcesp-on-rtr 0.2.22, evapplication 0.1.2.
+- Existing lab tdm-pw configs (payload=8, defaults everywhere)
+  pass the new gates unchanged.
+- **x86_64 only.**  Per operator decision, every CAS/CESoPSN plan
+  release ships x86_64 only — ARM edge devices don't have the
+  per-cycle performance required for frame-level CESoPSN
+  processing.  The xcesp-modem arm64 container the customer's
+  Wistron ONT runs stays on 0.4.73 (no CSD or modem path changes
+  here).  arm64 tarball can be retro-fitted later via
+  `gh release upload v0.4.74 xcespkg-arm64-0.4.74.tgz` if
+  needed.
+
 ## 0.4.73
 
 - **Fix (real): rotator writes straight to `xcesp.log`.**  0.4.72's
