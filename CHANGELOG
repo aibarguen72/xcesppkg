@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.4.80
+
+- **Fix (Phase 5): FRG mapping aligned to the observed TDMoIP peer.**
+  0.4.79 had `LAST=11` and `INTERMEDIATE=10`; tcpdump against
+  the operator's lab peer at 192.168.23.201 showed the actual
+  wire convention is `LAST=10` (135-byte fragments with CAS) and
+  `INTERMEDIATE=11` (120-byte data-only fragments).  Swap
+  restores 1:1 RX:TX on payload=4 and clears peer's LOS.
+- Non-fragmented Phase-4 traffic still emits `FRG_WHOLE = 00` —
+  no wire-bit change for that path.
+- Bundled: xcespserver 0.4.13, xcespcli 0.3.14, xcespproc 0.2.74,
+  xcespwdog 0.2.0, xcesp-on-xc 0.2.34, xcesp-on-pw 0.3.21,
+  xcesp-on-rtr 0.2.22, evapplication 0.1.2.
+- x86_64 only per CESoPSN plan policy.
+
 ## 0.4.79
 
 - **Fix (Phase 5): FRG codepoint mapping per RFC 4623 §4.2.1.**
