@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.4.77
+
+- **Fix (Phase-4 follow-up): CAS presence now driven by
+  `signaling` config, not CW's F bit.**  0.4.76 (Phase 4) read
+  `cw.f` in `onCesoPsnPayload`, which silently failed decode
+  against any RFC-5086-compliant peer — they send F=0 (byte-1
+  reserved bits) even when the packet carries a CAS
+  substructure.  Live lab symptom: rx-good-packets advanced
+  normally, tx-packets stuck at 0.  Fixed via xcesp-on-pw 0.3.18
+  + xcespproc 0.2.71 relink.
+- Bundled versions: xcespserver 0.4.13, xcespcli 0.3.14, xcespproc
+  **0.2.71** (relink), xcespwdog 0.2.0, xcesp-on-xc 0.2.34,
+  xcesp-on-pw **0.3.18** (fix), xcesp-on-rtr 0.2.22, evapplication
+  0.1.2.
+- x86_64 only per CESoPSN plan policy.
+
 ## 0.4.76
 
 - **CAS/CESoPSN plan — Phase 4 lands.**  `bind=loopback-ces` on a
