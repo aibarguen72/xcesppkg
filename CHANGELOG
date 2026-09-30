@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.4.79
+
+- **Fix (Phase 5): FRG codepoint mapping per RFC 4623 §4.2.1.**
+  0.4.78 shipped with inverted codepoints — LAST was 01, FIRST
+  was 10 — incompatible with RFC-compliant peers.  Symptom on the
+  operator's lab pw1 (payload=4, wire-mf=16, signaling=true):
+  peer sends fragments with FRG 01,10,10,11; we decoded 01 and
+  11 with the wrong withCas → half of RX packets silently failed
+  decode → TX at half the RX rate, peer LOS.  0.4.79 swaps the
+  codepoints to match the RFC.
+- Non-fragmented Phase-4 traffic (FRG=WHOLE=00) is byte-identical
+  on the wire to any earlier release; the fix affects only
+  fragmentation-enabled configs.
+- Bundled: xcespserver 0.4.13, xcespcli 0.3.14, xcespproc 0.2.73,
+  xcespwdog 0.2.0, xcesp-on-xc 0.2.34, xcesp-on-pw 0.3.20,
+  xcesp-on-rtr 0.2.22, evapplication 0.1.2.
+- x86_64 only per CESoPSN plan policy.
+
 ## 0.4.78
 
 - **CAS/CESoPSN plan — Phase 5 lands: fragmentation.**  Reordered
