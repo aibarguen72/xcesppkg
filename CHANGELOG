@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.75
+
+- **CAS/CESoPSN plan — Phase 3 lands.**  `bind=loopback-ces` on a
+  `tdm-pw` now runs the frame-level pipeline (decode via
+  CesoPsnFrameCodec → per-frame RX hook → per-frame TX hook →
+  accumulator → re-encode → txPacket).  With `signaling=false`
+  (Phase 3 gate; Phase 4 lifts to CAS) wire behaviour is
+  byte-identical to `bind=loopback`, but the code path exercised
+  is the one the real binds (tdmtester, ds0xc, ...) will use.
+- Bundled versions: xcespserver 0.4.13, xcespcli 0.3.14, xcespproc
+  **0.2.69** (relink), xcespwdog 0.2.0, xcesp-on-xc 0.2.34,
+  xcesp-on-pw **0.3.16** (Phase 3 code), xcesp-on-rtr 0.2.22,
+  evapplication 0.1.2.
+- x86_64 only per the CESoPSN plan policy — every plan phase ships
+  x86 only; arm64 stays on 0.4.73 for the customer's modem device
+  (no CSD or modem-path change here).
+
 ## 0.4.74
 
 - **CAS/CESoPSN plan — Phase 1 lands.**  New attrs on `domain`
