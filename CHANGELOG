@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.4.82
+
+- **feat (Phase 6): CAS cross-cadence adapter + `bind=loopback-domain`.**
+  Lets you bridge a peer with E1 CAS cadence (16-multiframe) to a
+  local domain configured with T1 CAS cadence (24-multiframe) or
+  vice-versa.  The RX adapter picks a drop-first-last / dup-first-
+  last schedule over the 48-frame LCM window; TX re-rendering falls
+  out of the codec's natural wire-cadence packet-close rhythm.
+- `loopback-domain` loops at the post-adapter internal-cadence
+  point so operators can validate the adapter against any existing
+  CESoPSN peer (no T1 emitter required).  `loopback-ces` continues
+  to work bit-identically and is still required for equal-cadence
+  loopback (the two loopbacks are not interchangeable; the diag
+  message points at the right one).
+- `show tdm-pw-cesopsn` header gains a `cadence:` line and the
+  sample-counter block gains `rxCasInternal` / `txCasInternal`.
+  Their ratio vs. `rxData` / `txData` is the domain cadence (16
+  for E1, 24 for T1), independent of the peer's wire cadence.
+- Bundles xcesp-on-pw 0.3.23, xcespcli 0.3.16, xcespproc 0.2.76,
+  xcesptest 0.4.26.
+- x86_64 only per the CESoPSN plan policy.
+
 ## 0.4.81
 
 - **feat (Phase 8): CESoPSN per-slot snapshot + `show
