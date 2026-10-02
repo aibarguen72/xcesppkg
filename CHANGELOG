@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.86
+
+- **feat: `test-drop-tx-percent` — symmetric TX-side drop knob.**
+  Companion to `test-drop-rx-percent` from 0.4.85.  Suppresses
+  ~N% of outbound packets at the last moment while keeping the
+  local `txSentPackets` counter advancing normally, so the local
+  pw looks healthy while the remote end sees true wire loss.
+  Use it to drive remote-end LOS, Phase-7 synthesis, protection
+  switchover, etc., without touching the medium.
+- Decision is made once per `txPacket` call so protected PWs
+  drop both legs together — simulates a both-wire outage rather
+  than a selective leg loss.
+- `show tdm-pw-cesopsn` renders both knobs on one `test-drop:`
+  line when either is active.
+- Bundles xcesp-on-pw 0.3.27, xcespcli 0.3.18, xcespproc 0.2.80,
+  xcesptest 0.4.30.  x86_64 only per CESoPSN plan.
+
 ## 0.4.85
 
 - **feat (Phase 7): RX sequence-gap synthesis + deterministic
