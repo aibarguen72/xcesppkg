@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.4.84
+
+- **fix: `ts16data` gate narrowed to timeslots>=16.**  Previously
+  rejected any T1-shaped PW (wire-multiframe=24) with the default
+  `ts16data=true`, even when `timeslots<16` makes the flag a
+  don't-care.  Fix lets T1 CESoPSN pseudowires with small
+  timeslot counts stay UP without having to explicitly disable
+  `ts16data`.
+- Bundles xcesp-on-pw 0.3.25, xcespproc 0.2.78, xcesptest 0.4.28
+  (xcespcli 0.3.16 unchanged, re-bundled).
+
 ## 0.4.83
 
 - **fix (Phase 6 polish): loopback-ces no longer gated on
