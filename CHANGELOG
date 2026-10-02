@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.4.85
+
+- **feat (Phase 7): RX sequence-gap synthesis + deterministic
+  drop knob.**  On an RX sequence gap of ≤ `max-gap-frames`,
+  the pipeline fills with the last-seen real data+CAS pattern
+  before processing the next packet.  Downstream TDM sees a
+  short "silence at last known pattern" instead of a dropped
+  packet; peer stays happy.
+- **`max-gap-frames` config attribute**: cap on synthesis
+  (default 32 = 2 × 16 ≈ 4 ms of TDM).  Beyond the cap the pw
+  bumps `rxSynthLossEvents_` instead of filling — a long outage
+  no longer produces a huge synthetic burst.  Set to 0 to
+  disable synthesis entirely.
+- **`test-drop-rx-percent` config attribute** (0..100):
+  deterministic RX-side drop injector for test harnesses — N%
+  of incoming data packets are dropped before the sequence
+  tracker so the synthesis path fires naturally.
+- **`show tdm-pw-cesopsn`** gains a `synth:` line showing
+  `frames / events / loss / max-gap / cap` plus the test-drop
+  rate and dropped-packet count when the knob is active.
+- Bundles xcesp-on-pw 0.3.26, xcespcli 0.3.17, xcespproc
+  0.2.79, xcesptest 0.4.29.  x86_64 only per CESoPSN plan.
+
 ## 0.4.84
 
 - **fix: `ts16data` gate narrowed to timeslots>=16.**  Previously
