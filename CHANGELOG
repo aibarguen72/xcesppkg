@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.83
+
+- **fix (Phase 6 polish): loopback-ces no longer gated on
+  domain cas-multiframe.**  0.4.82 introduced a check requiring
+  `wire-multiframe == domain.cas-multiframe` for loopback-ces,
+  carried from the Phase-5 implementation.  loopback-ces actually
+  loops at wire cadence and never touches the internal-cadence
+  stream, so a mismatched `domain.cas-multiframe` is harmless.
+  Fixed so operators can change `domain.cas-multiframe` without
+  dropping their existing loopback-ces pseudowires.
+- **fix: `ts16data` gate keys off `wire-multiframe`.**  It's a
+  wire layout attribute; pre-Phase-6 wire-mf and internal-mf were
+  always equal so the mismatch never bit — Phase 6 cross-cadence
+  made it visible.
+- Bundles xcesp-on-pw 0.3.24, xcespproc 0.2.77 (xcespcli 0.3.16
+  and xcesptest 0.4.27 unchanged from 0.4.82 bundle contents).
+
 ## 0.4.82
 
 - **feat (Phase 6): CAS cross-cadence adapter + `bind=loopback-domain`.**
