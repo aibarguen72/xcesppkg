@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.4.87
+
+- **feat (Phase D1 of the domain-processing plan): XC
+  service-engine skeleton + clock-selection schema.**
+  Operators can now define the full `xc { endpoint / service /
+  chain / condition }` and `clock { clock-source }` configuration
+  surface.  Commit-time sanity enforces timeslot syntax ([1..31],
+  comma + range lists, operator order preserved), backup
+  endpoint symmetry (same slot count main vs backup), copy
+  service role rules (≤1 master, ≤1 slave at 3+ endpoints),
+  priority ranges, and clock-source uniqueness.
+- No runtime pipeline effect yet — `bind=ds0xc`/`ds1xc` stays
+  commit-rejected until Phase D2 wires the FIFO + pacemaker tick
+  + bind integration.
+- Bundles xcesp-on-xc 0.2.35, xcesp-on-pw 0.3.28, xcespproc
+  0.2.81, xcesptest 0.4.31.  x86_64 only per CESoPSN plan.
+
 ## 0.4.86
 
 - **feat: `test-drop-tx-percent` — symmetric TX-side drop knob.**
