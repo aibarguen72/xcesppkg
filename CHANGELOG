@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.90
+
+- **fix: XC + clock cross-reference checks now fire at `check` /
+  `commit`, not only at runtime.**  Extended
+  `xcesptest/schema/domain.validate.py` with a nested-block
+  parser and all six cross-reference checks.  Previously the
+  dangling references were only visible as runtime `lldReason`
+  on the owning PObj — `check` reported "Configuration checked
+  OK" and the commit went through.  Now the operator sees a
+  precise error list at commit time naming the missing entities
+  and the valid ones that WERE defined.
+
 ## 0.4.89
 
 - **fix: cross-reference checks fire correctly now.**  The 0.4.88
