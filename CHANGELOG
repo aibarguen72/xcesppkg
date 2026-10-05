@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.4.89
+
+- **fix: cross-reference checks fire correctly now.**  The 0.4.88
+  clock-source check silently accepted dangling references
+  because `clock.py` was reading siblings from `data["parent"]`
+  but xcespmap passes only the direct parent's attrs there, not
+  its children.  Switched to `NEEDS_FULL_CONFIG` and dropped the
+  empty-set bail-out on all five XC/clock checks.
+- Bundles xcesp-on-xc 0.2.37, xcesp-on-pw 0.3.30, xcespproc
+  0.2.83, xcesptest 0.4.33.
+
 ## 0.4.88
 
 - **fix (Phase D1 polish): four UX issues surfaced by lab
