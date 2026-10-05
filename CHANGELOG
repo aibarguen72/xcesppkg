@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.4.88
+
+- **fix (Phase D1 polish): four UX issues surfaced by lab
+  validation.**
+  1. Clock-source and XC entity cross-references are now checked
+     at commit.  Dangling `clock-source`, `service.chain`,
+     `service.endpoint`, `chain.condition`, `endpoint.pw` /
+     `endpoint.bkp-pw` / `endpoint.bkp-condition`, and
+     `probe-condition.condition` references each LLD the owning
+     pw with a precise reason.
+  2. `default` (probe-debug), `bkp-when-value` (endpoint), and
+     `enable-when` (chain) now render as `attr true` / `attr
+     false` instead of `[no] attr`.  Shutdown / invert keep the
+     `[no]` form (self-documenting).
+  3. `set-data` / `set-cas` on xc-service-set accept hex strings
+     (bare `AA`, `0xAA`, lower-case).  Invalid hex LLDs the pw
+     at commit.
+- Bundles xcesp-on-xc 0.2.36, xcesp-on-pw 0.3.29, xcespproc
+  0.2.82, xcesptest 0.4.32.  x86_64 only per CESoPSN plan.
+
 ## 0.4.87
 
 - **feat (Phase D1 of the domain-processing plan): XC
