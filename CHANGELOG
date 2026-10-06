@@ -1,5 +1,41 @@
 # Changelog - xcesppkg
 
+## 0.5.0
+
+- **Phase D3 shipped clean: `set` service.**  Operator config:
+
+      xc
+        xc-chain ch1
+          level ds0
+        !
+        xc-service s-aa
+          chain ch1
+          type set
+          level ds0
+          xc-endpoint e1
+            pw pw1
+            timeslots 1-10
+          !
+          xc-service-set
+            set-data AA
+          !
+        !
+      !
+
+  Writes `0xAA` into timeslots 1-10 of pw1 on each pacemaker
+  tick.  Peer sees it on the wire.  Chain priority + per-service
+  priority both honored; shutdown gates on either stop the
+  service running.  CAS variant writes `set-cas` into those
+  slots on signaling pws.
+- Phase D3 diagnostics stripped (loader + engine + rule entry
+  prints).  worker.py keeps traceback-on-exception as a cheap
+  safety net for future rule bugs; expected FileNotFoundError
+  on missing rule files is silenced.
+- Minor version bumped from 0.4 to 0.5 to mark the per-domain
+  service pipeline being functional end-to-end.
+- Bundles xcesp-on-xc 0.2.43, xcesp-on-pw 0.3.35, xcespproc
+  0.2.92, xcesptest 0.4.45.
+
 ## 0.4.99
 
 - **fix: config-to-objects rules for xc + clock return the
