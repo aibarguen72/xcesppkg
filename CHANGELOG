@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.4.97
+
+- **diag: XcEngine stderr logs** on enroll / handler-install /
+  per-tick dispatch / applySetData.  Rate-limited to first 3
+  ticks + every 1000th.  Lets operators grep xcespproc output
+  to see why a `set` service may not be writing to the wire.
+  Will be stripped once D3 is verified.
+- Bundles xcesp-on-xc 0.2.40, xcespproc 0.2.89, xcesptest 0.4.41.
+
 ## 0.4.96
 
 - **feat (Phase D3): XC service engine + `set` service.**
