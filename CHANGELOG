@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.93
+
+- **fix (Phase D2 polish): CasCadenceAdapter is now wired for
+  ds0xc / ds1xc binds.**  0.4.92 constructed the adapter only
+  for loopback-domain, so operators running an ds0xc pw with
+  mismatched wire-multiframe vs domain.cas-multiframe would see
+  `adapter=none` + `rxCasInternal=0` in the status.  Both xc
+  binds now instantiate the adapter and route wire CAS through
+  it before the per-domain tick.
+- Bundles xcesp-on-pw 0.3.32, xcespproc 0.2.86, xcesptest
+  0.4.37 (xcespcli 0.3.19 unchanged, re-bundled).
+
 ## 0.4.92
 
 - **feat (Phase D2): enable `bind = ds0xc` / `ds1xc` with the
