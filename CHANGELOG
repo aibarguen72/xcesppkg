@@ -1,5 +1,40 @@
 # Changelog - xcesppkg
 
+## 0.4.96
+
+- **feat (Phase D3): XC service engine + `set` service.**
+  First service type live.  Operator config:
+
+      xc
+        xc-chain ch1
+          level ds0
+          priority 1
+        !
+        xc-service s-aa
+          chain ch1
+          type set
+          level ds0
+          xc-endpoint e1
+            pw pw1
+            timeslots 1-10
+          !
+          xc-service-set
+            set-data AA
+            set-cas 5
+          !
+        !
+      !
+
+  `set-data AA` writes `0xAA` into every data byte of timeslots
+  1-10 on pw1 on each pacemaker tick.  `set-cas 5` writes the
+  CAS nibble `0x5` into the same slots on every CAS tick (if
+  pw1 has `signaling`).  Multiple services per chain run in
+  priority order, chains run in priority order (1 = highest).
+  Shutdown gates at service and chain level.  `copy` service
+  lands in D4.
+- Bundles xcesp-on-xc 0.2.39, xcesp-on-pw 0.3.34, xcespproc
+  0.2.88, xcesptest 0.4.40.
+
 ## 0.4.95
 
 - **fix: `show tdm-pw-cesopsn` hides internal-mf / adapter on
