@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.4.95
+
+- **fix: `show tdm-pw-cesopsn` hides internal-mf / adapter on
+  the cadence line when signaling is off.**  Pairs with the
+  0.4.94 CAS-suppression work — these two attrs are CAS-only
+  concepts and were still showing on non-signaling pws.  Wire-mf
+  stays (also affects data layout).
+- Bundles xcespcli 0.3.21, xcesptest 0.4.39 (xcesp-on-pw,
+  xcespproc unchanged from 0.4.94).
+
 ## 0.4.94
 
 - **fix: `show tdm-pw-cesopsn` hides CAS-related output when
