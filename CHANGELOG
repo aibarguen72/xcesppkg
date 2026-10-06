@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.4.94
+
+- **fix: `show tdm-pw-cesopsn` hides CAS-related output when
+  signaling is off.**  rxCas/txCas counters, the
+  rxCasInternal / txCasInternal line, the cas-fifo line in the
+  xc section, the CAS table, and the TS16 note are all noise
+  when CAS doesn't exist on the wire — suppressed.  The
+  header line gains an explicit `signaling=true/false` so the
+  operator sees the config at a glance.
+- Bundles xcesp-on-pw 0.3.33, xcespcli 0.3.20, xcespproc 0.2.87,
+  xcesptest 0.4.38.
+
 ## 0.4.93
 
 - **fix (Phase D2 polish): CasCadenceAdapter is now wired for
