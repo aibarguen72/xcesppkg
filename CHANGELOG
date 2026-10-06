@@ -1,5 +1,42 @@
 # Changelog - xcesppkg
 
+## 0.4.92
+
+- **feat (Phase D2): enable `bind = ds0xc` / `ds1xc` with the
+  jitter FIFO + pacemaker-driven per-domain tick.**  First
+  milestone of the domain-processing pipeline.  Operators can
+  now:
+
+      domain tdm
+        cas-multiframe 16
+        fifo-data-depth-frames    16      # domain default
+        fifo-cas-depth-multiframes 2      # domain default
+        tdm-pw pw1
+          bind ds0xc
+          type cesopsn
+          signaling
+          ...
+        !
+        tdm-pw pw2
+          bind ds0xc
+          type cesopsn
+          signaling
+          ...
+        !
+      !
+
+  First pw to receive a frame claims the pacemaker role and
+  drives the tick; others buffer RX frames into their FIFO.
+  D2's pipeline is identity-passthrough (no services yet) —
+  every pw's TX emits a zero-filled frame on each tick, so peers
+  see idle traffic at the pacemaker's cadence.  Service engine
+  arrives in D3 (`set` service), D4 (`copy`), onward.
+- `show tdm-pw-cesopsn` shows the pacemaker flag and FIFO state
+  (data + CAS: filling/draining/underflow, current/max depth,
+  under/overflow events) on each ds0xc/ds1xc pw.
+- Bundles xcesp-on-pw 0.3.31, xcespcli 0.3.19, xcespproc 0.2.85,
+  xcesptest 0.4.36.
+
 ## 0.4.91
 
 - **feat (Phase D1B): merge xc-endpoint + xc-service-endpoint
