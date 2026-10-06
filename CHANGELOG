@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.4.99
+
+- **fix: config-to-objects rules for xc + clock return the
+  parser-expected shape.**  xcespmap's `parseObjectDefs` requires
+  each returned element to be `{"section": "...", "attrs": {...}}`
+  and silently drops any element where `section` is empty.
+  Phase D1 shipped the four new rules (xc-service, xc-chain,
+  xc-condition, clock) returning a flat `{...}` instead, so
+  every XcService / XcChain / XcCondition / PwClock PObj was
+  silently dropped before reaching the server's object list.
+  That's why `set` service in D3 never wrote anything — the
+  server never created the service object, so the engine never
+  enrolled, no tick handler was installed, pacemaker fallback
+  path emitted idle zeros.
+- Also bundles xcesptest 0.4.44 with the deeper worker.py
+  diagnostics (traceback-on-exception) that found this bug.
+- Bundles xcesp-on-xc 0.2.42, xcesp-on-pw 0.3.35, xcespproc
+  0.2.91, xcesptest 0.4.44.
+
 ## 0.4.98
 
 - **diag (D3): deeper XcService/XcChain loader tracing.**
