@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.4.98
+
+- **diag (D3): deeper XcService/XcChain loader tracing.**
+  Each loadConfig prints at entry, exit, and every cross-ref
+  failure, so we can tell whether services/chains are even
+  being instantiated or if they're silently failing before
+  reaching enrollment.
+- Bundles xcesp-on-xc 0.2.41, xcespproc 0.2.90, xcesptest 0.4.42.
+
 ## 0.4.97
 
 - **diag: XcEngine stderr logs** on enroll / handler-install /
