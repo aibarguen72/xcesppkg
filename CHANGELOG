@@ -1,5 +1,33 @@
 # Changelog - xcesppkg
 
+## 0.4.91
+
+- **feat (Phase D1B): merge xc-endpoint + xc-service-endpoint
+  into one node under xc-service.**  Operator-facing simpler
+  shape — each service declares its own endpoints inline:
+
+      xc-service svc1
+        chain ch1
+        level ds0
+        type copy
+        xc-endpoint e-a
+          pw pw1
+          timeslots 1-5
+          role master
+        !
+        xc-endpoint e-b
+          pw pw2
+          timeslots 1-5
+          role none
+        !
+        xc-service-copy !
+      !
+
+  Trade-off: no cross-service endpoint sharing (declared inline
+  per service).  Validator + XcServicePObj loader updated to
+  match.  Bundles xcesp-on-xc 0.2.38, xcespproc 0.2.84,
+  xcesptest 0.4.35.
+
 ## 0.4.90
 
 - **fix: XC + clock cross-reference checks now fire at `check` /
