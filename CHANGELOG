@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.5.9
+
+- **Phase D8 — sprint polish + end-to-end verify.**  Bundles
+  xcespserver 0.4.16, xcespcli 0.3.25, xcespproc 0.2.101,
+  xcespwdog 0.2.0.
+  - `show services name <s>` detail now carries a `CondVal`
+    column showing the gating condition's live boolean, so
+    operators can explain Path=main even when a backup is
+    wired (`CondVal != BkpWhen` -> main).
+  - XcChain JSON name uses config-mode instance (`ch1`),
+    matching the D7 polish to XcService.
+  - Full D5+D6+D7 integration lab-verified: clock arbitration
+    stays stable across chain gating / backup switches; gate
+    takes precedence over backup; every transition lands
+    within one pacemaker tick.
+
 ## 0.5.8
 
 - Bundles xcespserver 0.4.16, xcespcli 0.3.24, xcespproc
