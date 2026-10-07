@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.5.7
+
+- Bundles xcespserver 0.4.15, xcespcli 0.3.23, xcespproc 0.2.99,
+  xcespwdog 0.2.0 with **Phase D6 — conditions, probes, chain
+  gating**:
+  - `xc-condition <name>` under a domain's `xc` block, combining
+    `xc-probe-debug` (operator toggle, default from config) and
+    `xc-probe-condition` (reference another condition, optional
+    `invert`) under AND or OR.  Cycle-safe evaluation.
+  - `xc-chain` gates on `condition <name> enable-when {true|false}`
+    — a chain is skipped when the condition's live value differs.
+  - `show conditions [name <c>] domain <D>` prints the live
+    arbitration view; `do-probe <condition> <probe>
+    {true|false} domain <D>` toggles a debug probe at runtime
+    (survives config reload if the probe stays).
+
 ## 0.5.6
 
 - Bundles xcespserver 0.4.14, xcespcli 0.3.22, xcespproc 0.2.98,
