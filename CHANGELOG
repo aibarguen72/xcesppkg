@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.5.8
+
+- Bundles xcespserver 0.4.16, xcespcli 0.3.24, xcespproc
+  0.2.100, xcespwdog 0.2.0 with **Phase D7 — backup endpoints**:
+  an `xc-endpoint` can carry a `bkp-pw`/`bkp-timeslots` pair
+  gated by `bkp-condition` + `bkp-when-value`.  When the gating
+  condition matches, the engine swaps that endpoint's live
+  pw+slots within one tick (data and CAS phases stay on the
+  same resolved path).  Dangling backup-condition → stay on
+  main (fail-safe).  New `show services [name <s>] domain <D>`
+  verb surfaces the per-endpoint `Path` column (`main` /
+  `BACKUP`).
+
 ## 0.5.7
 
 - Bundles xcespserver 0.4.15, xcespcli 0.3.23, xcespproc 0.2.99,
