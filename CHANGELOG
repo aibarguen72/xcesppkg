@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.5.6
+
+- Bundles xcespserver 0.4.14, xcespcli 0.3.22, xcespproc 0.2.98,
+  xcespwdog 0.2.0 with the **D5 LOS-aware fix**:
+  `TdmPwPObj::isUp()` now reads `status_.up` directly
+  (`!(lld || overall-los)`) so a pw whose peer went silent drops
+  out of pacemaker candidacy and the next-priority UP source
+  wins.  Lab-verified: pw1 in LOS -> pw2 (priority 2) promoted
+  to ACTIVE.
+
 ## 0.5.5
 
 - Bundles xcespserver 0.4.14, xcespcli 0.3.22, xcespproc 0.2.97,
