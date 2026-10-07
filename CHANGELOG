@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.5.1
+
+- **feat (Phase D4): `copy` service.**  Second service type.
+  Writes the RX bytes of one endpoint into the TX bytes of
+  another on each pacemaker tick, with role-based direction
+  logic:
+    - **2 endpoints**: bidirectional A↔B (roles ignored).
+    - **3+ endpoints**: exactly one `master` (required), ≤1
+      `slave`, rest `none`.  Master → slave + rest (none);
+      slave → master.  No slave → unidirectional.
+  Timeslot pairing in ds0 is by list-index position; ds1
+  copies the full pw-wide slot range.  Loader catches
+  mismatched slot counts across endpoints with a precise
+  lldReason at commit.  CAS variant copies CAS nibbles on
+  signaling source pws.
+- Bundles xcesp-on-xc 0.2.44, xcesp-on-pw 0.3.35, xcespproc
+  0.2.93, xcesptest 0.4.46.
+
 ## 0.5.0
 
 - **Phase D3 shipped clean: `set` service.**  Operator config:
