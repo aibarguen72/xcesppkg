@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.3
+
+- **fix: 0.5.2 shipped a FIFO auto-floor that wasn't actually in
+  the binary.**  Compile error on `log_` member access (fixed to
+  `log_->log` since it's a pointer) + a makefile-default-goal
+  trap in `xcesp-on-pw` (`-include $(DEPS)` was before `all:` so
+  the first .d rule hijacked the default target).  Now the
+  auto-raise log line is in the shipped xcespproc.  Bundles
+  xcesp-on-pw 0.3.37, xcespproc 0.2.95, xcesp-on-xc 0.2.44,
+  xcesptest 0.4.48.
+
 ## 0.5.2
 
 - **feat (D4 polish): FIFO depths auto-floor at loadConfig.**
