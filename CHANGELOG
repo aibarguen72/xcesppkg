@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.5.4
+
+- **tune: FIFO auto-floor at 4 × payload** (was 2× in 0.5.3).
+  Operator's 2-pw lab test with 0.5.3 showed overflow fixed
+  but ~10% underflow — pre-fill landed at depth/2 = 1× payload,
+  so a single adverse pull-cycle drained to 0.  Doubling the
+  floor puts pre-fill at 2× payload and steady-state in
+  [1×payload .. 3×payload], absorbing 2 adverse cycles either
+  direction.
+- Bundles xcesp-on-pw 0.3.38, xcesp-on-xc 0.2.44, xcespproc
+  0.2.96, xcesptest 0.4.49.
+
 ## 0.5.3
 
 - **fix: 0.5.2 shipped a FIFO auto-floor that wasn't actually in
