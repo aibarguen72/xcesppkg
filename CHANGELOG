@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.5.5
+
+- Bundles xcespserver 0.4.14, xcespcli 0.3.22, xcespproc 0.2.97,
+  xcespwdog 0.2.0 with the **Phase D5 clock-source arbitration**
+  landing.  Each tdm-pw domain can carry one `clock` block whose
+  `clock-source` children name candidate pseudowires with
+  `priority 1..100` (1=highest) and `wtr 0..3600s` (continuous-UP
+  wait-to-restore).  `PwClockPObj` picks the highest-priority
+  stable candidate on every pacemaker tick; empty candidate list
+  = pipeline idle (no first-RX fallback).  Operator view via
+  `show clock [domain D]`.
+
 ## 0.5.4
 
 - **tune: FIFO auto-floor at 4 × payload** (was 2× in 0.5.3).
