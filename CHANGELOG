@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.5.2
+
+- **feat (D4 polish): FIFO depths auto-floor at loadConfig.**
+  Operator-reported case: payload=24 with domain-default
+  fifo-data-depth-frames=16 ran the copy service correctly but
+  hammered the FIFO with ~9k overflow drops + ~7k underflow
+  replays per minute (every 24-frame packet burst overflowed
+  8 slots, then the pulls underflowed 8).  Fix: at loadConfig,
+  auto-raise `fifo-data-depth-frames` to `2 × payload` and
+  `fifo-cas-depth-multiframes` to 4 (adapter-inflate margin)
+  when below those floors.  Operators who want deeper jitter
+  margin can still override higher.  INFO log line fires on
+  each auto-raise so the bump is visible.
+- Bundles xcesp-on-pw 0.3.36, xcesp-on-xc 0.2.44, xcespproc
+  0.2.94, xcesptest 0.4.47.
+
 ## 0.5.1
 
 - **feat (Phase D4): `copy` service.**  Second service type.
