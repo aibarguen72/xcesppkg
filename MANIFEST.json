@@ -1,7 +1,9 @@
 {
   "version": "0.5.15",
   "x86_64": "xcespkg-0.5.15.tar.gz",
+  "arm64":  "xcespkg-arm64-0.5.15.tgz",
   "sha256": {
-    "x86_64": "43aaa1de6438c1fa378b1bbd8b25bc75862a26708f277bd8fe2a0b144d9687f3"
+    "x86_64": "43aaa1de6438c1fa378b1bbd8b25bc75862a26708f277bd8fe2a0b144d9687f3",
+    "arm64":  "b652615bf359495021d0324c445e9cecd3062fc73b919e55d507511100961eb4"
   }
 }
