@@ -106,6 +106,9 @@ Optional:
                           after 3 consecutive primary failures;
                           every renewal cycle on backup it probes
                           primary first and reverts on success.
+  --csd-timeout <SEC>     tear down CSD data call after SEC seconds
+                          of zero traffic in either direction.
+                          0 or unset = disabled (default).
   --rvp-port <N>          default 8888
   --rvp-renewal <SEC>     REGISTER cadence (default 300)
   --tcp-port <N>          transport TCP port (default 5001)
@@ -169,7 +172,7 @@ action_start() {
     # --- defaults ---
     local IMAGE="$DEFAULT_IMAGE" CONTAINER_NAME="$DEFAULT_NAME"
     local SERIAL_DEV="" MSISDN="" RVP_IP="" RVP_IP_BKP="" RVP_PORT="8888"
-    local RVP_RENEWAL_SEC="" TRANSPORT_IP=""
+    local RVP_RENEWAL_SEC="" TRANSPORT_IP="" CSD_TIMEOUT_SEC=""
     local TRANSPORT_TCP_PORT="5001" TRANSPORT_UDP_PORT="5011"
     local DTE_BAUD="9600" CRYPTO_PASSPHRASE="" SYSTEM_NAME=""
     local NETWORK_MODE="host" STATE_DIR="" DETACH="-d" DRY_RUN=0
@@ -194,6 +197,7 @@ action_start() {
             --rvp-bkp)       RVP_IP_BKP=$2; shift 2 ;;
             --rvp-port)      RVP_PORT=$2; shift 2 ;;
             --rvp-renewal)   RVP_RENEWAL_SEC=$2; shift 2 ;;
+            --csd-timeout)   CSD_TIMEOUT_SEC=$2; shift 2 ;;
             --transport-ip)  TRANSPORT_IP=$2; shift 2 ;;
             --tcp-port)      TRANSPORT_TCP_PORT=$2; shift 2 ;;
             --udp-port)      TRANSPORT_UDP_PORT=$2; shift 2 ;;
@@ -278,6 +282,7 @@ action_start() {
     [ -n "$CRYPTO_PASSPHRASE" ]  && env_args+=(-e "CRYPTO_PASSPHRASE=$CRYPTO_PASSPHRASE")
     [ -n "$RVP_RENEWAL_SEC" ]    && env_args+=(-e "RVP_RENEWAL_SEC=$RVP_RENEWAL_SEC")
     [ -n "$RVP_IP_BKP" ]         && env_args+=(-e "RVP_IP_BKP=$RVP_IP_BKP")
+    [ -n "$CSD_TIMEOUT_SEC" ]    && env_args+=(-e "CSD_TIMEOUT_SEC=$CSD_TIMEOUT_SEC")
     if [ -n "$LICENSE_AUTH" ]; then
         # Fail fast if the interface doesn't exist on the host.  Under
         # --network=host the container will read the same /sys, so if

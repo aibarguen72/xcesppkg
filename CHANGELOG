@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.5.12
+
+- **M3 — CSD idle timeout.**  Bundles xcespserver 0.4.16,
+  xcespcli 0.3.28, xcespproc 0.2.104, xcespwdog 0.2.0.
+  - New optional `attr csd-timeout` (seconds, 0 = disabled,
+    default 0 — pre-M3 behaviour).  When a call is up and no
+    byte has moved in either direction for the configured
+    window, the modem tears the call down the same way
+    `actHangup` does (socket close + `onCallDown("16")`).
+    Fix for RTUs where a mishandled `+++` leaves both ends
+    stuck with a call that no DTE will drop.
+  - `show modem <name>` adds `CSD timeout:` (when non-zero)
+    and `CSD idle:` (while a call is up) lines.
+  - Docker: `CSD_TIMEOUT_SEC` env (`entrypoint.sh`) +
+    `--csd-timeout <SEC>` flag on `xcesp-modem.sh start`.
+
 ## 0.5.11
 
 - **M2 — show pstn-rvp pagination + filter.**  Bundles

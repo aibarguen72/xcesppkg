@@ -136,6 +136,11 @@ if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
     if [ -n "${CRYPTO_PASSPHRASE:-}" ]; then
         echo "    crypto-passphrase $CRYPTO_PASSPHRASE"
     fi
+    # M3 CSD idle-timeout.  Unset or 0 = feature disabled (clean
+    # schema diff).  Positive integer arms the sweep.
+    if [ -n "${CSD_TIMEOUT_SEC:-}" ] && [ "$CSD_TIMEOUT_SEC" != "0" ]; then
+        echo "    csd-timeout $CSD_TIMEOUT_SEC"
+    fi
     # Optional `dte-lines` child.  Emitted only when at least one
     # DTE_*_SOURCE env var is set — matches the schema convention that
     # every source attr defaults to `none` (no physical mapping).
