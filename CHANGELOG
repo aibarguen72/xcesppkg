@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.5.14
+
+- **M5 — AT+XMSISDN live MSISDN get/set.**  Bundles
+  xcespserver 0.4.16, xcespcli 0.3.29, xcespproc 0.2.106,
+  xcespwdog 0.2.0.
+  - `AT+XMSISDN?` (or bare `AT+XMSISDN`) reads the current
+    MSISDN; `AT+XMSISDN=?` reports syntax hint;
+    `AT+XMSISDN="<val>"` validates `+?[0-9]+`, atomically
+    rewrites the sidecar, and re-arms the PstnRvpClient
+    with the new value — no restart needed.
+  - Rejected with `+CME ERROR` on modems whose MSISDN is
+    pinned by config, or on invalid syntax.
+  - Also fixes an M4 bring-up bug: a modem with `msisdn
+    user` + empty sidecar now correctly reports
+    `Licensed: false` (previously the atomic kept its
+    default `true`, masking the dormant state).
+
 ## 0.5.13
 
 - **M4 — MSISDN sidecar file.**  Bundles xcespserver 0.4.16,
