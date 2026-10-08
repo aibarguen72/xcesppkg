@@ -1,5 +1,30 @@
 # Changelog - xcesppkg
 
+## 0.5.15
+
+- **M6 — docker `msisdn` verb.**  New
+  `xcesp-modem.sh msisdn [--modem <name>] [<value>]` action:
+  - No value → cat the first non-blank non-comment line
+    from the host-side `<state>/modem/modem_<name>/msisdn.txt`.
+    State dir discovered via `docker inspect` on the
+    `/var/lib/xcesp` bind-mount; falls back to
+    `/var/lib/xcesp` when the container isn't running (so a
+    factory-provisioned unit can seed the sidecar before
+    first start).
+  - With value → validate `+?[0-9]+`, atomic rewrite of
+    the host sidecar (tmp + rename), then — if the
+    container is running — inject
+    `AT+XMSISDN="<value>"` via `docker exec xcespcli` so
+    the live modem picks it up without a restart.
+    Docker-missing / container-not-running path is handled
+    gracefully (sidecar updated, modem picks up on next
+    start).
+- Help text + dispatch wired.  No docker image change
+  required — only the host wrapper is touched.
+- Lab-verified (native, no docker): read / explicit-modem /
+  invalid-value / write / read-back / docker-missing
+  fallback all behave correctly.
+
 ## 0.5.14
 
 - **M5 — AT+XMSISDN live MSISDN get/set.**  Bundles

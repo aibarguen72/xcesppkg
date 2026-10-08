@@ -42,6 +42,12 @@ Actions:
   cli [xcespcli args]     run xcespcli inside the container (interactive)
   status                  container + modem status snapshot
   shell                   interactive bash inside the container
+  msisdn [NEW]            read / write the modem's live MSISDN sidecar.
+                          No arg prints the current value; a value
+                          validates +?[0-9]+, writes the host sidecar,
+                          and (if the container is running) injects
+                          AT+XMSISDN= live.  Requires the modem to have
+                          been committed with `msisdn user`.
   version                 print the currently-installed image tag
   help                    this help
 
@@ -420,6 +426,87 @@ action_shell() {
     exec docker exec -it "$DEFAULT_NAME" /bin/bash
 }
 
+action_msisdn() {
+    # M6: read / write the per-modem MSISDN sidecar from the host.
+    # The modem must have been committed with `msisdn user` for the
+    # live-write path to take effect (xcesp-on-xc refuses otherwise).
+    # Usage:
+    #   xcesp-modem msisdn [MODEM]            -> read
+    #   xcesp-modem msisdn [MODEM] <value>    -> write
+    # When MODEM is omitted it defaults to $MODEM_NAME (= "modem1" at
+    # entrypoint-level default).  Pass MODEM explicitly if an operator
+    # chose a different --modem-name on `start`.
+    local modem="modem1" value=""
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --modem)   modem=$2; shift 2 ;;
+            -h|--help)
+                cat <<USAGE
+usage: $(basename "$0") msisdn [--modem <name>] [NEW_VALUE]
+  Read (no NEW_VALUE) or write the live MSISDN sidecar.
+  Writes also inject AT+XMSISDN="<NEW_VALUE>" into the running
+  container so the modem picks it up without a restart.
+USAGE
+                return 0 ;;
+            *) if [ -z "$value" ] && [[ "$1" =~ ^\+?[0-9]+$ ]]; then
+                   value=$1; shift
+               else
+                   die "msisdn: unexpected arg '$1' (expected +?[0-9]+ or --modem <name>)"
+               fi ;;
+        esac
+    done
+
+    # Locate the host side of the /var/lib/xcesp bind-mount.  Same
+    # inspect trick as action_log().  If the container isn't running
+    # we fall back to the default host path so a factory-provisioned
+    # unit (container not yet started) can still seed the sidecar.
+    local host_lib
+    host_lib=$(docker inspect --format \
+        '{{range .Mounts}}{{if eq .Destination "/var/lib/xcesp"}}{{.Source}}{{end}}{{end}}' \
+        "$DEFAULT_NAME" 2>/dev/null || true)
+    if [ -z "$host_lib" ]; then
+        host_lib="/var/lib/xcesp"
+    fi
+    local sidecar="$host_lib/modem/modem_${modem}/msisdn.txt"
+
+    if [ -z "$value" ]; then
+        # Read mode.
+        if [ ! -f "$sidecar" ]; then
+            echo "(sidecar missing: $sidecar — modem '$modem' may not use msisdn user)" >&2
+            return 1
+        fi
+        # Emit the first non-blank non-comment line, matching the
+        # loader's parse (xcesp-on-xc readMsisdnSidecar).  Falls
+        # back to the raw file if the awk is unhappy for any reason.
+        awk 'NF && !/^[[:space:]]*#/ { print; exit }' "$sidecar" || cat "$sidecar"
+        return 0
+    fi
+
+    # Write mode.  Atomic rewrite (tmp + rename) so a crash can't
+    # leave the file half-written.
+    mkdir -p "$(dirname "$sidecar")" || die "cannot create $(dirname "$sidecar") (run as root?)"
+    local tmp="${sidecar}.tmp.$$"
+    printf '%s\n' "$value" > "$tmp" || die "write to $tmp failed"
+    mv -f "$tmp" "$sidecar" || { rm -f "$tmp"; die "rename to $sidecar failed"; }
+    echo "wrote $sidecar: $value"
+
+    # If the container is running, inject AT+XMSISDN= so the live
+    # modem picks it up without a restart.  xcesp-on-xc does its own
+    # atomic rewrite + RVP re-arm when it processes the AT verb; the
+    # idempotent host-side write above means both ends agree even
+    # on a race.  Docker-not-installed path (e.g. a dev host using
+    # the sidecar directly against a native xcesp build) is handled
+    # the same way as "container not running".
+    if command -v docker >/dev/null 2>&1 && \
+       docker ps -q -f "name=$DEFAULT_NAME" 2>/dev/null | grep -q .; then
+        echo "injecting AT+XMSISDN=\"$value\" into live container..."
+        printf 'do-modem %s at-inject AT+XMSISDN="%s"\n' "$modem" "$value" \
+            | docker exec -i "$DEFAULT_NAME" xcespcli 2>&1 | tail -4
+    else
+        echo "(container not running; sidecar updated, modem will pick it up on next start)"
+    fi
+}
+
 action_status() {
     docker ps -f "name=$DEFAULT_NAME" \
         --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
@@ -457,6 +544,7 @@ case "${1:-help}" in
     cli)               shift; action_cli "$@" ;;
     status|ps)         shift; action_status ;;
     shell|bash)        shift; action_shell ;;
+    msisdn)            shift; action_msisdn "$@" ;;
     version)           action_version ;;
     help|--help|-h)    action_help ;;
     *) echo "unknown action: $1" >&2; action_help >&2; exit 2 ;;
