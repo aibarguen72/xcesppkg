@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.5.11
+
+- **M2 — show pstn-rvp pagination + filter.**  Bundles
+  xcespserver 0.4.16, xcespcli 0.3.27, xcespproc 0.2.103,
+  xcespwdog 0.2.0.
+  - Default `show pstn-rvp <name> domain <D>` caps the
+    registrations table at 50 rows and prints
+    `Shown: N/<total> (use 'filter <msisdn|ip>' to see more)`.
+  - `show pstn-rvp <name> domain <D> filter <s>` bypasses the
+    cap and matches `<s>` as a substring on MSISDN or peer IP;
+    footer reads `Matched: N/<total>`.  Zero matches prints
+    `(no matches)`.
+
 ## 0.5.10
 
 - **M1 — Redundant PSTN-RVP per modem.**  Bundles xcespserver
