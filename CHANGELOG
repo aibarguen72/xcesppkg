@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.5.13
+
+- **M4 — MSISDN sidecar file.**  Bundles xcespserver 0.4.16,
+  xcespcli 0.3.29, xcespproc 0.2.105, xcespwdog 0.2.0.
+  - Config `msisdn user` is a magic directive — the loader
+    reads the live value from
+    `/var/lib/xcesp/modem/modem_<name>/msisdn.txt` (first
+    non-blank non-comment line wins).  Lets operators ship
+    identical factory-provisioned images and set the MSISDN
+    at site deployment (or hot-swap a spare).
+  - Empty / missing file → modem comes up ACTIVE for AT
+    control; RVP registration stays dormant until the
+    sidecar is populated (M5 adds `AT+XMSISDN=` for runtime
+    change; M6 adds `xcesp-modem msisdn <value>` for the
+    host).
+  - `show modem <name>` renders the MSISDN with a `(from
+    file:...)` suffix on `msisdn user`, or `(unset —
+    populate ...)` on an empty sidecar.
+
 ## 0.5.12
 
 - **M3 — CSD idle timeout.**  Bundles xcespserver 0.4.16,
