@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.5.10
+
+- **M1 — Redundant PSTN-RVP per modem.**  Bundles xcespserver
+  0.4.16, xcespcli 0.3.26, xcespproc 0.2.102, xcespwdog 0.2.0.
+  - New optional `attr rvp-ip-bkp` on `node modem` (same
+    `rvp-port`).  Active/standby state machine inside
+    `PstnRvpClient`: 3 consecutive primary failures → swap to
+    backup; each renewal cycle on backup sends one
+    `primary-probe` first and auto-reverts on success.
+  - `show modem <name>` renders `RVP backup:` + `Active RVP:`
+    when a backup is wired (single-RVP output unchanged).
+  - Docker: new optional `RVP_IP_BKP` env (`entrypoint.sh`) and
+    `--rvp-bkp <IP>` flag on `xcesp-modem.sh start`.
+
 ## 0.5.9
 
 - **Phase D8 — sprint polish + end-to-end verify.**  Bundles

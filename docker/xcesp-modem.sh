@@ -101,6 +101,11 @@ Required:
   --serial <DEV>          host serial device (e.g. /dev/ttyUSB0)
 
 Optional:
+  --rvp-bkp <IP>          redundant RVP address (same --rvp-port).
+                          Active/standby: modem swaps to backup
+                          after 3 consecutive primary failures;
+                          every renewal cycle on backup it probes
+                          primary first and reverts on success.
   --rvp-port <N>          default 8888
   --rvp-renewal <SEC>     REGISTER cadence (default 300)
   --tcp-port <N>          transport TCP port (default 5001)
@@ -163,7 +168,7 @@ EOF
 action_start() {
     # --- defaults ---
     local IMAGE="$DEFAULT_IMAGE" CONTAINER_NAME="$DEFAULT_NAME"
-    local SERIAL_DEV="" MSISDN="" RVP_IP="" RVP_PORT="8888"
+    local SERIAL_DEV="" MSISDN="" RVP_IP="" RVP_IP_BKP="" RVP_PORT="8888"
     local RVP_RENEWAL_SEC="" TRANSPORT_IP=""
     local TRANSPORT_TCP_PORT="5001" TRANSPORT_UDP_PORT="5011"
     local DTE_BAUD="9600" CRYPTO_PASSPHRASE="" SYSTEM_NAME=""
@@ -186,6 +191,7 @@ action_start() {
         case "$1" in
             --msisdn)        MSISDN=$2; shift 2 ;;
             --rvp)           RVP_IP=$2; shift 2 ;;
+            --rvp-bkp)       RVP_IP_BKP=$2; shift 2 ;;
             --rvp-port)      RVP_PORT=$2; shift 2 ;;
             --rvp-renewal)   RVP_RENEWAL_SEC=$2; shift 2 ;;
             --transport-ip)  TRANSPORT_IP=$2; shift 2 ;;
@@ -271,6 +277,7 @@ action_start() {
     [ -n "$SYSTEM_NAME" ]        && env_args+=(-e "SYSTEM_NAME=$SYSTEM_NAME")
     [ -n "$CRYPTO_PASSPHRASE" ]  && env_args+=(-e "CRYPTO_PASSPHRASE=$CRYPTO_PASSPHRASE")
     [ -n "$RVP_RENEWAL_SEC" ]    && env_args+=(-e "RVP_RENEWAL_SEC=$RVP_RENEWAL_SEC")
+    [ -n "$RVP_IP_BKP" ]         && env_args+=(-e "RVP_IP_BKP=$RVP_IP_BKP")
     if [ -n "$LICENSE_AUTH" ]; then
         # Fail fast if the interface doesn't exist on the host.  Under
         # --network=host the container will read the same /sys, so if

@@ -125,6 +125,12 @@ if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
     echo "    transport-tcp-port $TRANSPORT_TCP_PORT"
     echo "    transport-udp-port $TRANSPORT_UDP_PORT"
     echo "    rvp-ip $RVP_IP"
+    # Optional redundant RVP (M1).  Same port as primary.  When
+    # unset the modem runs the pre-M1 single-RVP behaviour and no
+    # `rvp-ip-bkp` line is emitted (clean schema diff).
+    if [ -n "${RVP_IP_BKP:-}" ]; then
+        echo "    rvp-ip-bkp $RVP_IP_BKP"
+    fi
     echo "    rvp-port $RVP_PORT"
     echo "    rvp-renewal-seconds $RVP_RENEWAL_SEC"
     if [ -n "${CRYPTO_PASSPHRASE:-}" ]; then
