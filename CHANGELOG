@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.18
+
+- Bundles **xcespproc 0.2.109** — new `[PROC]` ini knobs:
+  - `CPU_PIN = N` (or comma-separated list) → calls
+    `sched_setaffinity` at startup so a dense fleet of RT
+    xcespprocs can be pinned one-per-core.
+  - `CPU_WARN_THRESHOLD_PCT = 70` (default) +
+    `CPU_WARN_SAMPLES = 3` (default) → `CPU_HIGH` alarm
+    with 5-pp hysteresis.  Tune threshold lower (~55-60)
+    for SCHED_OTHER setups.
+
 ## 0.5.17
 
 - **fix: xcespproc baseline caps gain `cap_sys_nice`.**
