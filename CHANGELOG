@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.5.17
+
+- **fix: xcespproc baseline caps gain `cap_sys_nice`.**
+  Without it `rt-processing true` on a domain silently
+  stayed SCHED_OTHER — `pthread_setschedparam` returned
+  EPERM and the result was swallowed.  Patched in both
+  places that write the baseline:
+  - `install.sh` XCESPPROC_CAPS (one-time install).
+  - `scripts/xcesp-activate` (runs on every service
+    start — this is what reverted operator one-off
+    `setcap` additions).
+- Bundles xcespproc 0.2.108 (relink against xcesp-on-pw
+  0.3.41 with the new SCHED_FIFO success/failure log).
+
 ## 0.5.16
 
 - **feat: `do-pstnrvp-report` operator action.**  Bundles
