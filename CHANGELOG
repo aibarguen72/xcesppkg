@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.5.16
+
+- **feat: `do-pstnrvp-report` operator action.**  Bundles
+  xcespserver 0.4.17, xcespcli 0.3.30, xcespproc 0.2.107,
+  xcespwdog 0.2.0.
+  - New verb `do-pstnrvp-report [name <n>] domain <D>`
+    writes a plain-text snapshot of the RVP registration
+    table to the server's log directory (`dskDir_/log`
+    when configured) so it's visible to `show dir log` and
+    `copy log <N>`.  Filename:
+    `pstn-rvp-<domain>-<name|_all>-YYYYMMDD-HHMMSS.txt`.
+  - With no `name`, every PSTN-RVP in the domain is
+    dumped into one atomic file (one section per RVP).
+    With `name <n>`, only that one.
+  - Header has domain / RVP listener / licensed-slot count /
+    duplicate policy / status / registration count; body
+    is one row per MSISDN with Source IP / TCP / UDP /
+    Last renewal / TTL / Crypto.
+
 ## 0.5.15
 
 - **M6 — docker `msisdn` verb.**  New
