@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.5.19
+
+- Bundles **xcespproc 0.2.110** (relink against
+  xcesp-on-xc 0.2.54) — fixes a slug-vs-instance mismatch
+  on modem that broke `show modem <name>` and
+  `do-modem <name> at-inject ...`.  `show modem-summary`
+  now shows the config-mode name (e.g. "hgi" instead of
+  "modem_hgi") plus the Domain column, and the follow-up
+  commands work on the first try.
+
 ## 0.5.18
 
 - Bundles **xcespproc 0.2.109** — new `[PROC]` ini knobs:
