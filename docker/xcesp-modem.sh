@@ -171,6 +171,15 @@ hosts pstn-rvp / carries fleet license-code lines):
                           as-is and MSISDN/RVP/etc. env vars are
                           IGNORED (the operator manages config
                           via CLI at that point).
+
+  Documentation server (the image carries the XCESP-MODEM manual and
+  serves it over HTTP, so it is readable on the device itself):
+    --no-doc              do not serve the documentation
+    --doc-port <port>     listen port (default 8089; 8080 was dropped
+                          because it clashes with far too many packages
+                          and the container is --network=host)
+    --doc-bind <addr>     listen address (default 0.0.0.0;
+                          use 127.0.0.1 to keep it on the device)
 EOF
 }
 
@@ -195,6 +204,11 @@ action_start() {
     # In-container log rotator caps (empty = use rotator's own
     # defaults of 10 MB × 4 archives).  Set LOG_MAX_MB=0 to disable.
     local LOG_MAX_MB="" LOG_KEEP=""
+    # Documentation server.  The image carries the XCESP-MODEM manual
+    # and serves it over HTTP so a field engineer can read it on the
+    # device with no network access to anything else.  Empty = use the
+    # entrypoint's defaults (enabled, 0.0.0.0:8089).
+    local DOC_ENABLED="" DOC_PORT="" DOC_BIND=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -224,6 +238,9 @@ action_start() {
             --foreground)    DETACH=""; shift ;;
             --dry-run)       DRY_RUN=1; shift ;;
             --license-auth)  LICENSE_AUTH=$2; shift 2 ;;
+            --no-doc)        DOC_ENABLED="false"; shift ;;
+            --doc-port)      DOC_PORT=$2; shift 2 ;;
+            --doc-bind)      DOC_BIND=$2; shift 2 ;;
             --log-max-mb)    LOG_MAX_MB=$2; shift 2 ;;
             --log-keep)      LOG_KEEP=$2;   shift 2 ;;
             --persist-config)
@@ -304,6 +321,9 @@ action_start() {
         fi
         env_args+=(-e "LICENSE_AUTH=$LICENSE_AUTH")
     fi
+    [ -n "$DOC_ENABLED" ] && env_args+=(-e "DOC_ENABLED=$DOC_ENABLED")
+    [ -n "$DOC_PORT" ]    && env_args+=(-e "DOC_PORT=$DOC_PORT")
+    [ -n "$DOC_BIND" ]    && env_args+=(-e "DOC_BIND=$DOC_BIND")
     [ -n "$LOG_MAX_MB" ] && env_args+=(-e "LOG_MAX_MB=$LOG_MAX_MB")
     [ -n "$LOG_KEEP" ]   && env_args+=(-e "LOG_KEEP=$LOG_KEEP")
     for src in DCD DSR CTS RI DTR RTS; do
@@ -352,6 +372,18 @@ action_start() {
         net_args+=(--network=bridge
                    -p "${TRANSPORT_TCP_PORT}:${TRANSPORT_TCP_PORT}"
                    -p "${TRANSPORT_UDP_PORT}:${TRANSPORT_UDP_PORT}/udp")
+        # Forward the documentation port as well, or the manual is
+        # unreachable under bridge networking.  The effective port must
+        # be repeated here because the entrypoint's own default (8089)
+        # is not visible to this script.
+        if [ "$DOC_ENABLED" != "false" ]; then
+            net_args+=(-p "${DOC_PORT:-8089}:${DOC_PORT:-8089}")
+            if [ -n "$DOC_BIND" ] && [ "$DOC_BIND" != "0.0.0.0" ]; then
+                echo "[start] --network bridge with --doc-bind $DOC_BIND:" \
+                     "the forward will not reach a server bound to the" \
+                     "container's own loopback"
+            fi
+        fi
     fi
 
     local -a docker_cmd=(

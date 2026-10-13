@@ -258,7 +258,7 @@ PY
 fi
 
 # ---------------------------------------------------------------------------
-# Documentation HTTP server (port 8080 by default).
+# Documentation HTTP server (port 8089 by default).
 #
 # The image carries the XCESP-MODEM documentation set at /var/xcesp/doc
 # when the xcesppkg tarball was built with DOC_PROFILE=modem.  The
@@ -268,7 +268,7 @@ fi
 # container does not run.
 #
 #   DOC_ENABLED  true (default) | false — serve the documentation
-#   DOC_PORT     8080 (default)
+#   DOC_PORT     8089 (default)
 #   DOC_BIND     0.0.0.0 (default); 127.0.0.1 restricts to the container
 #
 # Both branches are idempotent, which matters because the container
@@ -277,13 +277,48 @@ fi
 # the disable branch truncates a block that may already be gone.
 # ---------------------------------------------------------------------------
 : "${DOC_ENABLED:=true}"
-: "${DOC_PORT:=8080}"
+# Default moved from 8080 to 8089 because 8080 is contested by far
+# too many packages (gitlab, kibana, tomcat, nginx devkits, …) and
+# the modem container runs with --network=host by default, so a
+# port clash on 8080 is routine.  8089 is close enough to be
+# memorable but has very few collisions in the wild.
+: "${DOC_PORT:=8089}"
 : "${DOC_BIND:=0.0.0.0}"
 
 WDOG_INI=/var/xcesp/cfg/xcespwdog.ini
 DOC_MARKER='# --- doc-httpd (keep LAST'
 
-if [ "$DOC_ENABLED" = "true" ] && [ -n "$(ls -A /var/xcesp/doc 2>/dev/null)" ]; then
+# Pre-flight: if DOC_PORT is already in use the launch will loop-
+# respawn-die (seen in 0.5.20 on hosts where :8080 was held by an
+# unrelated service, now moot after the default moved to 8089 but
+# the check protects any port the operator chooses).  Python binds
+# via SO_REUSEADDR disabled, so a clash produces OSError 98 almost
+# immediately and xcespwdog hits WDOG_RESPAWN_MAXCOUNT in ~3 s.
+# Preempt that by trying to bind the port ourselves — if it fails,
+# log a WARNING and remove [process.4] so xcespwdog never tries.
+doc_port_in_use() {
+    python3 -c "
+import socket, sys
+try:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('$DOC_BIND', $DOC_PORT))
+    s.close()
+    sys.exit(1)   # port is free
+except OSError:
+    sys.exit(0)   # port is taken
+" 2>/dev/null
+}
+
+doc_disabled_reason=""
+if [ "$DOC_ENABLED" != "true" ]; then
+    doc_disabled_reason="DOC_ENABLED=$DOC_ENABLED"
+elif [ -z "$(ls -A /var/xcesp/doc 2>/dev/null)" ]; then
+    doc_disabled_reason="/var/xcesp/doc is empty (tarball built without DOC_PROFILE?)"
+elif doc_port_in_use; then
+    doc_disabled_reason="port $DOC_BIND:$DOC_PORT already in use on the host (--network=host); pass --doc-port <N> or --no-doc"
+fi
+
+if [ -z "$doc_disabled_reason" ]; then
     # Rewrite the launch line in place.  Matching on 'http.server'
     # rather than on the current port keeps this correct when the
     # operator restarts the same container with a different DOC_PORT.
@@ -298,12 +333,7 @@ else
     if grep -qF "$DOC_MARKER" "$WDOG_INI"; then
         sed -i "/$(printf '%s' "$DOC_MARKER" | sed 's/[][\.*^$\/]/\\&/g')/,\$d" "$WDOG_INI"
     fi
-    if [ "$DOC_ENABLED" = "true" ]; then
-        echo "[xcesp-modem] documentation server disabled:" \
-             "/var/xcesp/doc is empty (tarball built without DOC_PROFILE?)"
-    else
-        echo "[xcesp-modem] documentation server disabled (DOC_ENABLED=$DOC_ENABLED)"
-    fi
+    echo "[xcesp-modem] WARNING: documentation server disabled: $doc_disabled_reason" >&2
 fi
 
 # ---------------------------------------------------------------------------

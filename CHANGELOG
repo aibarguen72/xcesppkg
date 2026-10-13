@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.5.21
+
+- **docker: doc server default port moved 8080 → 8089.**
+  8080 clashes with far too many packages (gitlab, kibana,
+  tomcat, nginx devkits, …) and the modem container runs
+  with `--network=host` by default, so a port collision on
+  8080 is routine.  8089 is close enough to be memorable but
+  has very few collisions in the wild.  Operators who prefer
+  a different port still have `--doc-port <N>`.
+- **docker: entrypoint pre-flight on DOC_PORT.**  Before
+  touching the ini, bind-test the port.  If it's already in
+  use (or otherwise non-bindable), log a WARNING naming the
+  port + the two overrides (`--doc-port <N>` or `--no-doc`)
+  and skip the `[process.4]` block entirely, so xcespwdog
+  never launches a doomed `python3 -m http.server` that
+  loop-dies to the respawn ceiling.
+- `--no-doc` operator flag already present (surface in
+  `start --help`), kept — this is still the way to disable
+  the doc server when a customer does not want it exposed.
+
 ## 0.5.20
 
 - **docker: default domain name changed from `lab` to `net`.**

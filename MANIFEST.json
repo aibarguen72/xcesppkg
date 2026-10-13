@@ -1,7 +1,7 @@
 {
-  "version": "0.5.20",
-  "arm64":  "xcespkg-arm64-0.5.20.tgz",
+  "version": "0.5.21",
+  "arm64":  "xcespkg-arm64-0.5.21.tgz",
   "sha256": {
-    "arm64":  "979a82623f0046dac5e89d72f0ed6c8e4610a0c29e99bdeb89739c01731ee3a9"
+    "arm64":  "bc524237c11b6e09ea72e91af455bcc4768abe61c3d943a9eef049e5a9f057ed"
   }
 }
