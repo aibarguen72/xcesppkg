@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.5.20
+
+- **docker: default domain name changed from `lab` to `net`.**
+  Entrypoint still accepts `DOMAIN_NAME=lab` (or any other
+  value) via env override; only the unqualified-launch
+  default moves.  `lab` was a lab-only name that leaked into
+  production generated configs.
+- **ARM package + docker image bundle the MODEM doc
+  profile.**  `arm64/package.sh` is invoked with
+  `DOC_PROFILE=modem`, which stages
+  `doc/site-modem/` instead of the full set.  The
+  modem-only container shows just the MODEM book at
+  `http://<container>:8080/` — customers can't surf chapters
+  for parts they haven't bought.
+- No binary / source change beyond `entrypoint.sh`.
+
 ## 0.5.19
 
 - Bundles **xcespproc 0.2.110** (relink against

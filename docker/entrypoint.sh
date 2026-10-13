@@ -35,7 +35,7 @@ require DTE_SERIAL_DEVICE
 # ---------------------------------------------------------------------------
 : "${SYSTEM_NAME:=xcesp-modem}"
 : "${MODEM_NAME:=modem1}"
-: "${DOMAIN_NAME:=lab}"
+: "${DOMAIN_NAME:=net}"
 : "${PROFILE:=wismo-q2403a}"
 : "${DTE_SERIAL_BAUD:=9600}"
 : "${TRANSPORT_TCP_PORT:=5001}"
@@ -254,6 +254,55 @@ PY
         echo "[xcesp-modem] $TRANSPORT_IP still not bindable after" \
              "${TRANSPORT_IP_WAIT_SECONDS}s — launching anyway (modem" \
              "bring-up will fail loudly)" >&2
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# Documentation HTTP server (port 8080 by default).
+#
+# The image carries the XCESP-MODEM documentation set at /var/xcesp/doc
+# when the xcesppkg tarball was built with DOC_PROFILE=modem.  The
+# server itself is declared as [process.4] in xcespwdog.ini; this block
+# only tunes or removes it.  A host install does the equivalent from the
+# [DOC_HTTPD] section of xcespserver.ini via xcesp-activate, which a
+# container does not run.
+#
+#   DOC_ENABLED  true (default) | false — serve the documentation
+#   DOC_PORT     8080 (default)
+#   DOC_BIND     0.0.0.0 (default); 127.0.0.1 restricts to the container
+#
+# Both branches are idempotent, which matters because the container
+# filesystem survives `docker restart`: the enable branch rewrites the
+# whole launch line rather than substituting a one-shot placeholder, and
+# the disable branch truncates a block that may already be gone.
+# ---------------------------------------------------------------------------
+: "${DOC_ENABLED:=true}"
+: "${DOC_PORT:=8080}"
+: "${DOC_BIND:=0.0.0.0}"
+
+WDOG_INI=/var/xcesp/cfg/xcespwdog.ini
+DOC_MARKER='# --- doc-httpd (keep LAST'
+
+if [ "$DOC_ENABLED" = "true" ] && [ -n "$(ls -A /var/xcesp/doc 2>/dev/null)" ]; then
+    # Rewrite the launch line in place.  Matching on 'http.server'
+    # rather than on the current port keeps this correct when the
+    # operator restarts the same container with a different DOC_PORT.
+    sed -i "s|^WDOG_LAUNCH .*http\.server.*|WDOG_LAUNCH             = python3 -m http.server --bind $DOC_BIND --directory /var/xcesp/doc $DOC_PORT|" \
+        "$WDOG_INI"
+    pages=$(find /var/xcesp/doc -name '*.html' 2>/dev/null | wc -l)
+    echo "[xcesp-modem] documentation served on $DOC_BIND:$DOC_PORT ($pages pages)"
+else
+    # Delete from the marker to end-of-file.  doc-httpd is the last
+    # [process.N] section precisely so this cannot orphan another
+    # process behind an unscanned gap.
+    if grep -qF "$DOC_MARKER" "$WDOG_INI"; then
+        sed -i "/$(printf '%s' "$DOC_MARKER" | sed 's/[][\.*^$\/]/\\&/g')/,\$d" "$WDOG_INI"
+    fi
+    if [ "$DOC_ENABLED" = "true" ]; then
+        echo "[xcesp-modem] documentation server disabled:" \
+             "/var/xcesp/doc is empty (tarball built without DOC_PROFILE?)"
+    else
+        echo "[xcesp-modem] documentation server disabled (DOC_ENABLED=$DOC_ENABLED)"
     fi
 fi
 
