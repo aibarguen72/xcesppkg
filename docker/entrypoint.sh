@@ -36,6 +36,7 @@ require DTE_SERIAL_DEVICE
 : "${SYSTEM_NAME:=xcesp-modem}"
 : "${MODEM_NAME:=modem1}"
 : "${DOMAIN_NAME:=net}"
+: "${PRODUCT_NAME:=XCESP-MODEM}"
 : "${PROFILE:=wismo-q2403a}"
 : "${DTE_SERIAL_BAUD:=9600}"
 : "${TRANSPORT_TCP_PORT:=5001}"
@@ -111,6 +112,10 @@ if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
     echo "management"
     echo "  system"
     echo "    system-name $SYSTEM_NAME"
+    # Product branding on the xcespcli banner.  Fixed for the
+    # modem container; operators who want their own branding set
+    # PRODUCT_NAME in env.
+    echo "    product-name $PRODUCT_NAME"
     echo "  !"
     echo "!"
     echo ""

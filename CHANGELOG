@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.5.22
+
+- **feat: xcespcli banner shows product name + bundle
+  version only.**  Was:
+      XCESP Platform v0.4.17 | (c) XCESP Project
+  Now (modem container):
+      XCESP-MODEM 0.5.22 | (c) XCESP Project
+  Operators see ONE number — the installed xcesppkg
+  bundle — instead of the per-binary xcespserver /
+  xcespcli build-version pair that previously showed.
+  Bundles xcespserver 0.4.18 + xcespcli 0.3.31.
+- **docker: Dockerfile copies the bundle VERSION file to
+  `/var/xcesp/mainsw/VERSION`** so xcespserver's existing
+  SERVER_VERSION resolver (CliClient.cpp:200–212) actually
+  finds the bundle number.  Was missing; the resolver
+  silently fell back to xcespserver's PRJVERSION
+  (0.4.17 / .18 / …).
+- **docker: `product-name XCESP-MODEM` baked into the
+  generated xcespserver.conf.**  Override via
+  `-e PRODUCT_NAME=<string>` for custom branding.
+
 ## 0.5.21
 
 - **docker: doc server default port moved 8080 → 8089.**

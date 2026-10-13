@@ -48,11 +48,17 @@ RUN ln -sf /bin/true /usr/sbin/ldconfig \
 
 # Unpack the xcesppkg into standard paths.  The tarball's layout
 # already matches /var/xcesp — copy only the pieces the container
-# needs (no doc/, no scripts/ — those are for full host installs).
+# needs (no scripts/ — those are for full host installs).
+#
+# doc/ IS copied when the tarball carries it, and is served on port 8089
+# by the doc-httpd process (see xcespwdog.ini [process.4]).  Build the
+# tarball with DOC_PROFILE=modem so the image carries the XCESP-MODEM
+# documentation set rather than the complete one: a modem customer must
+# not receive the router and TDM chapters.
 COPY ${XCESPPKG_TARBALL} /tmp/pkg.tgz
 RUN mkdir -p /var/xcesp/cfg /var/xcesp/schema /var/xcesp/rules \
              /var/xcesp/dsk /var/xcesp/log /var/lib/xcesp \
-             /run/xcesp /usr/lib/xcesp \
+             /var/xcesp/doc /run/xcesp /usr/lib/xcesp \
     && tar xzf /tmp/pkg.tgz -C /tmp/ \
     && cp /tmp/xcespkg-*/bin/xcespserver /usr/bin/xcespserver \
     && cp /tmp/xcespkg-*/bin/xcespproc   /usr/bin/xcespproc \
@@ -61,7 +67,15 @@ RUN mkdir -p /var/xcesp/cfg /var/xcesp/schema /var/xcesp/rules \
     && cp /tmp/xcespkg-*/bin/xcesp-ip    /usr/lib/xcesp/xcesp-ip \
     && cp -r /tmp/xcespkg-*/schema/*     /var/xcesp/schema/ \
     && cp -r /tmp/xcespkg-*/rules/*      /var/xcesp/rules/ \
+    && mkdir -p /var/xcesp/mainsw \
+    && cp    /tmp/xcespkg-*/VERSION      /var/xcesp/mainsw/VERSION \
     && cp    /tmp/xcespkg-*/cfg/xcespproc.ini  /var/xcesp/cfg/ \
+    && if ls -d /tmp/xcespkg-*/doc >/dev/null 2>&1; then \
+           cp -r /tmp/xcespkg-*/doc/. /var/xcesp/doc/; \
+           echo "bundled documentation: $(find /var/xcesp/doc -name '*.html' | wc -l) pages"; \
+       else \
+           echo "no documentation in tarball — doc-httpd will not start"; \
+       fi \
     && rm -rf /tmp/xcespkg-* /tmp/pkg.tgz \
     && chmod 0755 /usr/bin/xcespserver /usr/bin/xcespproc \
                   /usr/bin/xcespwdog /usr/bin/xcespcli \
@@ -84,12 +98,13 @@ COPY xcesp-log-rotator.sh /usr/local/bin/xcesp-log-rotator
 RUN chmod 0755 /usr/local/bin/xcesp-entrypoint \
               /usr/local/bin/xcesp-log-rotator
 
-# xcespcli control ports.  Host mode (--network=host) is the default
-# runtime topology, so these EXPOSEs are documentation only — the
-# operator can override at run time by dropping host networking and
-# mapping ports explicitly, at the cost of the RVP registration
-# source-IP breakage we hit in the xcesptest lab.
+# xcespcli control port and the documentation HTTP port.  Host mode
+# (--network=host) is the default runtime topology, so these EXPOSEs are
+# documentation only — the operator can override at run time by dropping
+# host networking and mapping ports explicitly, at the cost of the RVP
+# registration source-IP breakage we hit in the xcesptest lab.
 EXPOSE 9900
+EXPOSE 8089
 LABEL org.opencontainers.image.title="xcesp-modem"
 LABEL org.opencontainers.image.description="Single-modem xcesp container (arm64)"
 
