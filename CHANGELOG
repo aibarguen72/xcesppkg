@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.5.25
+
+- **fix: don't let a stale "no PSK" LOOKUP cache entry
+  block every subsequent dial under
+  `crypto-mode=required`.**  Bundles xcespproc 0.2.112
+  (relink against xcesp-on-xc 0.2.56).  First-time
+  enablement of crypto on both ends was wedged: if the
+  caller's DIAL ran before the callee had finished its
+  REGISTER-with-crypto, the LOOKUP response carried no
+  PSK and the result cached (TTL default 3600 s) → every
+  subsequent dial saw the stale entry and failed with
+  `DIAL blocked: crypto-mode=required and no PSK`.
+  Only `systemctl restart xcespserver` recovered.
+- No other change from 0.5.24.
+
 ## 0.5.24
 
 - **feat: `CRYPTO_MODE` env + `--crypto-mode` flag on
