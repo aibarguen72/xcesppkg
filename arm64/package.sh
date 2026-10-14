@@ -102,14 +102,28 @@ cp -r "$XSRC/xcesppy/xcesppy/." "$STAGING/python/xcesppy/"
 find "$STAGING/python" -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
 # --- Documentation (mkdocs-built static site) ---
-# Bundled only if ../doc/site/ exists — gracefully skipped if the doc
-# tree has not been rebuilt locally.
-if [ -d "$XSRC/doc/site" ]; then
-    mkdir -p "$STAGING/doc"
-    cp -r "$XSRC/doc/site/." "$STAGING/doc/"
-    echo "  Bundled docs: $XSRC/doc/site → $STAGING/doc"
+# Which documentation PROFILE to bundle.  The doc tree builds one site
+# per profile (see doc/build-docs.sh), because XCESP is sold in parts and
+# a customer must not receive chapters for parts they have not bought:
+#
+#   DOC_PROFILE=full   -> doc/site/        complete documentation set
+#   DOC_PROFILE=modem  -> doc/site-modem/  XCESP-MODEM customer set
+#
+# Defaults to 'full' so an unqualified package build is unchanged.
+# Bundled only if the profile's site directory exists — gracefully
+# skipped if the doc tree has not been rebuilt locally.
+DOC_PROFILE="${DOC_PROFILE:-full}"
+if [ "$DOC_PROFILE" = "full" ]; then
+    DOC_SRC="$XSRC/doc/site"
 else
-    echo "  Skipping docs ($XSRC/doc/site not found)"
+    DOC_SRC="$XSRC/doc/site-$DOC_PROFILE"
+fi
+if [ -d "$DOC_SRC" ]; then
+    mkdir -p "$STAGING/doc"
+    cp -r "$DOC_SRC/." "$STAGING/doc/"
+    echo "  Bundled docs ($DOC_PROFILE profile): $DOC_SRC → $STAGING/doc"
+else
+    echo "  Skipping docs ($DOC_SRC not found — run 'doc/build-docs.sh $DOC_PROFILE')"
 fi
 
 # --- Management scripts ---

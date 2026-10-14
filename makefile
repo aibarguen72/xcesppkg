@@ -204,15 +204,24 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	chmod +x $(PKG_NAME)/scripts/xcesp-l2tpv3d-launch
 
 	# --- Documentation (mkdocs-built static site) ---
-	# Bundled only if ../doc/site/ exists — gracefully skipped if the doc
-	# tree has not been rebuilt locally (the doc subproject is authored
-	# separately; the operator may not have generated it yet).
-	@if [ -d ../doc/site ]; then \
+	# DOC_PROFILE selects which documentation profile to bundle, because
+	# XCESP is sold in parts and a customer must not receive chapters for
+	# parts they have not bought (see doc/build-docs.sh):
+	#   DOC_PROFILE=full   -> ../doc/site/        complete set (default)
+	#   DOC_PROFILE=modem  -> ../doc/site-modem/  XCESP-MODEM customer set
+	# Bundled only if the profile's site directory exists — gracefully
+	# skipped if the doc tree has not been rebuilt locally (the doc
+	# subproject is authored separately; the operator may not have
+	# generated it yet).
+	@doc_profile="$(or $(DOC_PROFILE),full)"; \
+	if [ "$$doc_profile" = "full" ]; then doc_src=../doc/site; \
+	else doc_src=../doc/site-$$doc_profile; fi; \
+	if [ -d "$$doc_src" ]; then \
 		mkdir -p $(PKG_NAME)/doc; \
-		cp -r ../doc/site/. $(PKG_NAME)/doc/; \
-		echo "  Bundled docs: ../doc/site → $(PKG_NAME)/doc"; \
+		cp -r "$$doc_src/." $(PKG_NAME)/doc/; \
+		echo "  Bundled docs ($$doc_profile profile): $$doc_src → $(PKG_NAME)/doc"; \
 	else \
-		echo "  Skipping docs (../doc/site not found)"; \
+		echo "  Skipping docs ($$doc_src not found — run 'doc/build-docs.sh '$$doc_profile)"; \
 	fi
 
 	# --- Management scripts ---

@@ -14,8 +14,8 @@ transport ports, PSK) from environment variables at launch.
 - `entrypoint.sh` — runs at container start; validates env, generates
   `/var/xcesp/cfg/xcespserver.conf`, execs `xcespwdog`.
 - `xcespserver.ini` / `xcespwdog.ini` — container-tuned INI files
-  (`LICENSE_ENFORCE=true`, `DOC_HTTPD` disabled, wdog launches
-  server + proc directly with no xcesp-activate stage).
+  (`LICENSE_ENFORCE=true`, wdog launches server + proc + log-rotator +
+  doc-httpd directly with no xcesp-activate stage).
 - `build.sh` — build the image on THIS host (needs podman + qemu-user).
 - `save.sh` — export the built image to a docker-loadable `.tar`.
 - **`xcesp-modem.sh`** — single operator entry point on the target
@@ -26,10 +26,19 @@ transport ports, PSK) from environment variables at launch.
 ## Build + package (this host)
 
 ```
-cd docker
+cd ../../doc && ./build-docs.sh modem        # -> doc/site-modem/
+cd ../xcesppkg/arm64 && DOC_PROFILE=modem ./package.sh
+cd ../docker
 ./build.sh                     # -> localhost/xcesp-modem:<VER>-arm64
 ./save.sh                      # -> xcesp-modem-<VER>-arm64.tar
 ```
+
+`DOC_PROFILE=modem` is what puts the **XCESP-MODEM** documentation set
+into the tarball, and from there into the image at `/var/xcesp/doc`.
+Without it the package bundles the complete documentation set, which
+includes the router and TDM chapters a modem customer has not bought.
+With neither built, the image simply carries no documentation and
+doc-httpd does not start.
 
 Copy `xcesp-modem-<VER>-arm64.tar` and `xcesp-modem.sh` to the target
 device.
@@ -56,6 +65,37 @@ Container starts detached with `--restart unless-stopped`.  Follow
 the log with `./xcesp-modem.sh log -f` (tails the plain-text file
 on the bind-mount, which survives ungraceful power-off — `docker
 logs`' JSON stream can go corrupt if the host was killed mid-write).
+
+## Documentation on the device
+
+The image carries the XCESP-MODEM manual and serves it over HTTP, so a
+field engineer can read it on the device itself with no other network
+access. It is enabled by default on port 8089:
+
+```
+http://<device>:8089/
+```
+
+Controlled at `start` time:
+
+```
+./xcesp-modem.sh start ... --doc-port 9100      # different port
+./xcesp-modem.sh start ... --doc-bind 127.0.0.1 # device-local only
+./xcesp-modem.sh start ... --no-doc             # do not serve it
+```
+
+The entrypoint pre-flights the port: if it is already held on the host,
+`[process.4]` is stripped and the reason logged rather than letting
+xcespwdog respawn-loop python until it hits RESPAWN_MAXCOUNT. Check
+which happened with `./xcesp-modem.sh log | grep documentation`.
+
+Under `--network bridge` the chosen port is forwarded automatically.
+Note that `--doc-bind 127.0.0.1` combined with bridge networking binds
+the server to the container's own loopback, where the forward cannot
+reach it; use one or the other.
+
+The equivalent on a host install is the `[DOC_HTTPD]` section of
+`/var/xcesp/cfg/xcespserver.ini`, applied by `xcesp-activate`.
 
 ## Everyday operator commands
 

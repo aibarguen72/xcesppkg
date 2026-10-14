@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.5.23
+
+- **fix: CSD file-transfer failure after phase-6 crypto
+  handshake.**  Bundles xcespproc 0.2.111 (relink against
+  xcesp-on-xc 0.2.55) which replays bytes TCP coalesced
+  with the SETUP / CONNECT handshake into the byte pipe
+  instead of silently dropping them.
+  Customer file downloads over an answered CSD call
+  (crypto-mode=off, i.e. the plaintext path the current
+  modem containers use) were failing with corrupt
+  headers because the called side's DTE output arrived
+  in the same TCP segment as `CONNECT\n` and
+  `pendingHandshakeBuf_.clear()` discarded it.
+- Side bump only — no other content change from 0.5.22.
+  xcespserver 0.4.18, xcespcli 0.3.31, xcespwdog
+  unchanged.
+
 ## 0.5.22
 
 - **feat: xcespcli banner shows product name + bundle
