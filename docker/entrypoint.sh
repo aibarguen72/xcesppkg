@@ -141,8 +141,22 @@ if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
     if [ -n "${CRYPTO_PASSPHRASE:-}" ]; then
         echo "    crypto-passphrase $CRYPTO_PASSPHRASE"
     fi
+    # Phase-7 crypto policy.  Unset / empty / "off" = default `off`
+    # (passphrase line, if present, is kept but not enforced — i.e.
+    # the modem still accepts plaintext peers).  `required` =
+    # enforce: outbound REGISTER/SMS/CSD without a peer key fails
+    # cleanly, inbound plaintext is dropped.  Must be matched on
+    # BOTH peers to make a call succeed; mismatched modes fail the
+    # handshake with "crypto policy mismatch" in the log.
+    if [ -n "${CRYPTO_MODE:-}" ] && [ "$CRYPTO_MODE" != "off" ]; then
+        echo "    crypto-mode $CRYPTO_MODE"
+    fi
     # M3 CSD idle-timeout.  Unset or 0 = feature disabled (clean
-    # schema diff).  Positive integer arms the sweep.
+    # schema diff).  Positive integer arms the sweep: when a call
+    # is up and no byte has moved in EITHER direction for N
+    # seconds, the modem tears the call down (as if ATH had been
+    # typed).  Fix for RTUs where a mishandled "+++" leaves both
+    # ends stuck with a call that no DTE will drop.
     if [ -n "${CSD_TIMEOUT_SEC:-}" ] && [ "$CSD_TIMEOUT_SEC" != "0" ]; then
         echo "    csd-timeout $CSD_TIMEOUT_SEC"
     fi
@@ -196,10 +210,16 @@ if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
 } > "$CFG"
 
 echo "[xcesp-modem] generated $CFG"
+if [ -n "${CRYPTO_PASSPHRASE:-}" ]; then
+    crypto_tag="on,mode=${CRYPTO_MODE:-off}"
+else
+    crypto_tag="off"
+fi
 echo "[xcesp-modem]   MSISDN=$MSISDN  RVP=$RVP_IP:$RVP_PORT" \
      "transport=$TRANSPORT_IP:$TRANSPORT_TCP_PORT/$TRANSPORT_UDP_PORT" \
      "dte=$DTE_SERIAL_DEVICE@$DTE_SERIAL_BAUD" \
-     "crypto=$([ -n "${CRYPTO_PASSPHRASE:-}" ] && echo on || echo off)"
+     "crypto=$crypto_tag" \
+     "csd-timeout=${CSD_TIMEOUT_SEC:-0}s"
 fi   # end of CFG_SKIP_GEN guard
 
 # ---------------------------------------------------------------------------

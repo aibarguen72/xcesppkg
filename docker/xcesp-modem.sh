@@ -121,6 +121,12 @@ Optional:
   --udp-port <N>          transport UDP port (default 5011)
   --baud <N>              DTE baud rate (default 9600)
   --passphrase <S>        crypto-passphrase (omit = plaintext)
+  --crypto-mode <M>       off (default) | required.  `required` =
+                          enforce AEAD: outbound REGISTER/SMS/CSD
+                          without a peer key fails cleanly, inbound
+                          plaintext is dropped.  Must be matched on
+                          BOTH peers; mismatched modes fail the
+                          handshake.  Needs --passphrase.
   --system-name <N>       device hostname (default xcesp-modem)
   --network <host|bridge> docker network mode (default host)
   --state-dir <DIR>       root for persistent state (default
@@ -189,7 +195,7 @@ action_start() {
     local SERIAL_DEV="" MSISDN="" RVP_IP="" RVP_IP_BKP="" RVP_PORT="8888"
     local RVP_RENEWAL_SEC="" TRANSPORT_IP="" CSD_TIMEOUT_SEC=""
     local TRANSPORT_TCP_PORT="5001" TRANSPORT_UDP_PORT="5011"
-    local DTE_BAUD="9600" CRYPTO_PASSPHRASE="" SYSTEM_NAME=""
+    local DTE_BAUD="9600" CRYPTO_PASSPHRASE="" CRYPTO_MODE="" SYSTEM_NAME=""
     local NETWORK_MODE="host" STATE_DIR="" DETACH="-d" DRY_RUN=0
     local DTE_DCD_SOURCE="" DTE_DSR_SOURCE="" DTE_CTS_SOURCE=""
     local DTE_RI_SOURCE=""  DTE_DTR_SOURCE="" DTE_RTS_SOURCE=""
@@ -224,6 +230,7 @@ action_start() {
             --serial)        SERIAL_DEV=$2; shift 2 ;;
             --baud)          DTE_BAUD=$2; shift 2 ;;
             --passphrase)    CRYPTO_PASSPHRASE=$2; shift 2 ;;
+            --crypto-mode)   CRYPTO_MODE=$2; shift 2 ;;
             --system-name)   SYSTEM_NAME=$2; shift 2 ;;
             --network)       NETWORK_MODE=$2; shift 2 ;;
             --state-dir)     STATE_DIR=$2; shift 2 ;;
@@ -275,6 +282,16 @@ action_start() {
         *) die "--network must be 'host' or 'bridge' (got '$NETWORK_MODE')" ;;
     esac
 
+    if [ -n "$CRYPTO_MODE" ]; then
+        case "$CRYPTO_MODE" in
+            off|required) ;;
+            *) die "--crypto-mode must be 'off' or 'required' (got '$CRYPTO_MODE')" ;;
+        esac
+        if [ "$CRYPTO_MODE" = "required" ] && [ -z "$CRYPTO_PASSPHRASE" ]; then
+            die "--crypto-mode required needs --passphrase"
+        fi
+    fi
+
     if [ "$DRY_RUN" = 0 ] && [ ! -c "$SERIAL_DEV" ]; then
         die "$SERIAL_DEV is not a character device on this host"
     fi
@@ -303,6 +320,7 @@ action_start() {
     )
     [ -n "$SYSTEM_NAME" ]        && env_args+=(-e "SYSTEM_NAME=$SYSTEM_NAME")
     [ -n "$CRYPTO_PASSPHRASE" ]  && env_args+=(-e "CRYPTO_PASSPHRASE=$CRYPTO_PASSPHRASE")
+    [ -n "$CRYPTO_MODE" ]        && env_args+=(-e "CRYPTO_MODE=$CRYPTO_MODE")
     [ -n "$RVP_RENEWAL_SEC" ]    && env_args+=(-e "RVP_RENEWAL_SEC=$RVP_RENEWAL_SEC")
     [ -n "$RVP_IP_BKP" ]         && env_args+=(-e "RVP_IP_BKP=$RVP_IP_BKP")
     [ -n "$CSD_TIMEOUT_SEC" ]    && env_args+=(-e "CSD_TIMEOUT_SEC=$CSD_TIMEOUT_SEC")

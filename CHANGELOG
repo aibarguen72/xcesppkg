@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.5.24
+
+- **feat: `CRYPTO_MODE` env + `--crypto-mode` flag on
+  the modem container.**  The container already honours
+  `CRYPTO_PASSPHRASE` and emits a `crypto-passphrase`
+  line, but there was no way to flip the per-modem
+  policy from the default `off` to `required`.  Now
+  `-e CRYPTO_MODE=required` (or
+  `xcesp-modem.sh start … --crypto-mode required
+  --passphrase lab-fleet-secret`) emits
+  `crypto-mode required` under the modem block.
+  `xcesp-modem.sh` rejects `--crypto-mode required`
+  without `--passphrase` client-side (xcespserver's
+  commit-time gate would reject it too, but failing
+  before the container ever boots is a nicer UX).
+- **feat: the one-line summary printed by
+  `entrypoint.sh` after generating `xcespserver.conf`
+  now shows `crypto=on,mode=<M>` (or `off`) and
+  `csd-timeout=<N>s`.**  Previously only the
+  passphrase presence was shown, which hid whether the
+  policy was actually enforced.
+- No binary change from 0.5.23 — xcespproc 0.2.111
+  carries the CSD handshake replay fix.
+
 ## 0.5.23
 
 - **fix: CSD file-transfer failure after phase-6 crypto
