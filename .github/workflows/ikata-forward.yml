@@ -1,0 +1,53 @@
+# Copy this file into EVERY xcesp* repo as .github/workflows/ikata-forward.yml
+# and add the repo secret IKATA_DISPATCH_TOKEN (see ikata-agents README, step 5).
+#
+# It runs for a few seconds on a GitHub-hosted runner and only forwards the event
+# to aibarguen72/ikata-agents, where the agents run on the self-hosted server.
+name: ikata-forward
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+
+permissions: {}
+
+jobs:
+  forward:
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event.action == 'labeled' && github.event.label.name == 'feature-done') ||
+      (github.event_name == 'issue_comment' &&
+        github.event.comment.user.login == 'aibarguen72' &&
+        contains(github.event.issue.labels.*.name, 'needs-human')) ||
+      (github.event_name == 'pull_request_review' &&
+        github.event.review.state == 'changes_requested' &&
+        github.event.review.user.login == 'aibarguen72' &&
+        contains(join(github.event.pull_request.labels.*.name, ','), 'agent:'))
+    steps:
+      - name: Dispatch to ikata-agents
+        env:
+          GH_TOKEN: ${{ secrets.IKATA_DISPATCH_TOKEN }}
+        run: |
+          case "$GITHUB_EVENT_NAME" in
+            issues|pull_request) TYPE=feature-done ;;
+            *)                   TYPE=human-reply ;;
+          esac
+          jq --arg type "$TYPE" --arg repo "$GITHUB_REPOSITORY" --arg ev "$GITHUB_EVENT_NAME" '
+            (.issue // .pull_request) as $it |
+            { event_type: $type,
+              client_payload: {
+                event: $type, trigger: $ev, repo: $repo,
+                number: $it.number, title: $it.title, url: $it.html_url,
+                is_pr: ((.pull_request != null) or ($it.pull_request != null)),
+                labels: ([$it.labels[].name] | join(",")),
+                actor: .sender.login,
+                comment_url: ((.comment // .review // {}).html_url)
+              } }' "$GITHUB_EVENT_PATH" > payload.json
+          gh api repos/aibarguen72/ikata-agents/dispatches --input payload.json
+          echo "Forwarded $TYPE for $GITHUB_REPOSITORY"
