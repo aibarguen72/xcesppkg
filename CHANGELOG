@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.5.40
+
+- **feat(B7): TDMTEST timed mode + start/stop/reset verbs.**
+  Bundles xcesp-on-xc 0.2.65 + xcespserver 0.4.21 +
+  xcespproc 0.2.126 + xcespcli 0.3.39.  Phase state machine
+  wakes up for `mode=timed` services; `continuous` services
+  auto-start Running at load.
+- Operator surface:
+
+      do-xcservice <name> start   [domain <D>]
+      do-xcservice <name> stop    [domain <D>]
+      do-xcservice <name> reset   [domain <D>]
+
+- Phase cycle (timed): `idle → settling (settle-sec) →
+  running (duration-sec) → finished`.  Counters freeze at
+  finished; `reset` back to idle zeros counters + history.
+- `show xc-service name <s>` shows `Elapsed (s)` and
+  `Remaining (s)` when phase is settling or running.
+- No disk persistence of the final test result — B8 adds
+  the JSON report export for xcespqa pickup.
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.39
 
 - **feat(B6): 15-min PM intervals + 24h history.**  Bundles
