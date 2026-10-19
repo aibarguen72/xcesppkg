@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.42
+
+- **feat: TAB / `?` completion for all `do-*` verbs.**
+  Bundles xcespcli 0.3.41 which exposes do-modem /
+  do-probe / do-pstnrvp-report / do-xcservice in the
+  top-level TAB and `?` list with per-slot sub-token
+  completion.  Everything else unchanged from 0.5.41.
+- Reminder: operators must restart `xcespcli` after
+  `software-install` for the new completion to take
+  effect (running sessions keep the old binary).
+
 ## 0.5.41
 
 - **feat(B8): TDMTEST JSON report export.**  Bundles
