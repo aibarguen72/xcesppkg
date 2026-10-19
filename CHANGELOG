@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.5.26
+
+- **feat(A1): pseudo-clock config attr.**  Bundles xcesp-on-pw
+  0.3.42, xcespproc 0.2.113, xcespcli 0.3.32 — operators can
+  now commit `internal-pseudoclock true` under `clock` and see
+  it rendered in `show clock`.  Runtime handoff still lands in
+  phase A3 (next xcesppkg release train).
+
 ## 0.5.25
 
 - **fix: don't let a stale "no PSK" LOOKUP cache entry
