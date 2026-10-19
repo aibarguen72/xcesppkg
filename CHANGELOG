@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.5.31
+
+- **fix(B1): schema was unparseable in 0.5.30; xcespcli could
+  not load schema from the server.**  Bundles xcesp-on-xc
+  0.2.58 + xcespserver 0.4.20 + xcespproc 0.2.118.
+    - `xc-service-tdmtest.schema` dropped `decimal` (unknown
+      base type) and the inline `attr pattern enum values=…`
+      pattern that silently loses the value set on an attr
+      line.  Replaced with a new `tdmtest-voice-pattern` enum
+      type alias in `_types.schema` and a plain `string`
+      min-mos with range validation moved to the commit gate.
+    - No functional change otherwise — just makes 0.5.30's
+      intended schema actually parse.
+- Operators on 0.5.30 should upgrade before using xcespcli;
+  deployments that only use the server-side CLI are unaffected
+  (xcespserver had the schema already loaded in-process).
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.30
 
 - **feat(B1): TDMTEST xc-service schema + commit gates.**
