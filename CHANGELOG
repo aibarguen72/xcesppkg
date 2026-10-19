@@ -1,5 +1,38 @@
 # Changelog - xcesppkg
 
+## 0.5.35
+
+- **feat(B4): TDMTEST DATA mode is live.**  First tdmtest
+  kind that actually runs: PRBS BERT over timeslots with
+  per-bit error counting + sync tracking.  Bundles xcesp-on-xc
+  0.2.61 + xcespproc 0.2.122 + xcespcli 0.3.35.
+- Operator shape — minimum config for a 2-endpoint uni DATA
+  test (same xc-service you were playing with for B3,
+  just now actually generating + checking bits):
+
+      xc-service dataTest
+        chain chTdm
+        level ds0
+        type tdmtest
+        xc-service-tdmtest
+          kind data
+          mode continuous
+          direction uni
+          tdmtest-data
+            prbs-type 15
+          !
+        !
+        xc-endpoint ep1  pw pw1  role master  timeslots 1-4 !
+        xc-endpoint ep2  pw pw2  role slave   timeslots 1-4 !
+      !
+
+  `show xc-service name dataTest` reports
+  `PRBS type`, `TX frames`, `RX frames`, `RX errored bits`,
+  `Sync OK` after a few seconds of running.
+- Still no PM intervals / history — that's B5 (ES/SES/UAS
+  classification) + B6 (15-min bins + 24h history).
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.34
 
 - **feat(B3): tdmtest service is now parked-but-OK.**  Bundles
