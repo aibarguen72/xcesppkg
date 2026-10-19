@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.5.38
+
+- **feat(B5.1): rename `show services` → `show xc-service`.**
+  Bundles xcespcli 0.3.37.  Matches the config-mode node
+  name (`xc-service <name>` under `xc`) so operators see one
+  consistent token across config and show commands.
+  `services` kept as a backwards-compat alias for one
+  release.
+- No server-side change — xcesp-on-xc / xcespproc are
+  unchanged from 0.5.37.
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.37
 
 - **feat(B5): TDMTEST G.826 ES/SES/UAS classification.**
