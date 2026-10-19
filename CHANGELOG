@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.5.32
+
+- **fix(B1): tdmtest services are visible in `show services`.**
+  Bundles xcesp-on-xc 0.2.59 + xcespproc 0.2.119.  B1 ((<=
+  0.5.31) made `type=tdmtest` services invisible — the loader
+  returned false, xcespproc dropped the object, and the
+  service never reached `show services`.  Now the service
+  stays in the registry with `Config: LLD` and the reason
+  "tdmtest kind not yet implemented (B2+)", so operators can
+  see "it's here, parked" rather than nothing.
+- xcespcli 0.3.33 unchanged.
+- x86_64 only.
+
 ## 0.5.31
 
 - **fix(B1): schema was unparseable in 0.5.30; xcespcli could
