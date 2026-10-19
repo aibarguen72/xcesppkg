@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.5.41
+
+- **feat(B8): TDMTEST JSON report export.**  Bundles
+  xcesp-on-xc 0.2.66 + xcespserver 0.4.22 + xcespproc 0.2.127
+  + xcespcli 0.3.40.  Operator surface:
+
+      do-xcservice <name> export-report [<path>] [domain <D>]
+
+- Report shape (ISO-8601 UTC + 15-min PM bins):
+    - top-level: `service`, `domain`, `kind`, `mode`,
+      `direction`, `phase`, `started`, `ended`,
+      `duration_sec`, `prbs_type`, `result`.
+    - `endpoints[]`.
+    - `summary` — aggregate counters + sync_ok + ES/SES/UAS.
+    - `current_interval` — in-flight 15-min bin.
+    - `intervals[]` — closed bins, oldest-first.
+- Default export path when `<path>` is omitted:
+  `<logDir>/tdmtest-<domain>-<name>-YYYYMMDD-HHMMSS.json`.
+- Atomic file write (tmp + rename) so a concurrent reader
+  never sees a half-written report.
+
 ## 0.5.40
 
 - **feat(B7): TDMTEST timed mode + start/stop/reset verbs.**
