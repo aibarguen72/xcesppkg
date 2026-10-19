@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.5.39
+
+- **feat(B6): 15-min PM intervals + 24h history.**  Bundles
+  xcesp-on-xc 0.2.64 + xcespproc 0.2.125 + xcespcli 0.3.38.
+  Service-level aggregate ES/SES/UAS classification rolls
+  into a 15-min interval accumulator anchored on wall-clock
+  :00/:15/:30/:45 UTC boundaries; snapshots pile up in a
+  bounded 96-row ring (24 h).
+- Operator surface:
+
+      show xc-service name <s> history [N] domain <D>
+
+  Default N=10, max 96.  Row 0 is always the currently-open
+  interval (End = `(in progress)`) so operators see partial
+  progress before the next boundary.
+- UAS retro-relabel from B5 now adjusts the current
+  interval's `ses` → `uas` too, so a run that triggers UAS
+  mid-interval doesn't leave the interval with inflated
+  SES.
+- No disk persistence — history is in-memory only (operator
+  exports via B8's `do-xcservice export-report` when ready).
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.38
 
 - **feat(B5.1): rename `show services` → `show xc-service`.**
