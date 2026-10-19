@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.5.33
+
+- **feat(B2): PRBS LFSR lifted to shared `BertPrbs.h`.**
+  Bundles xcespproc 0.2.120.  Pure refactor — zero behaviour
+  change for the existing packet BERT.  Preparation for B4+
+  where the TDMTEST data mode in xcesp-on-xc consumes the
+  same PRBS bits (adds PRBS-23 support in the header for
+  future callers; PktBertPObj's clamp still accepts 7/11/15
+  only, so its behaviour is bit-identical).
+- xcesp-on-xc / xcespserver / xcespcli unchanged.
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.32
 
 - **fix(B1): tdmtest services are visible in `show services`.**
