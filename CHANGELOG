@@ -1,5 +1,27 @@
 # Changelog - xcesppkg
 
+## 0.5.36
+
+- **fix(B4.1): TDMTEST DATA RX now uses stream-locked PRBS
+  verification.**  Bundles xcesp-on-xc 0.2.62 + xcespproc
+  0.2.123.
+- B4 (<= 0.5.35) ran the TX and RX LFSRs free-running at
+  the same cadence from a shared seed, which only aligns
+  when TX and RX are tick-synced with zero delay.  On a
+  real wire with a remote loop (round-trip ≥ 1 tick) the
+  LFSRs drift and errors look random (~50 % bit-error rate
+  on a clean loop — observed on preprod `pw_gen_1` with
+  `bind=loopback-ces` on the remote).
+- 0.5.36 switches the RX to the standard BERT recovery
+  algorithm: track the wire by shifting RECEIVED bits into
+  the LFSR state after each prediction/compare.  A short
+  warm-up (`prbs-type` bits = 15 for PRBS-15, 23 for
+  PRBS-23) absorbs real stream bits into the state before
+  counting errors.  Result: on a clean loop, `Sync OK: yes`
+  after ~2 bytes and `RX errored bits: 0` from then on.
+- No config / schema / show-formatter change.
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.35
 
 - **feat(B4): TDMTEST DATA mode is live.**  First tdmtest
