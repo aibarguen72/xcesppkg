@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.5.28
+
+- **feat(A3): internal-pseudoclock goes live.**  Bundles
+  xcesp-on-pw 0.3.44 + xcespproc 0.2.115 + xcespcli 0.3.33.
+  Domains with `internal-pseudoclock true` under `clock` now
+  get a 62 ms software pacemaker when no real clock-source is
+  stable UP.  First release of Part A with observable
+  behaviour.  `show clock` reports `Active source: real-pw
+  <name> | internal-pseudoclock | none`.
+- Pre-existing deployments unchanged — `internal-pseudoclock`
+  defaults to false, so the real-pacemaker path is untouched.
+- x86_64 only — modem container (ARM) unaffected by Part A.
+
 ## 0.5.27
 
 - **feat(A2): pseudo-clock timer path.**  Bundles xcesp-on-pw
