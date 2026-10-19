@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.27
+
+- **feat(A2): pseudo-clock timer path.**  Bundles xcesp-on-pw
+  0.3.43 + xcespproc 0.2.114.  Runtime machinery for the
+  internal pacemaker lands (62 ms repeating timer on
+  PwDomainXcRegistry); no caller yet so no observable change
+  until phase A3.  Zero risk — the new code only runs if
+  `setInternalPacemaker` is called, and nothing calls it yet.
+- xcespcli unchanged from 0.3.32.
+- x86_64 only — modem container (ARM) unaffected by Part A.
+
 ## 0.5.26
 
 - **feat(A1): pseudo-clock config attr.**  Bundles xcesp-on-pw
