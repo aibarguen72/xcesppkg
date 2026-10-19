@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.5.37
+
+- **feat(B5): TDMTEST G.826 ES/SES/UAS classification.**
+  Bundles xcesp-on-xc 0.2.63 + xcespproc 0.2.124 + xcespcli
+  0.3.36.  Fifth phase of the Part-B roadmap: per-second
+  rollover of the raw bit-error counts into G.826 PM
+  semantics.
+- `show xc-service name <s>` now adds four lines when
+  kind=data:
+
+      ES count:             <ES seconds>
+      SES count:            <SES seconds>
+      UAS count:            <UAS seconds>
+      State:                available | unavailable
+
+- UAS entry/exit per G.826: 10 consecutive SES → declare
+  unavailable, relabel; 10 consecutive non-SES → leave UAS.
+  `ses-threshold` and `uas-threshold` attrs (already defined
+  in B1) drive the state machine; defaults 30 % / 10 s.
+- Still no 15-min / 24h history — that's B6 (ring buffer +
+  `show xc-service history`).
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.36
 
 - **fix(B4.1): TDMTEST DATA RX now uses stream-locked PRBS
