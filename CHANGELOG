@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.5.29
+
+- **feat(A4): handoff hardening + CLOCK_FALLBACK_ACTIVE alarm.**
+  Final phase of Part A.  Bundles xcesp-on-pw 0.3.45 +
+  xcespproc 0.2.116.
+    - Atomic `applyPacemakerSelection` on the registry closes
+      the brief torn-state window during real↔internal
+      handoffs.  No RX frame can see a pacemaker-cleared-but-
+      internal-not-yet-armed state.
+    - `CLOCK_FALLBACK_ACTIVE` alarm (WARNING) raised whenever
+      the internal pseudoclock is driving; cleared when a real
+      source is back.  Visible in `show alarms` / SNMP /
+      NETCONF just like any other ProcObject alarm.
+- Part A complete.  Operator uses:
+    `clock { internal-pseudoclock true }` for lab fallback;
+    `show clock` reports which path is live;
+    `CLOCK_FALLBACK_ACTIVE` alarm fires while fallback is in
+    use.
+- xcespcli unchanged from 0.3.33.
+- x86_64 only — modem container (ARM) unaffected by Part A.
+
 ## 0.5.28
 
 - **feat(A3): internal-pseudoclock goes live.**  Bundles
