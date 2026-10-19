@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.5.34
+
+- **feat(B3): tdmtest service is now parked-but-OK.**  Bundles
+  xcesp-on-xc 0.2.60 + xcespproc 0.2.121 + xcespcli 0.3.34.
+  Third phase of the Part-B roadmap: the B1/B2 LLD stub goes
+  away; `type=tdmtest` services parse cleanly, report
+  `Config: OK` with a nested tdmtest sub-block visible in
+  `show xc-service <name>` (kind / mode / direction / phase /
+  settle / duration).  Still no dataplane tick runs — phase
+  stays `idle` and XcEngine::enrollService is skipped for
+  tdmtest.  B4 wires the real dispatcher.
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.33
 
 - **feat(B2): PRBS LFSR lifted to shared `BertPrbs.h`.**
