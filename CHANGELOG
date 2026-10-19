@@ -1,5 +1,41 @@
 # Changelog - xcesppkg
 
+## 0.5.30
+
+- **feat(B1): TDMTEST xc-service schema + commit gates.**
+  First phase of the Part-B TDMTEST roadmap.  Bundles
+  xcesp-on-xc 0.2.57 + xcespserver 0.4.19 + xcespproc 0.2.117.
+  Operators can author `type tdmtest` services, commit, save,
+  load; the runtime refuses them with LLD "not yet implemented"
+  until B2+ wires it up.  Low-risk — the only observable
+  change in a deployment that doesn't use `tdmtest` is nothing.
+- Operator shape (becomes usable in B2+):
+
+      domain tdm
+        xc
+          xc-service test1
+            chain ch1
+            level ds0
+            type tdmtest
+            xc-service-tdmtest
+              kind data
+              mode continuous
+              direction uni
+              tdmtest-data
+                prbs-type 15
+              !
+            !
+            xc-endpoint e1
+              pw pw1
+              role master
+              timeslots 1-4
+            !
+          !
+        !
+      !
+
+- x86_64 only — modem container (ARM) unaffected by Part B.
+
 ## 0.5.29
 
 - **feat(A4): handoff hardening + CLOCK_FALLBACK_ACTIVE alarm.**
