@@ -1,5 +1,36 @@
 # Changelog - xcesppkg
 
+## 0.5.47
+
+- **feat(B10): G.711 A-law / μ-law companding for voice.**
+  Bundles xcesp-on-xc 0.2.71 + xcespproc 0.2.132 +
+  xcespcli 0.3.45.
+- Operator surface — new `encoding` attr on tdmtest-voice:
+
+      xc-service <name>
+        chain <c>
+        type tdmtest
+        xc-service-tdmtest
+          kind voice
+          tdmtest-voice
+            pattern sweep
+            [encoding { alaw | ulaw }]  default alaw
+            [min-mos 3.0]
+          !
+        !
+        endpoint ep1 ...
+
+- Linear PCM is no longer an option on the wire — a real
+  voice channel is always A-law (E1) or μ-law (T1).
+  Default = alaw.
+- Shared `g711` module in xcesp-on-xc/src/voice/ with
+  bidirectional table-based converters; ~129 KB of
+  lookup tables built once at service load.  Hot path is
+  branch-free O(1) array indexing.  Will be reused by the
+  upcoming full VOICE xc-service (not just this test).
+- `show xc-service name <s>` adds an `Encoding:` line.
+  Report export adds `voice_encoding` field.
+
 ## 0.5.46
 
 - **fix(B10): `kind=voice` is one timeslot per endpoint.**
