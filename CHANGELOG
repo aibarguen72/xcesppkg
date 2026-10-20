@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## 0.5.55
+
+- **feat(B10.5): voice delay scope label.**  Bundles
+  xcesp-on-xc 0.2.77 + xcespproc 0.2.138 +
+  xcespcli 0.3.49.
+- `show xc-service` Delay line now carries a scope
+  suffix so operators (and xcespqa consumers reading
+  the report JSON) know what the measured delay
+  represents:
+
+      Delay (ms) avg/obs max/cfg max: 4018 / 5606 (max 5000)  [one-way]
+      Delay (ms) avg/obs max/cfg max: 2397 / 2815 (max 5000)  [round-trip]
+
+- Semantics:
+    - **round-trip**: 1-endpoint loopback (TX returns to
+      the same endpoint via external loopback).
+    - **one-way**: 2-endpoint uni (master → slave) or
+      bidirectional (per-endpoint peer→self; reported
+      max = slower direction).
+- Round-trip measurement from a 1-ep loopback is
+  roughly 2× the equivalent one-way reading from a
+  symmetric 2-ep setup — keep that in mind when
+  comparing numbers across topologies.
+
 ## 0.5.54
 
 - **feat: inline per-endpoint tdmtest counters.**
