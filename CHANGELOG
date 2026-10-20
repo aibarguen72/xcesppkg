@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.54
+
+- **feat: inline per-endpoint tdmtest counters.**
+  Bundles xcespcli 0.3.48 — replaces the separate
+  per-endpoint runtime table with slash-separated
+  values on each counter line (`TX frames: 963 / 0`,
+  `Sync OK: - / yes`, …).  An `Endpoints:` legend line
+  names the slash-position order once per status
+  block.
+- 1-endpoint loopback output unchanged (scalar).
+
 ## 0.5.53
 
 - **feat: per-endpoint runtime table for 2-endpoint
