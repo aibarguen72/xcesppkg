@@ -1,5 +1,46 @@
 # Changelog - xcesppkg
 
+## 0.5.45
+
+- **feat(B10): VOICE kind for TDMTEST xc-service.**
+  Bundles xcesp-on-xc 0.2.69 + xcespproc 0.2.130 +
+  xcespcli 0.3.44.
+- Operator surface — configure a voice test:
+
+      xc-service <name>
+        chain <c>
+        type tdmtest
+        xc-service-tdmtest
+          kind voice
+          [mode { continuous | timed }]
+          [direction { uni | bidirectional }]
+          tdmtest-voice
+            [pattern { sweep | tone-1khz | speech-sample }]  default sweep
+            [max-delay-ms <ms>]                              default 1000
+            [min-mos <float>]                                default 3.0
+          !
+        !
+        endpoint <ep> ...
+
+- `show xc-service name <s>` prints `Pattern`,
+  `MOS (estimate)`, `MOS floor`, `Max delay (ms)`,
+  `Pass:` plus the shared ES/SES/UAS block.  Report
+  export (`do-xcservice <name> export-report`) adds a
+  voice branch with `voice_pattern` / `voice_min_mos` /
+  `voice_max_delay_ms` / `voice_mos`.
+- **Known limitation**: v1 does not yet measure round-
+  trip delay; the configured `max-delay-ms` is echoed in
+  the report but not enforced.  Delay measurement
+  (sync-marker scheme) lands in B10.1.
+- MOS is a **rough proxy**, not a certified PESQ/P.863
+  score — `4.3 - 0.3 · error_pct` clamped to `[1.0, 5.0]`.
+  Enough for a go/no-go against a configured floor.
+- Pseudoclock reminder: patterns are pure `f(idx)` so
+  they lock regardless of frame rate; the signals won't
+  carry audible frequency content on a 16 fr/sec domain
+  but the generator/verifier still produces a usable
+  pass/fail.
+
 ## 0.5.44
 
 - **feat(B9.1): CAS signaling-off operator warning.**
