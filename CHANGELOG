@@ -1,5 +1,33 @@
 # Changelog - xcesppkg
 
+## 0.5.43
+
+- **feat(B9): CAS kind for TDMTEST xc-service.**  Bundles
+  xcesp-on-xc 0.2.67 + xcespproc 0.2.128 + xcespcli 0.3.42.
+- Operator surface — configure a CAS test:
+
+      xc-service <name>
+        chain <c>
+        type tdmtest
+        xc-service-tdmtest
+          kind cas
+          [mode { continuous | timed }]        default continuous
+          [direction { uni | bidirectional }]  default uni
+          tdmtest-cas
+            bits <subset of a,b,c,d>
+            [flip-hz <1..100>]                  default 10
+          !
+        !
+        endpoint <ep> ...
+
+- `show xc-service name <s>` prints `CAS bits`, `Flip Hz`,
+  `Flips sent`, plus the standard ES/SES/UAS block.  Report
+  export (`do-xcservice <name> export-report`) adds a cas
+  branch with `cas_bits` / `cas_flip_hz` / `cas_flips_sent`
+  alongside the shared summary + intervals.
+- No new verbs — start/stop/reset/export-report work
+  unchanged for CAS services.
+
 ## 0.5.42
 
 - **feat: TAB / `?` completion for all `do-*` verbs.**
