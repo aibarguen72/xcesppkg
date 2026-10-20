@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.5.46
+
+- **fix(B10): `kind=voice` is one timeslot per endpoint.**
+  Bundles xcesp-on-xc 0.2.70 + xcespserver 0.4.23 +
+  xcespproc 0.2.131.  Commit-time gate in xcespserver
+  rejects any voice service whose endpoint names more
+  than one timeslot; load-time check in xcesp-on-xc
+  catches the direct-INI bypass path.
+- Rationale: a real voice channel is 1 TS × 64 kbit/s;
+  spreading one pattern across multiple TS would produce
+  misleading pass/fail numbers that don't reflect voice-
+  channel behaviour.
+- Multi-TS tests remain valid for `kind=data` (PRBS) and
+  `kind=cas` (ABCD bit-flip, same pattern on all TS) —
+  only `kind=voice` carries the restriction.
+
 ## 0.5.45
 
 - **feat(B10): VOICE kind for TDMTEST xc-service.**
