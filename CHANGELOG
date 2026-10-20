@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## 0.5.44
+
+- **feat(B9.1): CAS signaling-off operator warning.**
+  Bundles xcesp-on-xc 0.2.68 + xcespproc 0.2.129 +
+  xcespcli 0.3.43.  CAS tdmtest services whose endpoint
+  pws have `signaling false` now:
+    - skip TX+RX for that endpoint (no phantom errors);
+    - latch a `signaling_ok=no` state;
+    - surface a `WARNING:` line in `show xc-service name
+      <s>` so the operator sees why the test is quiet.
+- Pseudoclock sizing reminder: for operators testing CAS
+  on a pseudoclock domain (16 fr/sec), use `flip-hz 2` so
+  each flip period gets ~8 TX nibbles.  Default `flip-hz
+  10` is sized for real-wire (500 fr/sec); on pseudoclock
+  that squeezes to ~1.6 nibbles/period and the RX runs
+  near Nyquist.
+
 ## 0.5.43
 
 - **feat(B9): CAS kind for TDMTEST xc-service.**  Bundles
