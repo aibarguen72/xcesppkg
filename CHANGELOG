@@ -1,5 +1,44 @@
 # Changelog - xcesppkg
 
+## 0.5.58
+
+- **feat(C1): two new xc-condition probes.**
+  Bundles xcesp-on-xc 0.2.79 + xcespproc 0.2.140 +
+  xcespcli 0.3.52.
+- Operator surface — add either probe as a child of
+  `xc-condition`:
+
+      xc-condition primary-up
+        xc-probe-tdm-pw primary
+          pw pw_access_1
+          invert false
+        !
+      !
+
+      xc-condition channel-quality
+        xc-probe-tdmtest-sync qa
+          xc-service castest-ch1
+          invert false
+        !
+      !
+
+- Pattern suggestion from operator: run a continuous
+  `kind=cas` tdmtest on an unused CAS bit (one of
+  a/b/c/d not carrying real signalling) as a
+  channel-quality probe, then gate a chain's
+  enablement on `xc-probe-tdmtest-sync` referencing
+  that service.  `kind=data` works too but is more
+  intrusive (consumes a full timeslot); `kind=voice`
+  is rare but supported.
+- Both probes are live-reference (no cached state) and
+  cheap enough to evaluate on every chain-gate check.
+  `invert` lets the operator write either polarity of
+  the condition without inverting the condition
+  itself.
+- Cross-reference validation at commit time — a probe
+  pointing at a non-existent pw / xc-service LLDs the
+  owning condition with a specific error.
+
 ## 0.5.57
 
 - **feat(B10.7): `-` for inactive-side counters in uni
