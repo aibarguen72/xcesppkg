@@ -1,5 +1,31 @@
 # Changelog - xcesppkg
 
+## 0.5.51
+
+- **feat(B10.1): round-trip delay measurement + pass
+  gate.**  Bundles xcesp-on-xc 0.2.75 +
+  xcespproc 0.2.136 + xcespcli 0.3.46.
+- `tdmtest-voice.max-delay-ms` was previously echoed in
+  the report but never enforced.  Now:
+    - Every synced RX byte computes delay from the TX/RX
+      index gap × observed samples-per-ms.  Tick-rate
+      agnostic.
+    - `voice_pass` gates on `max(delay) ≤ max-delay-ms`
+      in addition to MOS/sync/UAS.
+    - `show xc-service name <s>` prints
+      `Delay (ms) avg/obs max/cfg max: <a> / <m> (max <c>)`.
+    - Report JSON gains `voice_delay_ms_avg` and
+      `voice_delay_ms_max`.
+- Scope: delay recorded only on endpoints with BOTH
+  txActive and rxActive — 1-ep loopback + 2-ep
+  bidirectional.  2-ep uni (master TX only, slave RX
+  only) stays at 0; future revision.
+- Pseudoclock reminder: default `max-delay-ms=1000` is
+  sized for real-wire (~6 ms observed).  At 16 fr/sec
+  with FIFO depth ~50 the observed delay is ~3000 ms —
+  automatic pseudoclock tests must bump `max-delay-ms`
+  to e.g. 5000 along with `settle-sec`.
+
 ## 0.5.50
 
 - **fix(B10): carry sync state across the settling→running
