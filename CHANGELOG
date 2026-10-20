@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.5.49
+
+- **fix(B10): conservative voice sync-acquire threshold.**
+  Bundles xcesp-on-xc 0.2.73 + xcespproc 0.2.134.  Voice
+  services now require 16 consecutive direct-match bytes
+  (up from 4) before flipping `syncOk`, eliminating the
+  tentative-lock-then-drop churn that latched ~32
+  errored samples in initial real-wire tests.
+- Defaults stay sized for real wire (8 kHz effective
+  sample rate): ~2 ms added to initial lock, no change
+  to error counting afterwards.
+- **Pseudoclock-automatic-testing note**: on a 16 fr/sec
+  pseudoclock domain the acquire window stretches to
+  several seconds.  Automatic tests running on
+  pseudoclock MUST bump `settle-sec` from 5 to 15-30
+  so sync-acquire burns in the settle window rather
+  than the measurement window.  No auto-adaptation —
+  operator policy: keep defaults predictable for the
+  dominant (real-wire) deployment.
+
 ## 0.5.48
 
 - **fix(B10): voice sync acquisition for real-wire
