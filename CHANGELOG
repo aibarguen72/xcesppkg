@@ -1,5 +1,28 @@
 # Changelog - xcesppkg
 
+## 0.5.50
+
+- **fix(B10): carry sync state across the settling→running
+  transition.**  Bundles xcesp-on-xc 0.2.74 +
+  xcespproc 0.2.135.
+- Previously, a voice test that acquired sync during the
+  settle window lost it when transitioning to the running
+  window — `zeroRuntimeState()` wiped stream state along
+  with the measurement counters.  The lost sync was then
+  re-acquired inside the running window, burning ~16
+  errored samples before stabilising.  Pseudoclock
+  showed this most clearly: MOS=3.80 instead of ~4.3,
+  Sample errors=16 instead of 0.
+- Fix splits the function into "zero measurement
+  counters" (always) and "zero stream state"
+  (reset-verb and continuous-load only).  Settling →
+  running now keeps syncOk, voiceRxIdx, PRBS LFSR, and
+  the CAS flip-generator timer intact across the
+  transition.
+- No new config, no operator action needed — re-run the
+  same test, errors should now stay at 0 after
+  acquisition and MOS land at the pattern's baseline.
+
 ## 0.5.49
 
 - **fix(B10): conservative voice sync-acquire threshold.**
