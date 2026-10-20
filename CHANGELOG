@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.5.57
+
+- **feat(B10.7): `-` for inactive-side counters in uni
+  tdmtest.**  Bundles xcespcli 0.3.51.
+- Previously a uni test showed `0` for the inactive
+  side of every per-endpoint counter — misleading,
+  since the side isn't driving the counter at all.  Now
+  TX counters show `-` on non-tx-active endpoints and
+  RX counters show `-` on non-rx-active endpoints.
+- UNI output:
+
+      TX frames:            963 / -
+      RX frames:            - / 963
+      Sample errors:        - / 0
+      Sync OK:              - / yes
+      State:                - / available
+
+- Bidirectional and loopback outputs unchanged.
+
 ## 0.5.56
 
 - **feat(B10.6): per-direction voice delay in bidi.**
