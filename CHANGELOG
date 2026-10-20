@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.5.56
+
+- **feat(B10.6): per-direction voice delay in bidi.**
+  Bundles xcesp-on-xc 0.2.78 + xcespproc 0.2.139 +
+  xcespcli 0.3.50.
+- The single aggregate Delay line is replaced with
+  four separate lines, carrying per-endpoint values
+  split by the `/` convention operators already see
+  on TX frames / RX frames / etc:
+
+      Delay avg (ms):      3981 / 3870
+      Delay max (ms):      5588 / 5234
+      Delay cfg max (ms):  5000
+      Delay scope:         one-way
+
+- Each slash column maps to the matching endpoint in
+  the `Endpoints:` legend.  `-` shown for tx-only
+  endpoints (uni-master).  Loopback still shows
+  scalar.  Lets asymmetric paths show their
+  per-direction numbers without rolling up.
+
 ## 0.5.55
 
 - **feat(B10.5): voice delay scope label.**  Bundles
