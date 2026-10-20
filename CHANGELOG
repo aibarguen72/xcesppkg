@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.5.52
+
+- **feat(B10.2): delay measurement for 2-endpoint uni.**
+  Bundles xcesp-on-xc 0.2.76 + xcespproc 0.2.137.
+- Lifts the scope limitation noted in 0.5.51.  In uni
+  mode with 2 endpoints the master is TX-only and the
+  slave is RX-only — v1 had no co-located TX/RX pair
+  for the gap-based delay math and left delay at 0.
+  v2 walks the peer EpState to pull the master's
+  `voiceTxIdx` into the slave's delay calculation.
+- `voice_delay_ms_avg` / `voice_delay_ms_max` /
+  `voice_pass` delay gate now cover all three
+  topologies: 1-endpoint loopback, 2-endpoint
+  bidirectional, 2-endpoint uni.
+
 ## 0.5.51
 
 - **feat(B10.1): round-trip delay measurement + pass
