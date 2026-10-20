@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.5.48
+
+- **fix(B10): voice sync acquisition for real-wire
+  loopback.**  Bundles xcesp-on-xc 0.2.72 +
+  xcespproc 0.2.133.
+- Previously, a kind=voice tdmtest service on a
+  real-wire-looped PW (FIFO depth ~26-48 samples)
+  reported MOS=1.00 and 70% sample errors even though
+  TX and RX bytes matched on the wire snapshot.  Sync
+  never acquired because the acquire scan was forward-
+  only and voiceRxIdx bumped unconditionally — ran
+  permanently ahead of the delayed wire.
+- Fix: bi-directional scan (±256 samples), rxIdx
+  stationary on sync-acquire miss, and only direct
+  matches at the current rxIdx count toward sync.
+  No new config knobs — existing voice services pick
+  up the fix automatically.
+
 ## 0.5.47
 
 - **feat(B10): G.711 A-law / μ-law companding for voice.**
