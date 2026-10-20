@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.5.53
+
+- **feat: per-endpoint runtime table for 2-endpoint
+  tdmtest services.**  Bundles xcespcli 0.3.47 — adds a
+  `--- Per-endpoint runtime ---` section above the
+  existing config table so operators can see which side
+  of a 2-ep uni / bidi test drove TX / RX / Errors
+  separately, instead of just the aggregate.
+- 1-endpoint loopback output unchanged.
+
 ## 0.5.52
 
 - **feat(B10.2): delay measurement for 2-endpoint uni.**
