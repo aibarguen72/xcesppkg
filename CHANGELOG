@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.5.65
+
+- **feat(DV1B step 4): cas-pattern OOS + cas-rx activity
+  detectors are live.**  Bundles xcesp-on-xc 0.2.85 +
+  xcespproc 0.2.145.
+- Lab verification plan (data or voice service with
+  `signaling true` on the endpoint's PW):
+    - set `oos cas-pattern cas-bit a cas-polarity true` on
+      an endpoint; drive its RX CAS to a=1 (via loopback /
+      peer) → `datapmp` state=`oos`.
+    - clear the A bit → `state` falls back to the activity
+      resolver.
+    - set `activity cas-rx cas-bit b cas-polarity true`;
+      flip the B bit → state=ACTIVE; clear it → IDLE.
+    - the two detectors can coexist on the same endpoint
+      (different bits).
+- Remaining stub: `activity cas-tx` (step 5, lands with
+  Phase 1E CAS blender).  Everything else from the step-1
+  skeleton (data-pattern OOS, data-activity, voice-energy)
+  is already live from previous releases.
+
 ## 0.5.64
 
 - **feat(DV1B step 3): voice-energy activity detector is
