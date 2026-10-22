@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.66
+
+- **fix: show xc-service MainSlots / BkpSlots print the
+  timeslot spec, not a count.**  Bundles xcespcli 0.3.55.
+- An endpoint configured `timeslots 2` now shows
+  `MainSlots: 2` (the ts number) rather than `MainSlots: 1`
+  (the count); specs like `1,3-5` or `1-30` print verbatim.
+  xcesp-on-xc + xcespproc unchanged from 0.5.65.
+
 ## 0.5.65
 
 - **feat(DV1B step 4): cas-pattern OOS + cas-rx activity
