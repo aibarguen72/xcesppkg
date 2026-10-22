@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.5.61
+
+- **fix: `processes <name>` role gate.**  Bundles
+  xcespserver 0.4.25.  Rejects at commit any
+  `processes <name>` whose instance name isn't
+  `routing` or `tdm-pw` — the name flows to
+  `xcespproc -r <name>`, and only those two are
+  accepted.  Previously a typo caused xcespwdog to
+  respawn xcespproc 3× and give up with no worker
+  running (xcesptest template had `processes tdm`
+  which bit the DATA/VOICE sprint lab verification).
+
 ## 0.5.60
 
 - **fix(DV1A): fold xc-endpoint-activity.schema attrs
