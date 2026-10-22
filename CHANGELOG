@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.5.64
+
+- **feat(DV1B step 3): voice-energy activity detector is
+  live.**  Bundles xcesp-on-xc 0.2.84 + xcespproc 0.2.144
+  + xcespcli 0.3.54.
+- Lab verification plan (voice service with one endpoint):
+    - set `activity voice-energy voice-active-threshold 2000
+      voice-active-time-ms 50 voice-idle-threshold 500
+      voice-idle-time-ms 200` + `encoding alaw` (or `ulaw`).
+    - inject silence (0xD5 for alaw, 0xFF for ulaw) on the
+      pw's ts → `show xc-service <name>` prints
+      `voice-energy (env=0)` and state=IDLE.
+    - send a tone / speech (TDMTEST voice-kind on the peer
+      pw works): envelope rides up; after `voice-active-
+      time-ms` above threshold, state flips to ACTIVE.
+    - cut the tone: envelope decays; after `voice-idle-
+      time-ms` below `voice-idle-threshold`, state falls
+      back to IDLE.
+- Remaining detectors (`cas-pattern` OOS; `cas-rx`, `cas-tx`
+  activity) stay IDLE until steps 4-5.
+
 ## 0.5.63
 
 - **feat(DV1B step 2): data-pattern OOS + data-activity
