@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.5.63
+
+- **feat(DV1B step 2): data-pattern OOS + data-activity
+  detectors are live.**  Bundles xcesp-on-xc 0.2.83 +
+  xcespproc 0.2.143.
+- Lab verification plan for operators who already have the
+  step 1 config:
+    - set `oos data-pattern` with `data-value 0xFF` +
+      `data-count 32` on one endpoint; drive its RX with
+      0xFF via loopback → `datapmp` shows state=`oos`.
+    - break the all-0xFF pattern (any non-0xFF byte in any
+      configured ts) → endpoint flips back to IDLE/ACTIVE
+      according to the activity detector.
+    - set `activity data-activity` with
+      `data-idle-timeout-ms 500` → ACTIVE whenever RX has
+      non-0xFF traffic in the configured ts, IDLE once
+      quiet for ≥500 ms.
+- Remaining detectors (`cas-pattern` OOS; `voice-energy`,
+  `cas-rx`, `cas-tx` activity) stay IDLE until steps 3-5.
+
 ## 0.5.62
 
 - **feat(DV1B step 1): per-endpoint liveness skeleton +
