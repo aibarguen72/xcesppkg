@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.5.62
+
+- **feat(DV1B step 1): per-endpoint liveness skeleton +
+  show polish.**  Bundles xcesp-on-xc 0.2.82 +
+  xcespproc 0.2.142 + xcespcli 0.3.53.
+- Three-state liveness tracking (OOS / IDLE / ACTIVE)
+  starts running on type=data / type=voice services.
+  Step 1 only resolves `activity.detector = none` →
+  always ACTIVE; the other detectors stay IDLE until
+  their specific patch:
+    - step 2 — data-pattern OOS + data-activity.
+    - step 3 — voice-energy.
+    - step 4 — cas-rx + cas-pattern OOS.
+    - step 5 — cas-tx (after Phase 1E CAS blender).
+- `show xc-service name <s>` now renders DATA/VOICE
+  service-level config (data-mode, cas-bits-*) and a
+  per-endpoint runtime table showing state, OOS /
+  activity detector + params, idle-silence,
+  tx-active-cas-bit, encoding.
+
 ## 0.5.61
 
 - **fix: `processes <name>` role gate.**  Bundles
