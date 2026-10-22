@@ -1,5 +1,51 @@
 # Changelog - xcesppkg
 
+## 0.5.59
+
+- **feat(DV1A): DATA/VOICE xc-service — schema + loader
+  skeleton.**  Bundles xcesp-on-xc 0.2.80 +
+  xcespserver 0.4.24 + xcespproc 0.2.141.
+- First phase of a multi-phase sprint building two new
+  xc-service types (`data` and `voice`) for role-based
+  multipoint-aggregation across TDM-PW endpoints.  See
+  `/home/asier/.claude/plans/xc-service-data-voice.md`
+  for the full plan.
+- Operator surface (Phase 1A is parse-only — service
+  commits cleanly but no runtime traffic flows yet):
+
+      xc-service <name>
+        chain <c>
+        level ds0
+        type { data | voice }
+        xc-service-data-config | xc-service-voice-config
+          [cas-bits-and | -or | -passthrough <abcd subset>]
+          [data-mode { full | cas-only }]      (data only)
+        !
+        xc-endpoint <ep>
+          pw <pw>
+          role { master | slave | omni | none }
+          timeslots <...>
+          [idle-silence <t|f>]
+          [tx-active-cas-bit <a|b|c|d>]
+          [encoding <alaw|ulaw>]      (voice; default alaw)
+          xc-endpoint-oos      <method + params>  !
+          xc-endpoint-activity <detector + params>  !
+        !
+      !
+
+- Commit gates (xcespserver): type=data requires
+  data-config sub-block (same for voice); level=ds0 +
+  ≥1 endpoint; cas-bits-* letter-list validation +
+  overlap check; data-mode=cas-only requires ≥1
+  and/or bit.
+- Service with type=data or type=voice shows
+  `Config: OK` and enrolls with the engine, but
+  dispatch is a no-op — expected for Phase 1A.  Runtime
+  aggregation arrives in subsequent phases (1B
+  liveness detectors, 1C role-Tx, 1D DATA, 1E CAS,
+  1F VOICE, 1G Tx-active-CAS, 1H blend modes, 1I
+  operator surface).
+
 ## 0.5.58
 
 - **feat(C1): two new xc-condition probes.**
