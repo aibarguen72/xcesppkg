@@ -1,5 +1,23 @@
 # Changelog - xcesppkg
 
+## 0.5.67
+
+- **feat(DV1C): role-based TX-activity derivation is live.**
+  Bundles xcesp-on-xc 0.2.86 + xcespproc 0.2.147 +
+  xcespcli 0.3.56.
+- `show xc-service <name>` gains per-endpoint RxAct /
+  TxAct columns.  No bytes move yet — the derived flags
+  feed Phase 1D (DATA aggregation) + 1F (VOICE).  Verify
+  the role matrix:
+    - M=ACT, S=IDL → M:(rx yes, tx no) S:(rx no, tx yes)
+    - M=IDL, S=ACT → M:(rx no, tx yes) S:(rx yes, tx no)
+    - M=ACT, S=ACT → both (rx yes, tx yes)
+    - M=OOS, S=ACT → M:(rx no, tx yes) S:(rx yes, tx no)
+    - any ep shutdown=yes → that ep: both no
+    - 3-ep with O=ACT, M=IDL, S=IDL → O:(rx yes, tx yes)
+                                      M:(rx no,  tx yes)
+                                      S:(rx no,  tx yes)
+
 ## 0.5.66
 
 - **fix: show xc-service MainSlots / BkpSlots print the
