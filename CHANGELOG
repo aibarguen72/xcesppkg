@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.5.60
+
+- **fix(DV1A): fold xc-endpoint-activity.schema attrs
+  onto single lines.**  Bundles xcesp-on-xc 0.2.81.
+  xcespserver startup previously emitted 5 WARNINGs
+  per load ("unexpected keyword 'min=1' inside node
+  block") because xcespschema's attr-line parser
+  doesn't support line continuations.  Fixed by
+  folding each attr onto one line.  No functional
+  change — the min/max tokens were silently dropped
+  anyway; proper range enforcement will land as a
+  future patch factoring the integer ranges into
+  named types in `_types.schema`.
+
 ## 0.5.59
 
 - **feat(DV1A): DATA/VOICE xc-service — schema + loader
