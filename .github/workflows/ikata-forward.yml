@@ -3,6 +3,9 @@
 #
 # It runs for a few seconds on a GitHub-hosted runner and only forwards the event
 # to aibarguen72/ikata-agents, where the agents run on the self-hosted server.
+# Asier's comments are forwarded when the item has `needs-human` (an agent is waiting),
+# or when it has an `agent:*` label and the comment mentions @ikatasup (wake the agent
+# on finished work). Other comments stay human-only, so notes never start a paid run.
 name: ikata-forward
 
 on:
@@ -24,7 +27,9 @@ jobs:
       (github.event.action == 'labeled' && github.event.label.name == 'feature-done') ||
       (github.event_name == 'issue_comment' &&
         github.event.comment.user.login == 'aibarguen72' &&
-        contains(github.event.issue.labels.*.name, 'needs-human')) ||
+        (contains(github.event.issue.labels.*.name, 'needs-human') ||
+          (contains(join(github.event.issue.labels.*.name, ','), 'agent:') &&
+           contains(github.event.comment.body, '@ikatasup')))) ||
       (github.event_name == 'pull_request_review' &&
         github.event.review.state == 'changes_requested' &&
         github.event.review.user.login == 'aibarguen72' &&
@@ -32,7 +37,10 @@ jobs:
     steps:
       - name: Dispatch to ikata-agents
         env:
-          GH_TOKEN: ${{ secrets.IKATA_DISPATCH_TOKEN }}
+          # ikata-agents itself has no IKATA_DISPATCH_TOKEN: it falls back to the bot PAT
+          # (BOT_GH_TOKEN, write on ikata-agents). A PAT is required — a dispatch sent with
+          # github.token does not start workflows.
+          GH_TOKEN: ${{ secrets.IKATA_DISPATCH_TOKEN || secrets.BOT_GH_TOKEN }}
         run: |
           case "$GITHUB_EVENT_NAME" in
             issues|pull_request) TYPE=feature-done ;;
