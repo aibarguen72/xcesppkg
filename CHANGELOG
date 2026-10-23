@@ -1,14 +1,37 @@
 # Changelog - xcesppkg
 
-## unreleased (fix/ikata-2-status-refresh-on-commit)
+## 0.5.68
 
+- **feat(DV1D): DATA aggregation is live for type=data.**
+  Bundles xcesp-on-xc 0.2.87 + xcespproc 0.2.148 +
+  xcespcli 0.3.57.
 - **fix(ikata-agents#2): `STATUS_POLL_INTERVAL` 30 -> 5 s**
   in `cfg/xcespserver.ini` and `docker/xcespserver.ini`.
-  The server polls each xcespproc once per interval (one
-  small STATUS_POLL frame); 30 s left `show status` up to
-  30 s (and with a two-step link transition, up to 60 s)
-  stale after a commit.  Pairs with the xcespserver fix
-  that also polls 2 s after each commit.
+  The server polls each xcespproc once per interval; 30 s
+  left `show status` up to 30 s (two-step link transition:
+  up to 60 s) stale after a commit.  Pairs with the
+  xcespserver fix that also polls 2 s after each commit.
+- Lab verification matrix (ds0 type=data service, each ep
+  driven with a known RX pattern):
+    - **2-ep master+slave bidir:** master's TX byte =
+      slave's RX byte; slave's TX byte = master's RX byte.
+      Flip one side IDLE+idle-silence → opposite side sees
+      0xFF.  Flip to OOS → both sides' TX = 0xFF (OOS blocks
+      the frame regardless of peer activity).
+    - **3-ep 1 master + 2 slaves:** both slaves' TX = master
+      RX; master TX = AND of both slaves' RX bytes.  Set
+      one slave to OOS → master TX = other slave's RX (OOS
+      slave drops out of the AND).
+    - **3-ep 2 masters + 1 slave:** slave TX = AND of both
+      masters' RX; both masters' TX = slave RX.
+    - **3-ep 2 omni + 1 slave:** omni self-subtract — each
+      omni's TX includes slave RX + the OTHER omni's RX,
+      with its own RX removed in the overlapping bits (via
+      omniMask).  Easiest check: drive both omni with the
+      same byte on ts; verify the overlap bits don't echo
+      back.
+    - **data-mode cas-only:** TX data stays 0xFF regardless
+      of input, independent of role/state.
 
 ## 0.5.67
 
