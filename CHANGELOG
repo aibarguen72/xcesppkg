@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## unreleased (fix/ikata-2-status-refresh-on-commit)
+
+- **fix(ikata-agents#2): `STATUS_POLL_INTERVAL` 30 -> 5 s**
+  in `cfg/xcespserver.ini` and `docker/xcespserver.ini`.
+  The server polls each xcespproc once per interval (one
+  small STATUS_POLL frame); 30 s left `show status` up to
+  30 s (and with a two-step link transition, up to 60 s)
+  stale after a commit.  Pairs with the xcespserver fix
+  that also polls 2 s after each commit.
+
 ## 0.5.67
 
 - **feat(DV1C): role-based TX-activity derivation is live.**
