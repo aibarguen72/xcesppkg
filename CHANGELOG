@@ -1,5 +1,34 @@
 # Changelog - xcesppkg
 
+## 0.5.70
+
+- Bundles xcespserver 0.4.26, xcespcli 0.3.57, xcespproc
+  0.2.150, xcespwdog 0.2.2 — rolls up the router stack
+  fixes:
+    - **xcesp-on-rtr 0.2.23**: QoS catalog ownership
+      (ikata-agents#13), skip-remove-on-never-processed
+      opt-in across 30 router objects (ikata-agents#12),
+      netns-return via fd on Fedora 44 (ikata-agents#11).
+    - **xcespserver 0.4.26**: relative INI paths
+      (`SCHEMA_DIR`, `RULES_DIR`, `DSK_DIR`,
+      `CONFIG_FILE`) are resolved to absolute at startup
+      (ikata-agents#10), fixing `--merge-config` under
+      xcesptest's `SCHEMA_DIR = ./schema` where xcespcli
+      silently fell back to `-S`.
+    - **xcespcli 0.3.57**: `--merge-config` fails fast on
+      running-config parse errors instead of PUT'ing a
+      mis-parsed config (ikata-agents#3).
+    - **xcespschema 0.2.2 + xcespconfig 0.2.1**: makefile
+      ordering fix — plain `make` now builds the `.a`
+      library (ikata-agents#3).
+    - **xcespwdog 0.2.2**: restored integration test INIs
+      (ikata-agents#6).
+    - **logservice 0.0.5**: ConsoleWriter flushes stdout/
+      stderr after every message so lines are visible
+      when stdio is a pipe.
+    - **iniconfig 0.0.2**: `IniConfig()` default ctor,
+      `loadFromString()`, `getSections()` in insertion order.
+
 ## 0.5.69
 
 - **feat(DV1E + 1B.5): CAS aggregation + `activity cas-tx`
