@@ -1,5 +1,40 @@
 # Changelog - xcesppkg
 
+## 0.5.69
+
+- **feat(DV1E + 1B.5): CAS aggregation + `activity cas-tx`
+  are live.**  Bundles xcesp-on-xc 0.2.88 + xcespproc
+  0.2.149.
+- Also pulls in xcespproc's ikata-agents#12 fix (skip
+  `remove()` on opted-in objects that were never
+  `process()`ed — stops the false "failed to return device"
+  warning on redeploy).
+- Lab verification plan — CAS blending (type=data or voice
+  with `signaling true` on the endpoints' PWs):
+    - **AND bits only** (`cas-bits-and abcd`): any 0 wins
+      — slave's TX = AND of all other active endpoints'
+      RX CAS.  Flip one bit at any endpoint to 0 → that
+      bit flips to 0 at the aggregated TX.
+    - **OR bits only** (`cas-bits-or abcd`): any 1 wins.
+    - **Mixed** (`cas-bits-and ab`, `cas-bits-or c`,
+      `cas-bits-passthrough d`): AB bits AND-combine, C
+      bit OR-combines, D bit stays 0 on TX.
+    - **OOS endpoint**: TX CAS = `casIdle` (A/B=1, C/D=0
+      for the mixed config above).
+    - **IDLE + idle-silence=yes**: same `casIdle`.
+    - **OMNI self-subtract**: 3-ep (2 omni + 1 slave) with
+      same bit set on both omnis → bit does NOT echo back
+      to the omni that sent it, but still reaches the
+      slave.
+- Lab verification plan — `activity cas-tx` (FXO-style):
+    - endpoint with `activity cas-tx cas-bit <B> cas-
+      polarity <P>` → state=Active whenever the service's
+      egress sets bit B at polarity P on that endpoint's
+      TX CAS.  Flip the aggregation inputs so the
+      resulting TX CAS matches / mismatches the probe;
+      state flips Active ↔ Idle on each CAS multiframe
+      cadence (no hysteresis).
+
 ## 0.5.68
 
 - **feat(DV1D): DATA aggregation is live for type=data.**
