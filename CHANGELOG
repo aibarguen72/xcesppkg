@@ -1,5 +1,33 @@
 # Changelog - xcesppkg
 
+## 0.5.71
+
+- **feat(DV1F): VOICE aggregation is live for type=voice.**
+  Bundles xcesp-on-xc 0.2.89 + xcespproc 0.2.151.
+- Lab verification matrix (ds0 type=voice service, one ts
+  per endpoint typical, `signaling true` on each PW only
+  if you'll also drive CAS):
+    - **2-ep master+slave bidir, alaw↔alaw:** drive each
+      side with a known tone / silence pattern.  Master's
+      TX byte = G.711-encoded slave RX PCM; slave's TX =
+      G.711-encoded master RX PCM.  Mixed codec (alaw
+      master, ulaw slave): each side re-encodes under its
+      own setting.
+    - **3-ep 1 master + 2 slaves:** both slaves' TX ≈ G.711-
+      encoded master RX; master's TX ≈ G.711-encoded SUM
+      of the two slaves (clamped at int16).  Set one slave
+      to OOS → master's TX ≈ the other slave's RX.
+    - **3-ep 2 omnis + 1 slave:** each omni's TX ≈ G.711-
+      encoded (otherOmni + slave) — self-subtracted so an
+      omni doesn't hear its own voice.
+    - **OOS or IDLE + idle-silence=yes:** TX byte = silence
+      (0xD5 alaw / 0xFF ulaw).
+    - **mixed data+voice**: not a thing — service type is
+      exclusive at commit.
+- No schema change.  CAS blending still available for
+  voice services via `cas-bits-*` (Phase 1E), useful for
+  rare "ring signal in a CAS bit" setups.
+
 ## 0.5.70
 
 - Bundles xcespserver 0.4.26, xcespcli 0.3.57, xcespproc
