@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.5.74
+
+- **fix: `do-modem <name> at-inject` no longer returns MODEM
+  BUSY when the DTE user is mid-typing.**  Bundles
+  xcesp-on-xc 0.2.91 + xcespproc 0.2.153.
+- Previously the AT inject refused whenever a human at the
+  DTE had typed some bytes without pressing ENTER.
+  Operator-visible as intermittent `MODEM BUSY` on `do-modem
+  <name> at-inject` even when the modem was clearly in
+  Command mode.  Now the inject snapshots any partial DTE
+  input, runs on a clean line, and restores it — the DTE
+  user doesn't lose what they'd typed.
+- Hard-refusal narrowed to non-Command mode (SMS body,
+  ATD call-progress, +++ escape, online data).
+
 ## 0.5.73
 
 - Bundles xcespserver 0.4.26, xcespcli 0.3.57, xcespproc 0.2.152, xcespwdog 0.2.3
