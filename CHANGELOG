@@ -1,5 +1,36 @@
 # Changelog - xcesppkg
 
+## 0.5.72
+
+- **feat(DV1G): TX-active CAS bit overlay is live.**
+  Bundles xcesp-on-xc 0.2.90 + xcespproc 0.2.152.
+- `tx-active-cas-bit` + `tx-active-cas-polarity` on a
+  service endpoint now overlay the configured CAS bit in
+  TX CAS based on the endpoint's role-derived txActive flag.
+  Emission gate: `state == ACTIVE` OR `activity.detector =
+  cas-tx` (FXO).
+- Lab verification plan (preferably with multiple services
+  on the same PW set so the plan's whole-stack testing
+  intent is exercised):
+    - type=data or type=voice service with roles M+S,
+      `tx-active-cas-bit d` and `tx-active-cas-polarity
+      true` on each endpoint, `signaling true` on each PW.
+    - drive one side ACTIVE (via data-activity or voice-
+      energy) → txActive flips at the OTHER side; its TX
+      CAS now has bit D=1 overlaid on top of the 1E
+      aggregate.
+    - drive both sides IDLE → both txActive=false → bit D=0.
+    - add an `activity cas-tx` endpoint that reads bit D at
+      polarity true → it transitions to ACTIVE whenever
+      the overlay sets D=1 (FXO loop).
+    - flip `tx-active-cas-polarity` to false → bit D=0 when
+      active, bit D=1 when idle.
+- Multiple-services-per-PW stacking: run two services
+  across the same PWs with different `cas-bits-*` subsets
+  — the TX CAS visible to each endpoint is the overlay of
+  all services' decisions; the last writer wins per bit
+  position per tick.
+
 ## 0.5.71
 
 - **feat(DV1F): VOICE aggregation is live for type=voice.**
