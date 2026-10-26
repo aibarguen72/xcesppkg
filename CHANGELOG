@@ -1,5 +1,11 @@
 # Changelog - xcesppkg
 
+## 0.5.73
+
+- Bundles xcespserver 0.4.26, xcespcli 0.3.57, xcespproc 0.2.152, xcespwdog 0.2.3
+  with the xcespwdog build fix: `make clean` no longer deletes the tracked
+  test INIs (ikata-agents#14). No runtime change.
+
 ## 0.5.72
 
 - **feat(DV1G): TX-active CAS bit overlay is live.**
