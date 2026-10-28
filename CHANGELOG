@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.5.77
+
+- **feat(DV1H): multi-service PW stacking is live.**
+  Bundles xcesp-on-xc 0.2.94 + xcespproc 0.2.156.
+- A `type=data` service with `data-mode=cas-only` and a
+  sibling `type=voice` service on the SAME PWs + timeslots
+  now coexist.  Each service only writes the bytes / CAS
+  bits it owns:
+    - cas-only service doesn't touch data bytes.
+    - voice service with purely-passthrough CAS doesn't
+      touch CAS bits.
+- Lab plan for the stacked config (dataPmp cas-only + voicePmp):
+    - Driving a tone on the voice service: TX data bytes
+      are the G.711-encoded aggregated PCM; the
+      cas-only data service does NOT corrupt them.
+    - Driving CAS bits (A/B AND, C/D OR) on dataPmp: TX
+      CAS carries the blended output; voicePmp's
+      passthrough does NOT wipe them.
+
 ## 0.5.76
 
 - **fix: OMNI self-subtract no longer corrupts slave bits
