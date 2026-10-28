@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.5.75
+
+- **fix: slaves no longer hear themselves in DATA + CAS
+  aggregation.**  Bundles xcesp-on-xc 0.2.92 + xcespproc
+  0.2.154.
+- Operator-reported in a 2M+2S DATA PMP: slaves' TX came
+  back `0x00` when it should have been the master's
+  `0x08`.  The plan's `slaveFinal = masterCommon &
+  omniAgg` folded `slaveCommon` into slave egress via
+  `omniAgg`; with no omnis active, that half-duplex
+  self-echo on the AND axis dropped the master's data.
+  Slave egress now uses `omniCommon` directly (and the
+  CAS-side analog uses `masterAnd & omniAnd` / `masterOr
+  | omniOr`).  OMNI self-subtract is unchanged — omnis
+  still hear slaves + other omnis legitimately.
+- Lab verification plan (same 2M+2S config):
+    - drive ep1=0x08, ep2=0xFF, ep3=0xFF, ep4=0x10 →
+      masters TX = `0x10` (unchanged), slaves TX = `0x08`
+      (was `0x00`).
+
 ## 0.5.74
 
 - **fix: `do-modem <name> at-inject` no longer returns MODEM
