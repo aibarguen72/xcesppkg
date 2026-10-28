@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.5.76
+
+- **fix: OMNI self-subtract no longer corrupts slave bits
+  in DATA + CAS aggregation.**  Bundles xcesp-on-xc 0.2.93
+  + xcespproc 0.2.155.
+- Operator-reported in a 2O+2S PMP test: omni ep1 TX was
+  `0xF7` instead of the expected `0x10`.  Self-sub was
+  running on `omniAgg = omniCommon & slaveCommon` where
+  the slaveCommon fold had already wiped bits out of the
+  recoverable mask.  Fix: self-sub runs on omni-only
+  aggregate (`omniCommon`+`omniMask` on DATA, `omniAnd`+
+  `omniAndMulti` / `omniOr`+`omniOrMulti` on CAS), then
+  combine with slaveCommon + masterCommon.
+- Lab verification plan (unchanged 2O+2S config, ep1=0x08,
+  ep2=0xFF, ep3=0xFF, ep4=0x10):
+    - Slaves ep3,ep4 TX = `0x08` (unchanged).
+    - Omnis ep1 TX = `0x10` (was `0xF7`), ep2 TX = `0x00`
+      (unchanged).
+
 ## 0.5.75
 
 - **fix: slaves no longer hear themselves in DATA + CAS
