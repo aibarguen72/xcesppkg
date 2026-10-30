@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.80
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.59, xcespproc 0.2.159
+  (relinked against xcesp-on-xc 0.2.97), xcespwdog 0.2.4.
+  Picks up Phase 2G.1 egress accumulator on xc-ip-endpoint — one
+  datagram per recovered async byte is replaced by size-/age-bounded
+  coalescing (defaults 40 B / 40 ms; escape hatch
+  `egress-flush-bytes 1` restores old behaviour).
+
 ## 0.5.79
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.59, xcespproc 0.2.158,
