@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.5.79
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.59, xcespproc 0.2.158,
+  xcespwdog 0.2.4 with Phase 2A-2F of the xc-ip-endpoint sprint
+  (IP endpoints under `xc-service type=data`: schema + loader +
+  async-over C++ asynclib port + UDP / TCP server+client transports +
+  per-endpoint runtime + aggregator refactor via AggEndpointView +
+  per-tick snapshot + `show xc-service` IP table/snapshot +
+  `do-xc-service <svc> ip-endpoint <ep> reset` verb).  Also includes
+  xcespwdog 0.2.4 (ikata-agents#15 — integration tests use syslog
+  port 11514 to not collide with any installed xcespwdog on the host).
+
 ## 0.5.78
 
 - **feat(DV1I): per-endpoint last-tick snapshot in
