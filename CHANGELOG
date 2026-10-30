@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.81
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.59, xcespproc 0.2.160
+  (relinked against xcesp-on-xc 0.2.98), xcespwdog 0.2.4.
+  Phase 2G.3 fix: `commit;save` with a new or edited xc-ip-endpoint
+  now starts the fresh runtime immediately instead of leaving it
+  stuck at `conn=idle` until the next xcespproc restart.
+- Phase 2G lab verification is complete end-to-end on this bundle
+  line (Cases 1-7 all green against the field-proven async-over
+  golden peer).
+
 ## 0.5.80
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.59, xcespproc 0.2.159
