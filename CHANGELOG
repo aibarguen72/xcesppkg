@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.5.84
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.61, xcespproc 0.2.162,
+  xcespwdog 0.2.4.  xcespcli rename: `do-xc-service` is now the
+  canonical verb spelling (matches the config-mode node name);
+  `do-xcservice` kept as a silent alias.  No functional change —
+  operators can use either form.
+
 ## 0.5.83
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.60, xcespproc 0.2.162
