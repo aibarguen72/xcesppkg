@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.82
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.60, xcespproc 0.2.161
+  (relinked against xcesp-on-xc 0.2.99), xcespwdog 0.2.4.
+  Phase 3 adds the TELNET filter for xc-ip-endpoint on TCP transports:
+  opt-in per endpoint via `telnet true`, three new attrs
+  (`telnet`, `telnet-active-negotiation`, `telnet-debug`),
+  BINARY/SGA/ECHO negotiated by default, all other options refused
+  with WONT/DONT, 32-entry debug ring surfaced via
+  `show xc-service <name>` under "--- Telnet events ---".
+
 ## 0.5.81
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.59, xcespproc 0.2.160
