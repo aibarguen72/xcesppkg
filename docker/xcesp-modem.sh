@@ -115,6 +115,12 @@ Optional:
   --csd-timeout <SEC>     tear down CSD data call after SEC seconds
                           of zero traffic in either direction.
                           0 or unset = disabled (default).
+  --latency-buffer-ms <MS> receive-side playout delay (peer -> serial)
+                          before a burst is written to the DTE in one
+                          write; keeps Modbus RTU frames gap-free.
+                          0..1000, default 20.  0 = write-through.
+  --egress-idle-ms <MS>   serial-quiet gap that closes one network
+                          message toward the peer.  0..1000, default 5.
   --rvp-port <N>          default 8888
   --rvp-renewal <SEC>     REGISTER cadence (default 300)
   --tcp-port <N>          transport TCP port (default 5001)
@@ -194,6 +200,7 @@ action_start() {
     local IMAGE="$DEFAULT_IMAGE" CONTAINER_NAME="$DEFAULT_NAME"
     local SERIAL_DEV="" MSISDN="" RVP_IP="" RVP_IP_BKP="" RVP_PORT="8888"
     local RVP_RENEWAL_SEC="" TRANSPORT_IP="" CSD_TIMEOUT_SEC=""
+    local LATENCY_BUFFER_MS="20" EGRESS_IDLE_MS=""
     local TRANSPORT_TCP_PORT="5001" TRANSPORT_UDP_PORT="5011"
     local DTE_BAUD="9600" CRYPTO_PASSPHRASE="" CRYPTO_MODE="" SYSTEM_NAME=""
     local NETWORK_MODE="host" STATE_DIR="" DETACH="-d" DRY_RUN=0
@@ -224,6 +231,8 @@ action_start() {
             --rvp-port)      RVP_PORT=$2; shift 2 ;;
             --rvp-renewal)   RVP_RENEWAL_SEC=$2; shift 2 ;;
             --csd-timeout)   CSD_TIMEOUT_SEC=$2; shift 2 ;;
+            --latency-buffer-ms) LATENCY_BUFFER_MS=$2; shift 2 ;;
+            --egress-idle-ms)    EGRESS_IDLE_MS=$2; shift 2 ;;
             --transport-ip)  TRANSPORT_IP=$2; shift 2 ;;
             --tcp-port)      TRANSPORT_TCP_PORT=$2; shift 2 ;;
             --udp-port)      TRANSPORT_UDP_PORT=$2; shift 2 ;;
@@ -324,6 +333,14 @@ action_start() {
     [ -n "$RVP_RENEWAL_SEC" ]    && env_args+=(-e "RVP_RENEWAL_SEC=$RVP_RENEWAL_SEC")
     [ -n "$RVP_IP_BKP" ]         && env_args+=(-e "RVP_IP_BKP=$RVP_IP_BKP")
     [ -n "$CSD_TIMEOUT_SEC" ]    && env_args+=(-e "CSD_TIMEOUT_SEC=$CSD_TIMEOUT_SEC")
+    for _v in LATENCY_BUFFER_MS EGRESS_IDLE_MS; do
+        _val="${!_v}"
+        if [ -n "$_val" ] && ! { [[ "$_val" =~ ^[0-9]+$ ]] && [ "$_val" -le 1000 ]; }; then
+            die "--$(echo "$_v" | tr 'A-Z_' 'a-z-'): '$_val' must be an integer 0..1000"
+        fi
+    done
+    env_args+=(-e "LATENCY_BUFFER_MS=$LATENCY_BUFFER_MS")
+    [ -n "$EGRESS_IDLE_MS" ]     && env_args+=(-e "EGRESS_IDLE_MS=$EGRESS_IDLE_MS")
     if [ -n "$LICENSE_AUTH" ]; then
         # Fail fast if the interface doesn't exist on the host.  Under
         # --network=host the container will read the same /sys, so if

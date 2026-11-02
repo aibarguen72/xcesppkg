@@ -95,7 +95,8 @@ CFG=/var/xcesp/cfg/xcespserver.conf
 if [ "${CONFIG_PERSIST:-0}" = "1" ] && [ -s "$CFG" ]; then
     echo "[xcesp-modem] persist mode: using existing $CFG ($(wc -l < "$CFG") lines) from host bind mount"
     echo "[xcesp-modem]   env-var config inputs (MSISDN, RVP_IP, TRANSPORT_IP,"
-    echo "[xcesp-modem]   DTE_*, CRYPTO_PASSPHRASE, DTE_*_SOURCE) are IGNORED —"
+    echo "[xcesp-modem]   DTE_*, CRYPTO_PASSPHRASE, DTE_*_SOURCE, LATENCY_BUFFER_MS,"
+    echo "[xcesp-modem]   EGRESS_IDLE_MS) are IGNORED —"
     echo "[xcesp-modem]   edit via 'xcesp-modem.sh cli' and commit+save instead."
     # Skip the generator and jump straight to the launch section.
     CFG_SKIP_GEN=1
@@ -107,6 +108,13 @@ fi
 # envsubst has no natural way to say "emit this line only if X is set"
 # without leaving a stray blank line.
 # ---------------------------------------------------------------------------
+for _v in LATENCY_BUFFER_MS EGRESS_IDLE_MS; do
+    _val="${!_v:-}"
+    if [ -n "$_val" ] && ! { [[ "$_val" =~ ^[0-9]+$ ]] && [ "$_val" -le 1000 ]; }; then
+        echo "[xcesp-modem] ERROR: $_v='$_val' must be an integer 0..1000 (ms)" >&2
+        exit 1
+    fi
+done
 if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
 {
     echo "management"
@@ -159,6 +167,18 @@ if [ "${CFG_SKIP_GEN:-0}" = "1" ]; then :; else
     # ends stuck with a call that no DTE will drop.
     if [ -n "${CSD_TIMEOUT_SEC:-}" ] && [ "$CSD_TIMEOUT_SEC" != "0" ]; then
         echo "    csd-timeout $CSD_TIMEOUT_SEC"
+    fi
+    # xcesp-on-xc 0.2.102 data-path shaping (ikata-agents #21).
+    # LATENCY_BUFFER_MS: receive-side playout delay (peer → DTE) before
+    #   a burst is written to the serial port in one write.  Default
+    #   20 ms keeps Modbus RTU frames gap-free on the serial line;
+    #   0 = write-through (pre-0.2.102 behaviour).  Always emitted so
+    #   the value is visible in `show running-config`.
+    # EGRESS_IDLE_MS: DTE-quiet gap (DTE → peer) that closes one
+    #   network message.  Emitted only when set (schema default 5).
+    echo "    latency-buffer-ms ${LATENCY_BUFFER_MS:-20}"
+    if [ -n "${EGRESS_IDLE_MS:-}" ]; then
+        echo "    egress-idle-ms $EGRESS_IDLE_MS"
     fi
     # Optional `dte-lines` child.  Emitted only when at least one
     # DTE_*_SOURCE env var is set — matches the schema convention that
@@ -219,7 +239,9 @@ echo "[xcesp-modem]   MSISDN=$MSISDN  RVP=$RVP_IP:$RVP_PORT" \
      "transport=$TRANSPORT_IP:$TRANSPORT_TCP_PORT/$TRANSPORT_UDP_PORT" \
      "dte=$DTE_SERIAL_DEVICE@$DTE_SERIAL_BAUD" \
      "crypto=$crypto_tag" \
-     "csd-timeout=${CSD_TIMEOUT_SEC:-0}s"
+     "csd-timeout=${CSD_TIMEOUT_SEC:-0}s" \
+     "latency-buffer=${LATENCY_BUFFER_MS:-20}ms" \
+     "egress-idle=${EGRESS_IDLE_MS:-5}ms"
 fi   # end of CFG_SKIP_GEN guard
 
 # ---------------------------------------------------------------------------
