@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.5.85
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.61, xcespproc 0.2.163
+  (relinked against xcesp-on-xc 0.2.101), xcespwdog 0.2.4.
+  **Phase 3 TELNET sprint CLOSED**: Phase 3.2 opener-flush fix
+  decouples TELNET protocol frames from TDM data-tick cadence so
+  the 5-frame opener (and option responses) leave the socket within
+  one event-loop pass of the connect edge, independent of pw
+  activity.  Also clears the egress accumulator on disconnect so
+  stale tail bytes don't carry across sessions on tcp-accept=replace.
+  Lab-verified end-to-end against the field-proven async-over
+  golden peer across all 10 Phase 3F cases.
+
 ## 0.5.84
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.61, xcespproc 0.2.162,
