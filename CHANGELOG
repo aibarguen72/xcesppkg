@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.87
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.63, xcespproc 0.2.165
+  (relinked against xcesp-on-xc 0.2.103), xcespwdog 0.2.4.
+  **ModemXc: the first Modbus reply after `ATA\r\n` keeps its slave
+  address 0x0A** (ikata-agents #31). The #18 LF-residue drop now fires
+  only for an LF that is really still pending.
+  **xcespcli: `do-modem <m> at-inject "<AT>" domain <D>`** no longer
+  sends the domain modifier to the modem as part of the AT command
+  (ikata-agents #30).
+
 ## 0.5.86
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.62, xcespproc 0.2.164
