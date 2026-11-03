@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## unreleased (master)
+
+- **fc41/apply.sh**: installer for the Fedora 41 binary bundle, for hosts
+  whose glibc is too old for the release binaries (e.g. hulk).  It checks
+  libraries with `ldd`, installs the binaries into mainsw, restarts xcesp,
+  and verifies each running copy (`/usr/bin/<bin>`,
+  `/usr/lib/xcesp/xcesp-ip`) against the bundle by sha256.  The old check
+  called `--version`, which the XCESP binaries don't have.  No versions
+  are hard-coded; an optional `BUNDLE_VERSION` next to the script is
+  printed.
+
 ## 0.5.87
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.63, xcespproc 0.2.165
