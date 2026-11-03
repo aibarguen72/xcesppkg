@@ -10,6 +10,9 @@
   called `--version`, which the XCESP binaries don't have.  No versions
   are hard-coded; an optional `BUNDLE_VERSION` next to the script is
   printed.
+- Host-run scripts are committed executable (`fc41/apply.sh`,
+  `arm64/build.sh`, `arm64/package.sh`, `docker/*.sh`), so `./build.sh`
+  and `./save.sh` work as the docker README shows.
 
 ## 0.5.87
 
