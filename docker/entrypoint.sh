@@ -31,6 +31,40 @@ require TRANSPORT_IP
 require DTE_SERIAL_DEVICE
 
 # ---------------------------------------------------------------------------
+# Cold-boot delay (opt-in via COLD_BOOT_DELAY_SEC, set by
+# `xcesp-modem.sh start --cold-boot-delay <SEC>`).
+#
+# After a device cold boot, docker's restart policy launches this
+# container as soon as dockerd is up — possibly before the serial UART
+# (e.g. SPI-attached SC16IS7xx) and the attached DTE have settled.
+# Hold the start until HOST uptime reaches COLD_BOOT_DELAY_SEC.
+# /proc/uptime is not namespaced, so inside the container it is the
+# host's uptime: any start later than SEC after boot (operator
+# start/restart) proceeds immediately.  Runs before the serial-device
+# check so a late-appearing device is also covered.
+# ---------------------------------------------------------------------------
+if [ -n "${COLD_BOOT_DELAY_SEC:-}" ] && [ "$COLD_BOOT_DELAY_SEC" != "0" ]; then
+    if ! { [[ "$COLD_BOOT_DELAY_SEC" =~ ^[0-9]+$ ]] && [ "$COLD_BOOT_DELAY_SEC" -le 3600 ]; }; then
+        echo "[xcesp-modem] ERROR: COLD_BOOT_DELAY_SEC='$COLD_BOOT_DELAY_SEC' must be an integer 0..3600 (s)" >&2
+        exit 1
+    fi
+    _uptime=$(cut -d. -f1 /proc/uptime)
+    if [ "$_uptime" -lt "$COLD_BOOT_DELAY_SEC" ]; then
+        _wait=$((COLD_BOOT_DELAY_SEC - _uptime))
+        echo "[xcesp-modem] cold boot: host uptime ${_uptime}s < ${COLD_BOOT_DELAY_SEC}s, delaying start ${_wait}s"
+        # We are PID 1: bash ignores SIGTERM by default there, so trap it
+        # explicitly or `docker stop` would hang for its full timeout.
+        trap 'echo "[xcesp-modem] stop requested during cold-boot delay"; exit 0' TERM INT
+        sleep "$_wait" &
+        wait $!
+        trap - TERM INT
+        echo "[xcesp-modem] cold-boot delay done, starting"
+    else
+        echo "[xcesp-modem] host uptime ${_uptime}s >= cold-boot-delay ${COLD_BOOT_DELAY_SEC}s: no delay"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # Defaults for optional parameters.
 # ---------------------------------------------------------------------------
 : "${SYSTEM_NAME:=xcesp-modem}"

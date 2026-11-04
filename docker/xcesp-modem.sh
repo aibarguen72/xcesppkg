@@ -20,7 +20,7 @@
 #   help                    this help
 set -euo pipefail
 
-DEFAULT_IMAGE="xcesp-modem:0.4.73-arm64"
+DEFAULT_IMAGE="xcesp-modem:0.5.88-arm64"
 DEFAULT_NAME="xcesp-modem"
 
 die() { echo "$@" >&2; exit 1; }
@@ -121,6 +121,12 @@ Optional:
                           0..1000, default 20.  0 = write-through.
   --egress-idle-ms <MS>   serial-quiet gap that closes one network
                           message toward the peer.  0..1000, default 5.
+  --cold-boot-delay <SEC> after a device cold boot, hold the modem
+                          start until host uptime reaches SEC seconds
+                          (lets the serial UART and the attached DTE
+                          settle).  Starts later than SEC after boot
+                          (xcesp-modem.sh start/restart) are not
+                          delayed.  0..3600, default 0 = off.
   --rvp-port <N>          default 8888
   --rvp-renewal <SEC>     REGISTER cadence (default 300)
   --tcp-port <N>          transport TCP port (default 5001)
@@ -200,7 +206,7 @@ action_start() {
     local IMAGE="$DEFAULT_IMAGE" CONTAINER_NAME="$DEFAULT_NAME"
     local SERIAL_DEV="" MSISDN="" RVP_IP="" RVP_IP_BKP="" RVP_PORT="8888"
     local RVP_RENEWAL_SEC="" TRANSPORT_IP="" CSD_TIMEOUT_SEC=""
-    local LATENCY_BUFFER_MS="20" EGRESS_IDLE_MS=""
+    local LATENCY_BUFFER_MS="20" EGRESS_IDLE_MS="" COLD_BOOT_DELAY_SEC=""
     local TRANSPORT_TCP_PORT="5001" TRANSPORT_UDP_PORT="5011"
     local DTE_BAUD="9600" CRYPTO_PASSPHRASE="" CRYPTO_MODE="" SYSTEM_NAME=""
     local NETWORK_MODE="host" STATE_DIR="" DETACH="-d" DRY_RUN=0
@@ -233,6 +239,7 @@ action_start() {
             --csd-timeout)   CSD_TIMEOUT_SEC=$2; shift 2 ;;
             --latency-buffer-ms) LATENCY_BUFFER_MS=$2; shift 2 ;;
             --egress-idle-ms)    EGRESS_IDLE_MS=$2; shift 2 ;;
+            --cold-boot-delay)   COLD_BOOT_DELAY_SEC=$2; shift 2 ;;
             --transport-ip)  TRANSPORT_IP=$2; shift 2 ;;
             --tcp-port)      TRANSPORT_TCP_PORT=$2; shift 2 ;;
             --udp-port)      TRANSPORT_UDP_PORT=$2; shift 2 ;;
@@ -341,6 +348,11 @@ action_start() {
     done
     env_args+=(-e "LATENCY_BUFFER_MS=$LATENCY_BUFFER_MS")
     [ -n "$EGRESS_IDLE_MS" ]     && env_args+=(-e "EGRESS_IDLE_MS=$EGRESS_IDLE_MS")
+    if [ -n "$COLD_BOOT_DELAY_SEC" ]; then
+        { [[ "$COLD_BOOT_DELAY_SEC" =~ ^[0-9]+$ ]] && [ "$COLD_BOOT_DELAY_SEC" -le 3600 ]; } \
+            || die "--cold-boot-delay: '$COLD_BOOT_DELAY_SEC' must be an integer 0..3600 (seconds)"
+        env_args+=(-e "COLD_BOOT_DELAY_SEC=$COLD_BOOT_DELAY_SEC")
+    fi
     if [ -n "$LICENSE_AUTH" ]; then
         # Fail fast if the interface doesn't exist on the host.  Under
         # --network=host the container will read the same /sys, so if

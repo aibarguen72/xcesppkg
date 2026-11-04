@@ -1,7 +1,19 @@
 # Changelog - xcesppkg
 
-## unreleased (master)
+## 0.5.88
 
+- Bundles xcespserver 0.4.27, xcespcli 0.3.63, xcespproc 0.2.165,
+  xcespwdog 0.2.4 (binaries unchanged from 0.5.87).
+- **docker: `xcesp-modem.sh start` default image is now
+  `xcesp-modem:0.5.88-arm64`** (was stuck at 0.4.73), so a plain
+  `start` after `load` uses the image just loaded.
+- **docker: `--cold-boot-delay <SEC>`** in `xcesp-modem.sh start`
+  (env `COLD_BOOT_DELAY_SEC`, 0..3600, default 0 = off).  After a
+  device cold boot the entrypoint holds the modem start until host
+  uptime reaches SEC seconds; any start later than that (operator
+  `start`/`restart`) is not delayed.  `docker stop` during the wait
+  exits cleanly.  Field workaround for the RTU boot-time BAD state on
+  the SC16IS762 (ttySC1) serial port.
 - **fc41/apply.sh**: installer for the Fedora 41 binary bundle, for hosts
   whose glibc is too old for the release binaries (e.g. hulk).  It checks
   libraries with `ldd`, installs the binaries into mainsw, restarts xcesp,
