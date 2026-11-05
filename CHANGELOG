@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.5.91
+
+- Bundles xcespserver 0.4.28, xcespcli 0.3.63, xcespproc 0.2.166,
+  xcespwdog 0.2.4 (binaries unchanged from 0.5.90).
+- **fix: `xcesp-cpu-layout` no longer warns about idle IRQs**
+  (ikata-agents#29).  0.5.90 compared each NIC IRQ's
+  `effective_affinity_list` with the housekeeping CPUs 1 s after setting
+  it.  x86 moves an MSI only at its next interrupt, so idle IRQs (virtio
+  config interrupts, the TX queue with no traffic) were reported as "could
+  not be moved" and the status said `result: warning` on a correct setup
+  (seen on xcespfc after a full reboot).  A NIC IRQ is now a WARNING only
+  when the kernel refuses the affinity (write fails, or the read-back
+  `smp_affinity_list` is outside housekeeping).  Pending moves are counted
+  in the `irq-steering:` status line ("N move at their next interrupt").
+
 ## 0.5.90
 
 - Bundles xcespserver 0.4.28, xcespcli 0.3.63, xcespproc 0.2.166,

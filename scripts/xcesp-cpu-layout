@@ -251,43 +251,39 @@ nic_irqs() {    # IRQ numbers that belong to network interfaces (MSI/MSI-X, lega
 if [ -n "$hk" ] && $irq_on; then
     hk_list=$(compress_cpus "$hk")
     nic=" $(nic_irqs | sort -nu | tr '\n' ' ') "
-    ok_n=0; nic_bad=""; nic_moved=""; other_bad=0
+    ok_n=0; nic_bad=""; other_bad=0; pending=0
     for d in "$SYS"/proc/irq/[0-9]*; do
         irq=${d##*/}
         [ -f "$d/smp_affinity_list" ] || continue
+        # accepted = the write succeeded and the kernel kept it (read back inside housekeeping)
+        acc=""
         if { echo "$hk_list" > "$d/smp_affinity_list"; } 2>/dev/null; then
+            acc=$(expand_cpus "$(cat "$d/smp_affinity_list" 2>/dev/null)") || acc=""
+            [ -n "$acc" ] && [ -n "$(subtract "$acc" "$hk")" ] && acc=""
+        fi
+        if [ -n "$acc" ]; then
             ok_n=$((ok_n + 1))
-            [[ $nic == *" $irq "* ]] && nic_moved+=" $irq"
+            # x86 moves an MSI only at its next interrupt: until an idle IRQ (virtio
+            # config, a TX queue with no traffic) fires, effective_affinity still shows
+            # the old CPU.  That is a pending move, not a failure.
+            if [ -f "$d/effective_affinity_list" ]; then
+                eff=$(expand_cpus "$(cat "$d/effective_affinity_list" 2>/dev/null)") || eff=""
+                [ -n "$eff" ] && [ -n "$(subtract "$eff" "$hk")" ] && pending=$((pending + 1))
+            fi
         elif [[ $nic == *" $irq "* ]]; then
             nic_bad+=" $irq"
         else
             other_bad=$((other_bad + 1))    # kernel-managed or per-CPU IRQs refuse affinity changes
         fi
     done
-    # effective affinity (when exposed) must end inside housekeeping; x86 may move an
-    # MSI only at its next interrupt, so give the kernel a moment before checking
-    effective_outside() {
-        local irq eff bad=""
-        for irq in $nic_moved; do
-            [ -f "$SYS/proc/irq/$irq/effective_affinity_list" ] || continue
-            eff=$(expand_cpus "$(cat "$SYS/proc/irq/$irq/effective_affinity_list" 2>/dev/null)") || continue
-            [ -n "$eff" ] && [ -n "$(subtract "$eff" "$hk")" ] && bad+=" $irq"
-        done
-        echo "$bad"
-    }
-    if [ -n "$nic_moved" ]; then
-        late=$(effective_outside)
-        [ -n "$late" ] && sleep 1 && late=$(effective_outside)
-        nic_bad+="$late"
-    fi
     if [ -f "$SYS/proc/irq/default_smp_affinity" ]; then
         { echo "$(cpu_mask "$hk")" > "$SYS/proc/irq/default_smp_affinity"; } 2>/dev/null \
             || warn "cannot set /proc/irq/default_smp_affinity: new IRQs may land on XCESP CPUs"
     fi
-    note "irq-steering: $ok_n IRQs -> CPU $hk_list; $other_bad kernel-managed IRQs left as they are"
+    note "irq-steering: $ok_n IRQs -> CPU $hk_list ($pending move at their next interrupt); $other_bad kernel-managed IRQs left as they are"
     nic_list=$(echo $nic | tr ' ' ',')
     note "nic-irqs: ${nic_list:-none found}"
-    [ -n "$nic_bad" ] && warn "NIC IRQ(s)${nic_bad} could not be moved to CPU $hk_list: real-time threads may share a CPU with NIC interrupts"
+    [ -n "$nic_bad" ] && warn "NIC IRQ(s)${nic_bad} refused CPU $hk_list: real-time threads may share a CPU with NIC interrupts"
 
     if irqbalance_present; then
         banned=$(compress_cpus "$rt_pool")
