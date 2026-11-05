@@ -97,6 +97,32 @@ if [ ! -c "$DTE_SERIAL_DEVICE" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Pre-set the DTE serial port raw BEFORE xcespproc opens it
+# (ikata-agents #35).  Opt out with DTE_SERIAL_STTY=0.
+#
+# After a device boot the port carries the driver's default cooked
+# termios (icanon echo ixon icrnl opost ...).  On the SC16IS762 SPI UART
+# (customer RTU: ttyMV1 -> ttySC1, kernel 6.12.16) the chip is programmed
+# from whatever termios the port has when it is opened; xcespproc's
+# later cfmakeraw tcsetattr does not leave it in the same state, and the
+# DSE link stays BAD until a shut/no shut or container restart (both of
+# which reopen the port with our raw termios still in place).  Setting
+# the port raw here first makes the very first xcespproc open behave
+# like a reopen.  Field-verified 2026-11-05 (cold boot + this stty =
+# GOOD without shut/no shut).
+# ---------------------------------------------------------------------------
+if [ "${DTE_SERIAL_STTY:-1}" != "0" ]; then
+    if stty -F "$DTE_SERIAL_DEVICE" "$DTE_SERIAL_BAUD" raw -echo -ixon -ixoff \
+            cs8 -parenb -cstopb -crtscts clocal cread 2>/tmp/stty.err; then
+        echo "[xcesp-modem] $DTE_SERIAL_DEVICE pre-set raw ${DTE_SERIAL_BAUD} 8N1 -ixon -crtscts"
+    else
+        echo "[xcesp-modem] WARNING: stty pre-set of $DTE_SERIAL_DEVICE failed:" \
+             "$(cat /tmp/stty.err)" >&2
+    fi
+    rm -f /tmp/stty.err
+fi
+
+# ---------------------------------------------------------------------------
 # Persistent-config mode (opt-in via CONFIG_PERSIST=1).
 #
 # Default behaviour of this container is stateless w.r.t. config: the

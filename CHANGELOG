@@ -1,5 +1,25 @@
 # Changelog - xcesppkg
 
+## 0.5.89
+
+- Bundles xcespserver 0.4.27, xcespcli 0.3.63, xcespproc 0.2.165,
+  xcespwdog 0.2.4 (binaries unchanged from 0.5.88).
+- **docker: fix the RTU boot-time BAD DTE link (ikata-agents #35).**
+  Before launching xcespwdog, the entrypoint now sets the DTE serial
+  port raw with `stty -F $DTE_SERIAL_DEVICE <baud> raw -echo -ixon
+  -ixoff cs8 -parenb -cstopb -crtscts clocal cread`.  After a device
+  boot the port carries the driver's default cooked termios (`icanon
+  echo ixon ...`).  On the SC16IS762 SPI UART (customer ttyMV1 →
+  ttySC1, kernel 6.12.16), xcespproc's first open then left the DSE
+  link BAD (missed polls, busy replies) until a `shutdown`/`no
+  shutdown` or a container restart.  With the port already raw at
+  first open, the link comes up GOOD (verified on the customer device
+  2026-11-05).  If `stty` fails, the entrypoint logs a WARNING and
+  carries on.  `DTE_SERIAL_STTY=0` turns the pre-set off.
+  `--cold-boot-delay` is no longer needed for this issue.
+- **docker: `xcesp-modem.sh start` default image is now
+  `xcesp-modem:0.5.89-arm64`.**
+
 ## 0.5.88
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.63, xcespproc 0.2.165,

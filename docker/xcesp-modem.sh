@@ -20,7 +20,7 @@
 #   help                    this help
 set -euo pipefail
 
-DEFAULT_IMAGE="xcesp-modem:0.5.88-arm64"
+DEFAULT_IMAGE="xcesp-modem:0.5.89-arm64"
 DEFAULT_NAME="xcesp-modem"
 
 die() { echo "$@" >&2; exit 1; }
