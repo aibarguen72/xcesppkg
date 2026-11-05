@@ -190,6 +190,20 @@ else
     warn "xcesp-ipsec-vip-installer not in package — IPsec VIP-on-loopback install-vip-on schema attr will be inert"
 fi
 
+# xcesp-cpu-layout → /usr/lib/xcesp/ (NOT on PATH) and mainsw/scripts/.
+# Run by xcesp-activate on every start: applies `server N / cpu-layout`
+# (IRQ steering to housekeeping CPUs, xcespproc CPU sets, rmem_default).
+info "Installing xcesp-cpu-layout..."
+src="$INSTALL_DIR/scripts/xcesp-cpu-layout"
+if [ -f "$src" ]; then
+    install -d -o root -g root -m 0755 /usr/lib/xcesp "$MAINSW_DIR/scripts"
+    install -o root -g root -m 0755 "$src" /usr/lib/xcesp/xcesp-cpu-layout
+    install -o root -g root -m 0755 "$src" "$MAINSW_DIR/scripts/xcesp-cpu-layout"
+    info "  /usr/lib/xcesp/xcesp-cpu-layout (and $MAINSW_DIR/scripts/)"
+else
+    warn "xcesp-cpu-layout not in package — server cpu-layout will be inert"
+fi
+
 # ---------------------------------------------------------------------------
 # Capabilities (xcespproc needs namespace + network admin)
 # ---------------------------------------------------------------------------

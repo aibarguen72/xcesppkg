@@ -1,0 +1,331 @@
+#!/bin/bash
+# xcesp-cpu-layout — apply `server N / cpu-layout` from xcespserver.conf (ikata-agents#29)
+#
+# Called by xcesp-activate (root) on every service start, before the xcespwdog
+# process list is generated.  Keeps OS interrupt work and XCESP real-time work
+# on different CPUs:
+#
+#   server 1
+#     cpu-layout
+#       housekeeping-cpus 0        ! CPUs for every IRQ (and new IRQs)
+#       irq-steering true          ! default true: try to steer IRQs there
+#       socket-rcvbuf 4194304      ! net.core.rmem_default (rmem_max raised if lower)
+#       process-cpus tdm-pw        ! CPU set for every xcespproc of this role
+#         cpus 2-3
+#       !
+#     !
+#   !
+#
+# Roles without `process-cpus` run on all online CPUs except housekeeping-cpus.
+# Without a cpu-layout block nothing is changed (and an earlier irqbalance ban
+# set by this script is removed).
+#
+# Steering is best effort: anything that can't be applied (an IRQ that refuses
+# the affinity, a CPU that is not online, irqbalance missing, ...) is logged as
+# WARNING and written to the status file, never fatal for the service start.
+#
+# Outputs (in --out DIR, default /run/xcesp):
+#   cpu-layout.env     CPU_DEFAULT=<list>  CPU_ROLE_<role>=<list>   (read by xcesp-activate)
+#   cpu-layout.status  human-readable result (result: ok | warning | not-configured)
+#
+# Options (tests): --conf FILE  --sys PREFIX (prefix for /proc and /sys)  --out DIR
+#                  --no-systemctl (don't touch irqbalance)
+
+set -uo pipefail
+
+CONF=/var/xcesp/cfg/xcespserver.conf
+SYS=""
+OUT=/run/xcesp
+USE_SYSTEMCTL=true
+SYSTEMCTL=${SYSTEMCTL:-systemctl}
+IRQB_DROPIN_DIR=${IRQB_DROPIN_DIR:-/run/systemd/system/irqbalance.service.d}
+IRQB_DROPIN=$IRQB_DROPIN_DIR/50-xcesp-cpu-layout.conf
+IRQB_ENV=${IRQB_ENV:-/run/xcesp-irqbalance.env}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --conf) CONF=$2; shift 2 ;;
+        --sys)  SYS=$2; shift 2 ;;
+        --out)  OUT=$2; shift 2 ;;
+        --no-systemctl) USE_SYSTEMCTL=false; shift ;;
+        *) echo "usage: $0 [--conf FILE] [--sys PREFIX] [--out DIR] [--no-systemctl]" >&2; exit 2 ;;
+    esac
+done
+
+log() { echo "xcesp-cpu-layout: $*" >&2; }
+STATUS=()
+RESULT=ok
+note() { STATUS+=("$*"); }
+warn() { log "WARNING: $*"; STATUS+=("WARNING: $*"); RESULT=warning; }
+
+# --- CPU list helpers ("0,2-3" <-> "0 2 3") --------------------------------
+expand_cpus() {             # expand_cpus LIST -> space-separated CPU ids, or rc 1 on bad syntax
+    local list=$1 tok a b out=""
+    list=${list//[[:space:]]/}
+    [ -n "$list" ] || { echo ""; return 0; }
+    IFS=, read -ra toks <<< "$list"
+    for tok in "${toks[@]}"; do
+        if [[ $tok =~ ^([0-9]+)-([0-9]+)$ ]]; then
+            a=${BASH_REMATCH[1]}; b=${BASH_REMATCH[2]}
+            [ "$a" -le "$b" ] || return 1
+            out+=" $(seq -s ' ' "$a" "$b")"
+        elif [[ $tok =~ ^[0-9]+$ ]]; then
+            out+=" $tok"
+        else
+            return 1
+        fi
+    done
+    echo "$out" | tr ' ' '\n' | sed '/^$/d' | sort -nu | tr '\n' ' ' | sed 's/ $//'
+}
+compress_cpus() {           # compress_cpus "0 1 2 5" -> "0-2,5"
+    local out="" start="" prev="" c
+    for c in $1; do
+        if [ -z "$start" ]; then start=$c; prev=$c; continue; fi
+        if [ "$c" -eq $((prev + 1)) ]; then prev=$c; continue; fi
+        out+="${out:+,}$start"; [ "$prev" != "$start" ] && out+="-$prev"
+        start=$c; prev=$c
+    done
+    if [ -n "$start" ]; then out+="${out:+,}$start"; [ "$prev" != "$start" ] && out+="-$prev"; fi
+    echo "$out"
+}
+intersect() { local a b out=""; for a in $1; do for b in $2; do [ "$a" = "$b" ] && out+=" $a"; done; done; echo "${out# }"; }
+subtract()  { local a b out="" hit; for a in $1; do hit=0; for b in $2; do [ "$a" = "$b" ] && hit=1; done; [ $hit = 0 ] && out+=" $a"; done; echo "${out# }"; }
+cpu_mask() {                # cpu_mask "0 2" -> kernel cpumask "5" (32-bit words, comma separated)
+    local c words=() i out=""
+    for c in $1; do
+        i=$((c / 32)); words[i]=$(( ${words[i]:-0} | (1 << (c % 32)) ))
+    done
+    local n=${#words[@]} top=0
+    for i in "${!words[@]}"; do [ "$i" -gt "$top" ] && top=$i; done
+    [ "$n" -gt 0 ] || { echo 0; return; }
+    for ((i = top; i >= 0; i--)); do
+        if [ "$i" -eq "$top" ]; then out=$(printf '%x' "${words[i]:-0}")
+        else out+=$(printf ',%08x' "${words[i]:-0}"); fi
+    done
+    echo "$out"
+}
+
+# --- Parse cpu-layout from the first server block that has one ---------------
+# Emits: "hk <list>", "irq <bool>", "rcvbuf <n>", "role <name> <list>"
+parse_layout() {
+    [ -f "$CONF" ] || return 0
+    awk '
+        function indent(s) { match(s, /^[ \t]*/); return RLENGTH }
+        /^server[ \t]/                   { in_server = 1; next }
+        in_server && /^!/                { in_server = 0; if (seen) exit; next }
+        !in_server                       { next }
+        !in_cl && /^[ \t]+cpu-layout[ \t]*$/ { if (seen) next; in_cl = 1; seen = 1; cl_ind = indent($0); next }
+        !in_cl                           { next }
+        {
+            ind = indent($0); line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
+            if (line == "!") {
+                if (ind <= cl_ind) { in_cl = 0; next }
+                if (role != "" && ind <= role_ind) { if (cpus != "") print "role", role, cpus; role = ""; cpus = "" }
+                next
+            }
+            n = split(line, f, /[ \t]+/)
+            if (role != "" && ind > role_ind) { if (f[1] == "cpus" && n >= 2) cpus = f[2]; next }
+            if (f[1] == "housekeeping-cpus" && n >= 2) print "hk", f[2]
+            else if (f[1] == "irq-steering") print "irq", (n >= 2 ? f[2] : "true")   # saved as bare "irq-steering"
+            else if (f[1] == "no" && f[2] == "irq-steering") print "irq", "false"
+            else if (f[1] == "socket-rcvbuf" && n >= 2) print "rcvbuf", f[2]
+            else if (f[1] == "process-cpus" && n >= 2) { role = f[2]; role_ind = ind; cpus = "" }
+        }
+    ' "$CONF"
+}
+
+write_outputs() {
+    mkdir -p "$OUT"
+    {
+        echo "# written by xcesp-cpu-layout at $(date '+%F %T') from $CONF"
+        echo "CPU_DEFAULT=${CPU_DEFAULT:-}"
+        local r
+        for r in "${!ROLE_SET[@]}"; do echo "CPU_ROLE_${r//-/_}=${ROLE_SET[$r]}"; done
+    } > "$OUT/cpu-layout.env"
+    {
+        echo "result: $RESULT"
+        local s
+        for s in "${STATUS[@]}"; do echo "$s"; done
+    } > "$OUT/cpu-layout.status"
+}
+
+irqbalance_present() {
+    $USE_SYSTEMCTL || return 1
+    "$SYSTEMCTL" cat irqbalance.service >/dev/null 2>&1
+}
+
+# remove a ban set by an earlier run (layout removed or steering turned off)
+drop_irqbalance_ban() {
+    [ -f "$IRQB_DROPIN" ] || return 0
+    rm -f "$IRQB_DROPIN" "$IRQB_ENV"
+    if $USE_SYSTEMCTL; then
+        "$SYSTEMCTL" daemon-reload 2>/dev/null || true
+        "$SYSTEMCTL" try-restart --no-block irqbalance.service 2>/dev/null || true
+    fi
+    log "removed the irqbalance CPU ban set by an earlier cpu-layout"
+}
+
+declare -A ROLE_SET
+ROLE_SET[__seed__]=1; unset 'ROLE_SET[__seed__]'
+CPU_DEFAULT=""
+
+spec=$(parse_layout)
+if [ -z "$spec" ]; then
+    RESULT=not-configured
+    note "no server cpu-layout block: CPU placement left to the OS"
+    drop_irqbalance_ban
+    write_outputs
+    exit 0
+fi
+
+online=$(expand_cpus "$(cat "$SYS/sys/devices/system/cpu/online" 2>/dev/null || echo 0)") || online=0
+note "online-cpus: $(compress_cpus "$online")"
+
+hk_cfg=""; irq_on=true; rcvbuf=""
+declare -A ROLE_CFG
+ROLE_CFG[__seed__]=1; unset 'ROLE_CFG[__seed__]'
+while read -r k a b; do
+    case "$k" in
+        hk) hk_cfg=$a ;;
+        irq) [ "$a" = false ] && irq_on=false ;;
+        rcvbuf) rcvbuf=$a ;;
+        role) ROLE_CFG[$a]=$b ;;
+    esac
+done <<< "$spec"
+
+# --- housekeeping set ---------------------------------------------------------
+hk=""
+if [ -n "$hk_cfg" ]; then
+    if ! hk_all=$(expand_cpus "$hk_cfg"); then
+        warn "housekeeping-cpus '$hk_cfg': bad CPU list, ignored"
+    else
+        hk=$(intersect "$hk_all" "$online")
+        missing=$(subtract "$hk_all" "$online")
+        [ -n "$missing" ] && warn "housekeeping-cpus $(compress_cpus "$missing") not online, ignored"
+        [ -z "$hk" ] && warn "no online housekeeping CPU: IRQs not steered"
+    fi
+    note "housekeeping-cpus: $([ -n "$hk" ] && compress_cpus "$hk" || echo none)"
+fi
+rt_pool=$(subtract "$online" "$hk")
+if [ -n "$hk" ] && [ -z "$rt_pool" ]; then
+    warn "housekeeping-cpus cover every online CPU: no CPU left for XCESP, placement not changed"
+    hk=""; rt_pool=$online
+fi
+
+# --- per-role CPU sets ----------------------------------------------------------
+[ -n "$hk" ] && CPU_DEFAULT=$(compress_cpus "$rt_pool")
+note "default xcespproc cpus: ${CPU_DEFAULT:-any}"
+for r in "${!ROLE_CFG[@]}"; do
+    if ! set_all=$(expand_cpus "${ROLE_CFG[$r]}"); then
+        warn "process-cpus $r: bad CPU list '${ROLE_CFG[$r]}', role uses the default"; continue
+    fi
+    set_ok=$(intersect "$set_all" "$online")
+    missing=$(subtract "$set_all" "$online")
+    [ -n "$missing" ] && warn "process-cpus $r: CPU $(compress_cpus "$missing") not online, ignored"
+    clash=$(intersect "$set_ok" "$hk")
+    [ -n "$clash" ] && warn "process-cpus $r: CPU $(compress_cpus "$clash") is also a housekeeping CPU (IRQs share it)"
+    if [ -z "$set_ok" ]; then warn "process-cpus $r: no usable CPU, role uses the default"; continue; fi
+    ROLE_SET[$r]=$(compress_cpus "$set_ok")
+    note "process-cpus $r: ${ROLE_SET[$r]}"
+done
+
+# --- IRQ steering ---------------------------------------------------------------
+nic_irqs() {    # IRQ numbers that belong to network interfaces (MSI/MSI-X, legacy, virtio names)
+    local dev d n v names=""
+    for dev in "$SYS"/sys/class/net/*; do
+        n=${dev##*/}; [ "$n" = lo ] && continue
+        [ -e "$dev/device" ] || continue
+        for d in "$dev/device" "$dev/device/.."; do
+            [ -d "$d/msi_irqs" ] && ls "$d/msi_irqs" 2>/dev/null
+            [ -f "$d/irq" ] && v=$(cat "$d/irq" 2>/dev/null) && [ "${v:-0}" -gt 0 ] && echo "$v"
+        done
+        v=$(basename "$(readlink -f "$dev/device")")
+        names+=" $n $v"
+    done
+    # names in /proc/interrupts, e.g. "virtio8-input.0", "enp9s0-TxRx-0"
+    [ -f "$SYS/proc/interrupts" ] && for n in $names; do
+        awk -v p="$n" '$1 ~ /^[0-9]+:$/ { if (index($NF, p "-") == 1 || $NF == p) { sub(":", "", $1); print $1 } }' "$SYS/proc/interrupts"
+    done
+}
+
+if [ -n "$hk" ] && $irq_on; then
+    hk_list=$(compress_cpus "$hk")
+    nic=" $(nic_irqs | sort -nu | tr '\n' ' ') "
+    ok_n=0; nic_bad=""; nic_moved=""; other_bad=0
+    for d in "$SYS"/proc/irq/[0-9]*; do
+        irq=${d##*/}
+        [ -f "$d/smp_affinity_list" ] || continue
+        if { echo "$hk_list" > "$d/smp_affinity_list"; } 2>/dev/null; then
+            ok_n=$((ok_n + 1))
+            [[ $nic == *" $irq "* ]] && nic_moved+=" $irq"
+        elif [[ $nic == *" $irq "* ]]; then
+            nic_bad+=" $irq"
+        else
+            other_bad=$((other_bad + 1))    # kernel-managed or per-CPU IRQs refuse affinity changes
+        fi
+    done
+    # effective affinity (when exposed) must end inside housekeeping; x86 may move an
+    # MSI only at its next interrupt, so give the kernel a moment before checking
+    effective_outside() {
+        local irq eff bad=""
+        for irq in $nic_moved; do
+            [ -f "$SYS/proc/irq/$irq/effective_affinity_list" ] || continue
+            eff=$(expand_cpus "$(cat "$SYS/proc/irq/$irq/effective_affinity_list" 2>/dev/null)") || continue
+            [ -n "$eff" ] && [ -n "$(subtract "$eff" "$hk")" ] && bad+=" $irq"
+        done
+        echo "$bad"
+    }
+    if [ -n "$nic_moved" ]; then
+        late=$(effective_outside)
+        [ -n "$late" ] && sleep 1 && late=$(effective_outside)
+        nic_bad+="$late"
+    fi
+    if [ -f "$SYS/proc/irq/default_smp_affinity" ]; then
+        { echo "$(cpu_mask "$hk")" > "$SYS/proc/irq/default_smp_affinity"; } 2>/dev/null \
+            || warn "cannot set /proc/irq/default_smp_affinity: new IRQs may land on XCESP CPUs"
+    fi
+    note "irq-steering: $ok_n IRQs -> CPU $hk_list; $other_bad kernel-managed IRQs left as they are"
+    nic_list=$(echo $nic | tr ' ' ',')
+    note "nic-irqs: ${nic_list:-none found}"
+    [ -n "$nic_bad" ] && warn "NIC IRQ(s)${nic_bad} could not be moved to CPU $hk_list: real-time threads may share a CPU with NIC interrupts"
+
+    if irqbalance_present; then
+        banned=$(compress_cpus "$rt_pool")
+        mkdir -p "$IRQB_DROPIN_DIR"
+        echo "IRQBALANCE_BANNED_CPULIST=$banned" > "$IRQB_ENV"
+        # EnvironmentFile= entries are read in order: this one, added by a drop-in,
+        # overrides IRQBALANCE_BANNED_CPULIST from /etc/sysconfig/irqbalance.
+        printf '# written by xcesp-cpu-layout (ikata-agents#29), removed when cpu-layout is removed\n[Service]\nEnvironmentFile=-%s\n' \
+            "$IRQB_ENV" > "$IRQB_DROPIN"
+        "$SYSTEMCTL" daemon-reload 2>/dev/null || warn "systemctl daemon-reload failed: irqbalance may still use XCESP CPUs"
+        if "$SYSTEMCTL" is-active --quiet irqbalance.service 2>/dev/null; then
+            "$SYSTEMCTL" try-restart --no-block irqbalance.service 2>/dev/null \
+                || warn "irqbalance restart failed: it may move IRQs back to XCESP CPUs"
+        fi
+        note "irqbalance: banned CPUs $banned"
+    else
+        drop_irqbalance_ban
+        note "irqbalance: not installed (affinity written directly)"
+    fi
+else
+    drop_irqbalance_ban
+    [ -n "$hk_cfg" ] && ! $irq_on && note "irq-steering: disabled by config"
+fi
+
+# --- socket receive buffer ------------------------------------------------------
+if [ -n "$rcvbuf" ] && [ "$rcvbuf" -gt 0 ] 2>/dev/null; then
+    p=$SYS/proc/sys/net/core
+    cur_max=$(cat "$p/rmem_max" 2>/dev/null || echo 0)
+    if [ "$cur_max" -lt "$rcvbuf" ] 2>/dev/null; then
+        { echo "$rcvbuf" > "$p/rmem_max"; } 2>/dev/null || warn "cannot raise net.core.rmem_max to $rcvbuf"
+    fi
+    if { echo "$rcvbuf" > "$p/rmem_default"; } 2>/dev/null; then
+        note "socket-rcvbuf: net.core.rmem_default=$rcvbuf"
+    else
+        warn "cannot set net.core.rmem_default to $rcvbuf"
+    fi
+fi
+
+write_outputs
+log "result $RESULT (details in $OUT/cpu-layout.status)"
+exit 0

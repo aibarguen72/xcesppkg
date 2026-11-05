@@ -1,5 +1,36 @@
 # Changelog - xcesppkg
 
+## 0.5.90
+
+- Bundles xcespserver 0.4.28, xcespcli 0.3.63, xcespproc 0.2.166,
+  xcespwdog 0.2.4.  xcespproc relinks xcesp-on-xc 0.2.104: the TDMTEST
+  status JSON carries the pass/fail `result` (ikata-agents #33), and
+  ModemXc re-drives the egress DCD/DSR/CTS lines after every DTE bring-up
+  (ikata-agents #34).  xcespserver adds the `server / cpu-layout` schema
+  and its commit hook (below).
+- **feat: `server N / cpu-layout` — CPU placement for real-time work
+  (ikata-agents#29).**  New `scripts/xcesp-cpu-layout`, run by
+  `xcesp-activate` on every service start (before the xcespwdog process
+  list is written), applies the saved `cpu-layout` block:
+  - `housekeeping-cpus`: every IRQ (`/proc/irq/*/smp_affinity_list`) and
+    new IRQs (`default_smp_affinity`) go there; when irqbalance is
+    installed, a runtime drop-in (`/run/systemd/system/irqbalance.service.d/
+    50-xcesp-cpu-layout.conf`) bans the other CPUs.  `irq-steering false`
+    turns steering off.
+  - every xcespproc launch line gets `taskset -c <set>`: the role's
+    `process-cpus <role> / cpus`, else all online CPUs except
+    `housekeeping-cpus`.  Domain RT threads inherit it.
+  - `socket-rcvbuf`: `net.core.rmem_default` (and `rmem_max` if lower).
+  Best effort: an IRQ that refuses the affinity (NIC IRQs are named), CPUs
+  not online, a missing irqbalance etc. are WARNINGs in the journal and in
+  `/run/xcesp/cpu-layout.status`; the start never fails.  Without a
+  `cpu-layout` block nothing changes and an earlier irqbalance ban is
+  removed.  Measured on xcespfc: with the equivalent manual setup the
+  all-port underflow events of #29 went from ~1 per 15 min to 0 in 60 min.
+  Note: as for every `xcesp-activate` change, the helper is taken from
+  `mainsw/scripts/`, so it applies on the first start after
+  `software-install`.
+
 ## 0.5.89
 
 - Bundles xcespserver 0.4.27, xcespcli 0.3.63, xcespproc 0.2.165,
@@ -7200,6 +7231,7 @@ xcesp-dhclient-script as 0.1.97 (no DHCP-client-side changes here).
 - Bundles xcespserver 0.0.30, xcespcli 0.0.51, xcespproc 0.0.79, xcespwdog 0.0.7 (unchanged)
 
 ## 0.0.117
+
 ## 0.0.118
 
 - Bundles xcesp-on-rtr 0.0.92: fix stale charon socket files — charon.vici left after pkill caused next restart to run without VICI (EADDRINUSE on bind); cleanStaleSwanFiles() now removes them before start and after stop
