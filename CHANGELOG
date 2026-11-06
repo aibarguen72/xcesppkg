@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.5.92
+
+- Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.167,
+  xcespwdog 0.2.4 with the TDM-PW fixes from the ON-PW-TDMPW findings:
+  - xcesp-on-pw 0.3.46: CAS once per internal multiframe under the
+    pseudoclock (ikata-agents#22) and from the data tick when the
+    pacemaker has no signaling (#28); adaptive expected rate on the
+    pseudoclock (#23); endpoint shutdown puts destination-mode PWs in
+    LLD and 2142 is bound only while a source-mode PW is active (#25);
+    LOS / protection selector on a 1 s timer (#26).
+  - xcesp-on-xc 0.2.105 rules + xcespmap 0.2.1 (in xcespserver): XC
+    chain / service / condition mapped to their own domain (#27).
+  - xcespserver 0.4.29: tdm-pw / pw-endpoint status in the global
+    status tree (#24).
+
 ## 0.5.91
 
 - Bundles xcespserver 0.4.28, xcespcli 0.3.63, xcespproc 0.2.166,
