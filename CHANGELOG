@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.94
+
+- Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.169,
+  xcespwdog 0.2.4 with:
+  - xcesp-on-rtr 0.2.24: static default routes 0.0.0.0/0 and ::/0 come UP
+    when installed, no IDLE retry loop (ikata-agents#37).
+  - xcesp-on-pw 0.3.48: PWs re-register right after `pw-endpoint no
+    shutdown` (#41); `ts16data` not allowed on a T1 PW (#40).
+
 ## 0.5.93
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.168,
