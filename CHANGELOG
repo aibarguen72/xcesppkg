@@ -1,5 +1,12 @@
 # Changelog - xcesppkg
 
+## 0.5.93
+
+- Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.168,
+  xcespwdog 0.2.4 with xcesp-on-pw 0.3.47: the internal pseudoclock
+  ticks at the domain's debugrate, so GEN / LPB back-to-back PWs agree on
+  the nominal rate (ikata-agents#38, regression from #23 / #26 in 0.5.92).
+
 ## 0.5.92
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.167,
