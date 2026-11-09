@@ -1,7 +1,9 @@
 # Changelog - xcesppkg
 
-## unreleased (fix/ikata-44-firewalld-zone)
+## 0.5.98
 
+- Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.171
+  (xcesp-on-rtr 0.2.26), xcespwdog 0.2.4.
 - **fix: firewalld no longer blocks GRE/ESP/IKE on router default links**
   (ikata-agents#44).  New root helper `scripts/xcesp-fw-zone`, installed
   to `/usr/lib/xcesp/` by `install.sh` and refreshed by `xcesp-activate`
