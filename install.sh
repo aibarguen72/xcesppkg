@@ -101,15 +101,15 @@ info "  Created $DSK_DIR/{img,bcfg,log,cap}"
 #   dev/  Device (own) certificates          — group-readable
 #   key/  Private keys                       — group-readable, NOT world
 # Files inside use mode 0640 (group-only); the dirs are 0750 so non-xcesp
-# users can't list private key names either.
-for d in "$DSK_DIR/cert/ca" "$DSK_DIR/cert/dev" "$DSK_DIR/cert/key"; do
+# users can't list private key names either.  The dirs are owned by
+# $XCESP_USER: xcespserver (uid xcesp) writes the keys and certs
+# (ikata-agents#32).  Keep in sync with xcesp-activate.
+for d in "$DSK_DIR/cert" "$DSK_DIR/cert/ca" "$DSK_DIR/cert/dev" "$DSK_DIR/cert/key"; do
     mkdir -p "$d"
-    chown root:"$XCESP_GROUP" "$d"
+    chown "$XCESP_USER:$XCESP_GROUP" "$d"
     chmod 0750 "$d"
 done
-chown root:"$XCESP_GROUP" "$DSK_DIR/cert"
-chmod 0750 "$DSK_DIR/cert"
-info "  Created $DSK_DIR/cert/{ca,dev,key} (mode 0750)"
+info "  Created $DSK_DIR/cert/{ca,dev,key} (owner $XCESP_USER, mode 0750)"
 
 # ---------------------------------------------------------------------------
 # Binaries → /var/xcesp/mainsw/bin/  AND  /usr/bin/

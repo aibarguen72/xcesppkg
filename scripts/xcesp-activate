@@ -195,6 +195,16 @@ install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0755 /run/netns
 touch /run/xtables.lock
 chown "root:$XCESP_GROUP" /run/xtables.lock
 chmod 0664 /run/xtables.lock
+# dsk/cert: xcespserver (uid xcesp) writes keys and certs there.  Installs
+# up to 0.5.96 created the dirs root:xcesp 0750 (read-only for xcesp), so
+# re-stamp them on every start (keep in sync with install.sh,
+# ikata-agents#32).
+if [ -d "$XCESP_BASE/dsk" ]; then
+    for d in "$XCESP_BASE/dsk/cert" "$XCESP_BASE/dsk/cert/ca" \
+             "$XCESP_BASE/dsk/cert/dev" "$XCESP_BASE/dsk/cert/key"; do
+        install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 "$d"
+    done
+fi
 # Home directory for xcesp user: needed for scp/sftp known_hosts storage.
 # Older installs used --no-create-home; ensure the directory exists here.
 install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0750 "/home/$XCESP_USER"
