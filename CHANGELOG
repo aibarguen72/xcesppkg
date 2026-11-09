@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.5.99
+
+- Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.172
+  (xcesp-on-rtr 0.2.27), xcespwdog 0.2.4.
+- **fix: firewalld follow-up** (ikata-agents#44): router default VRF
+  devices are bound to zone `xcesp` (GRE over a VRF slave was still
+  rejected), and an rlink is bound right after its rename.
+
 ## 0.5.98
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.171
