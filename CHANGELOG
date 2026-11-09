@@ -1,7 +1,11 @@
 # Changelog - xcesppkg
 
-## unreleased (fix/ikata-36-swanctl-dir)
+## 0.5.95
 
+- Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.170,
+  xcespwdog 0.2.4 with xcesp-on-rtr 0.2.25 (FRR push on fragment change,
+  ikata-agents#42) and xcesp-on-pw 0.3.49 (SET CAS on the internal
+  pseudoclock, #39).
 - **fix: IPsec on the host router (`router default`) gets its swanctl.conf
   on installed systems** (ikata-agents#36).  `install.sh` and
   `xcesp-activate` (every start) now create `/etc/swanctl` owned by
