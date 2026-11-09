@@ -1,5 +1,22 @@
 # Changelog - xcesppkg
 
+## unreleased (fix/ikata-44-firewalld-zone)
+
+- **fix: firewalld no longer blocks GRE/ESP/IKE on router default links**
+  (ikata-agents#44).  New root helper `scripts/xcesp-fw-zone`, installed
+  to `/usr/lib/xcesp/` by `install.sh` and refreshed by `xcesp-activate`
+  like `xcesp-cpu-layout`.  On every start `xcesp-activate` runs
+  `xcesp-fw-zone setup`: when firewalld is active it creates the
+  permanent zone `xcesp` with target `ACCEPT` (firewalld is reloaded only
+  when the zone is created or its target fixed; runtime interface
+  bindings survive the reload).  xcespproc (xcesp-on-rtr, same issue)
+  binds each link it creates for `router default` (rlink, gre, xfrm,
+  loopback, vlan, ...) with `sudo -n xcesp-fw-zone add <dev>` and
+  unbinds it on delete; new sudoers rule `/etc/sudoers.d/xcesp-firewalld`
+  (written by `install.sh` and `xcesp-activate`).  Management NICs stay
+  in their zone.  firewalld inactive or absent: nothing changes.
+  Failures are WARNINGs, never a failed start.
+
 ## 0.5.97
 
 - Bundles the same binaries as 0.5.95 / 0.5.96 (xcespserver 0.4.29,

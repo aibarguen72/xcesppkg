@@ -83,7 +83,7 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
             scripts/xcesp-activate scripts/xcesp-swap.sh \
             scripts/xcesp-dhclient-script scripts/chrony-install.sh \
             scripts/xcesp-login scripts/xcesp-ipsec-vip-installer \
-            scripts/xcesp-cpu-layout \
+            scripts/xcesp-cpu-layout scripts/xcesp-fw-zone \
             scripts/xcesp-ip.c scripts/xcesp-tacacs-auth.cpp \
             scripts/xcesp-radius-auth.cpp \
             cfg/xcespserver.ini cfg/xcespproc.ini cfg/xcespwdog.ini \
@@ -234,13 +234,15 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp scripts/xcesp-login              $(PKG_NAME)/scripts/
 	cp scripts/xcesp-ipsec-vip-installer $(PKG_NAME)/scripts/
 	cp scripts/xcesp-cpu-layout         $(PKG_NAME)/scripts/
+	cp scripts/xcesp-fw-zone            $(PKG_NAME)/scripts/
 	chmod +x $(PKG_NAME)/scripts/xcesp-activate \
 	         $(PKG_NAME)/scripts/xcesp-swap.sh  \
 	         $(PKG_NAME)/scripts/xcesp-dhclient-script \
 	         $(PKG_NAME)/scripts/chrony-install.sh \
 	         $(PKG_NAME)/scripts/xcesp-login \
 	         $(PKG_NAME)/scripts/xcesp-ipsec-vip-installer \
-	         $(PKG_NAME)/scripts/xcesp-cpu-layout
+	         $(PKG_NAME)/scripts/xcesp-cpu-layout \
+	         $(PKG_NAME)/scripts/xcesp-fw-zone
 
 	# --- Systemd service ---
 	mkdir -p $(PKG_NAME)/services

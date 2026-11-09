@@ -1,0 +1,71 @@
+#!/bin/bash
+# xcesp-fw-zone — firewalld zone `xcesp` for XCESP host-namespace links (ikata-agents#44)
+#
+# The links XCESP creates for `router default` (rlink veth, gre, xfrm,
+# loopbacks, ...) live in the host namespace.  Unassigned, firewalld filters
+# them with the default zone (e.g. FedoraServer), which rejects GRE, ESP,
+# IKE and ICMP on them.  This helper keeps an XCESP-owned zone `xcesp`
+# (target ACCEPT) and binds those links to it at runtime.  Management NICs
+# stay in their zone.
+#
+#   xcesp-fw-zone setup         create / fix the permanent zone (xcesp-activate,
+#                               every start; reloads firewalld only on change)
+#   xcesp-fw-zone add <dev>     runtime bind <dev> to zone xcesp (xcespproc via
+#   xcesp-fw-zone remove <dev>  sudo -n when the interface is created / deleted)
+#
+# firewalld inactive or not installed: nothing is done, exit 0.
+# Errors are printed to stderr with a non-zero exit; callers treat them as
+# WARNING (best effort, like cpu-layout).
+
+set -uo pipefail
+
+ZONE=xcesp
+FWCMD=firewall-cmd
+# Test override, ignored under sudo (xcespproc calls).
+[ -z "${SUDO_USER:-}" ] && FWCMD=${XCESP_FWCMD:-$FWCMD}
+
+die() { echo "xcesp-fw-zone: $*" >&2; exit 1; }
+
+command -v "$FWCMD" >/dev/null 2>&1 || exit 0
+"$FWCMD" --state >/dev/null 2>&1 || exit 0
+
+case "${1:-}" in
+setup)
+    changed=false
+    if ! "$FWCMD" --permanent --get-zones | tr ' ' '\n' | grep -qx "$ZONE"; then
+        "$FWCMD" --permanent --new-zone="$ZONE" >/dev/null || die "cannot create zone $ZONE"
+        "$FWCMD" --permanent --zone="$ZONE" --set-short="XCESP" >/dev/null
+        "$FWCMD" --permanent --zone="$ZONE" \
+            --set-description="Links created by XCESP for router default (managed by xcespproc)" >/dev/null
+        changed=true
+    fi
+    if [ "$("$FWCMD" --permanent --zone="$ZONE" --get-target)" != ACCEPT ]; then
+        "$FWCMD" --permanent --zone="$ZONE" --set-target=ACCEPT >/dev/null \
+            || die "cannot set target ACCEPT on zone $ZONE"
+        changed=true
+    fi
+    if $changed; then
+        # A reload keeps the runtime interface bindings of all zones.
+        "$FWCMD" --reload >/dev/null || die "firewall-cmd --reload failed"
+        echo "xcesp-fw-zone: zone $ZONE created (target ACCEPT)" >&2
+    fi
+    ;;
+add|remove)
+    dev=${2:-}
+    # Exact kernel interface names only: no '+' wildcard, no options.
+    [[ "$dev" =~ ^[A-Za-z0-9_.@-]{1,15}$ && "$dev" != -* ]] || die "invalid device name '$dev'"
+    if [ "$1" = add ]; then
+        # --change-interface also moves it out of another zone, if bound.
+        "$FWCMD" --zone="$ZONE" --change-interface="$dev" >/dev/null \
+            || die "cannot bind $dev to zone $ZONE"
+    else
+        [ "$("$FWCMD" --get-zone-of-interface="$dev" 2>/dev/null)" = "$ZONE" ] || exit 0
+        "$FWCMD" --zone="$ZONE" --remove-interface="$dev" >/dev/null \
+            || die "cannot remove $dev from zone $ZONE"
+    fi
+    ;;
+*)
+    die "usage: xcesp-fw-zone setup | add <dev> | remove <dev>"
+    ;;
+esac
+exit 0

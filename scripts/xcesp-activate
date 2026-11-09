@@ -132,6 +132,16 @@ if [ -d "$MAINSW/scripts" ]; then
             log "  refreshed $dst"
         fi
     fi
+    # firewalld zone helper (ikata-agents#44): run via sudo by xcespproc.
+    if [ -f "$MAINSW/scripts/xcesp-fw-zone" ]; then
+        mkdir -p /usr/lib/xcesp
+        src="$MAINSW/scripts/xcesp-fw-zone"
+        dst="/usr/lib/xcesp/xcesp-fw-zone"
+        if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+            install -o root -g root -m 0755 "$src" "$dst"
+            log "  refreshed $dst"
+        fi
+    fi
     ipsec_vip_src=""
     if [ -f "$MAINSW/scripts/xcesp-ipsec-vip-installer" ]; then
         ipsec_vip_src="$MAINSW/scripts/xcesp-ipsec-vip-installer"
@@ -952,6 +962,30 @@ if [ ${#tdm_router[@]} -gt 0 ]; then
         printf "%s→%s " "$k" "${tdm_router[$k]}"
     done)
     log "  tdm-pw netns binds: $binds"
+fi
+
+# ---------------------------------------------------------------------------
+# firewalld zone `xcesp` (ikata-agents#44)
+# ---------------------------------------------------------------------------
+# The links XCESP creates for router default (rlink, gre, xfrm, loopbacks,
+# ...) are in the host namespace; unassigned, firewalld filters them with
+# the default zone, which rejects GRE/ESP/IKE/ICMP.  xcesp-fw-zone creates
+# zone `xcesp` (target ACCEPT) here and xcespproc binds each such link to
+# it at runtime via `sudo -n /usr/lib/xcesp/xcesp-fw-zone add|remove <dev>`.
+# firewalld inactive or absent: nothing changes.  Best effort: a failure is
+# a WARNING, never a failed start.
+FW_ZONE_SUDOERS=/etc/sudoers.d/xcesp-firewalld
+if [ -x /usr/lib/xcesp/xcesp-fw-zone ]; then
+    cat > "$FW_ZONE_SUDOERS" <<SUDOERS
+# Allow xcespproc to bind the router default links it creates to the
+# firewalld zone xcesp (ikata-agents#44).
+$XCESP_USER ALL=(root) NOPASSWD: /usr/lib/xcesp/xcesp-fw-zone add *, \\
+                                  /usr/lib/xcesp/xcesp-fw-zone remove *
+SUDOERS
+    chmod 0440 "$FW_ZONE_SUDOERS"
+    if ! /usr/lib/xcesp/xcesp-fw-zone setup; then
+        log "  WARNING: firewalld zone xcesp not set up — router default tunnels may be filtered by the default zone"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
