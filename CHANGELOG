@@ -1,7 +1,9 @@
 # Changelog - xcesppkg
 
-## unreleased (fix/ikata-43-activate-reexec)
+## 0.5.96
 
+- Bundles the same binaries as 0.5.95 (xcespserver 0.4.29, xcespcli 0.3.63,
+  xcespproc 0.2.170, xcespwdog 0.2.4).
 - **fix: a new `xcesp-activate` runs in the first start after
   `software-install`** (ikata-agents#43).  When `xcesp-activate` refreshes
   `/usr/bin/xcesp-activate` from `mainsw/scripts/`, it now logs
