@@ -1,7 +1,9 @@
 # Changelog - xcesppkg
 
-## unreleased (fix/ikata-32-cert-dir-perms)
+## 0.5.97
 
+- Bundles the same binaries as 0.5.95 / 0.5.96 (xcespserver 0.4.29,
+  xcespcli 0.3.63, xcespproc 0.2.170, xcespwdog 0.2.4).
 - **fix: xcespserver can write keys and certificates on installed systems**
   (ikata-agents#32).  `install.sh` now creates `/var/xcesp/dsk/cert` and
   its `ca/`, `dev/`, `key/` subdirs owned by `xcesp:xcesp` (mode 0750,
