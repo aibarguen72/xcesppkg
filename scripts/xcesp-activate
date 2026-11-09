@@ -810,6 +810,17 @@ SUDOERS
     log "  $SWAN_SUDOERS installed"
 fi
 
+# /etc/swanctl owned by xcesp — re-applied on every activation (keep in
+# sync with install.sh, ikata-agents#36).  xcespproc writes the host-
+# namespace swanctl.conf at the top level of /etc/swanctl (preferred over
+# the root-owned /etc/strongswan/swanctl on Fedora).  Best effort: a
+# failure only breaks IPsec on router default, so it is a WARNING.
+if install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0755 /etc/swanctl 2>/dev/null; then
+    log "  /etc/swanctl owned by $XCESP_USER"
+else
+    log "  WARNING: could not create /etc/swanctl owned by $XCESP_USER — IPsec on router default will not get its swanctl.conf"
+fi
+
 # ---------------------------------------------------------------------------
 # Generate xcespwdog process list from xcespserver.conf
 # ---------------------------------------------------------------------------

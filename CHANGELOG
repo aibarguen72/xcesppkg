@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## unreleased (fix/ikata-36-swanctl-dir)
+
+- **fix: IPsec on the host router (`router default`) gets its swanctl.conf
+  on installed systems** (ikata-agents#36).  `install.sh` and
+  `xcesp-activate` (every start) now create `/etc/swanctl` owned by
+  `xcesp` (0755), as xcesptest `activate.sh` does on dev.  xcespproc
+  prefers `/etc/swanctl`, so on Fedora it no longer tries to write into
+  the root-owned `/etc/strongswan/swanctl/` (`writeSwanctlConf: ...
+  Permission denied`); the distro files there stay untouched.  If the
+  directory cannot be created or chowned, both scripts only print a
+  WARNING — IPsec on the host router is optional.
+
 ## 0.5.94
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.169,

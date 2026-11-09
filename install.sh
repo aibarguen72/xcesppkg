@@ -347,6 +347,19 @@ SUDOERS
 chmod 0440 "$SWAN_SUDOERS"
 info "  $SWAN_SUDOERS installed"
 
+# /etc/swanctl owned by xcesp (ikata-agents#36).  xcespproc prefers
+# /etc/swanctl over /etc/strongswan/swanctl and writes the host-namespace
+# (router default) swanctl.conf at its top level, so the directory itself
+# must be writable by xcesp — a root-owned distro dir (Fedora's
+# /etc/strongswan/swanctl) makes writeSwanctlConf fail with EACCES.
+# Non-fatal: IPsec on the host router is optional.  xcesp-activate
+# re-applies this on every start.
+if install -d -o "$XCESP_USER" -g "$XCESP_GROUP" -m 0755 /etc/swanctl 2>/dev/null; then
+    info "  /etc/swanctl owned by $XCESP_USER"
+else
+    warn "Could not create /etc/swanctl owned by $XCESP_USER — IPsec on the host router (router default) will not get its swanctl.conf"
+fi
+
 # ---------------------------------------------------------------------------
 # sudoers rule — allow xcesp to load kernel modules via xcespserver
 # ---------------------------------------------------------------------------
