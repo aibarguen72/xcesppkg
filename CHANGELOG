@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## unreleased (fix/ikata-43-activate-reexec)
+
+- **fix: a new `xcesp-activate` runs in the first start after
+  `software-install`** (ikata-agents#43).  When `xcesp-activate` refreshes
+  `/usr/bin/xcesp-activate` from `mainsw/scripts/`, it now logs
+  `xcesp-activate: updated from mainsw, re-executing the new version` and
+  re-execs the new copy once, in the same `ExecStartPre` (guarded by
+  `XCESP_ACTIVATE_REEXEC`, so it cannot loop).  Before, bash kept running
+  the old copy and the new logic (e.g. `/etc/swanctl` #36, cpu-layout #29)
+  only applied at the second restart.  Starts where the copy is unchanged
+  are as before.
+
 ## 0.5.95
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.63, xcespproc 0.2.170,
