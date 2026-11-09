@@ -53,7 +53,13 @@ done
 # logic (not the install.sh-vintage version that's still in /usr/bin).
 # Copy only when content differs — avoids a needless rewrite on every
 # start.
+#
+# ikata-agents#43: bash has already loaded this (old) copy, so a refreshed
+# /usr/bin/xcesp-activate would only run at the next start.  When it was
+# just replaced, re-exec the new version once, in this same start.
+# XCESP_ACTIVATE_REEXEC guards against a loop.
 if [ -d "$MAINSW/scripts" ]; then
+    activate_refreshed=0
     for s in xcesp-activate xcesp-swap.sh; do
         src="$MAINSW/scripts/$s"
         dst="$BINDIR/$s"
@@ -61,8 +67,14 @@ if [ -d "$MAINSW/scripts" ]; then
         if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
             install -o root -g root -m 0755 "$src" "$dst"
             log "  refreshed $dst"
+            [ "$s" = xcesp-activate ] && activate_refreshed=1
         fi
     done
+    if [ "$activate_refreshed" = 1 ] && [ -z "${XCESP_ACTIVATE_REEXEC:-}" ]; then
+        log "updated from mainsw, re-executing the new version"
+        export XCESP_ACTIVATE_REEXEC=1
+        exec "$BINDIR/xcesp-activate" "$@"
+    fi
     # 0.2.2: xcesp-login lives under /usr/lib/xcesp/ (off PATH).  Refresh
     # it from mainsw/scripts/ via the same content-compare pattern.
     if [ -f "$MAINSW/scripts/xcesp-login" ]; then
