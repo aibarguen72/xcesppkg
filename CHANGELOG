@@ -16,6 +16,22 @@
   (written by `install.sh` and `xcesp-activate`).  Management NICs stay
   in their zone.  firewalld inactive or absent: nothing changes.
   Failures are WARNINGs, never a failed start.
+  Review changes (same branch):
+  - `add` is checked by the helper itself, not only by its caller: it
+    refuses physical NICs (`/sys/class/net/<dev>/device` exists),
+    non-existent interfaces and interfaces bound to a zone other than
+    the default zone or `xcesp` (exit 1, message on stderr).
+  - New `allow-tunnel <dev>` / `deny-tunnel <dev>` (also in the sudoers
+    rule): for `type device` NICs of router default, open only GRE (47),
+    ESP (50) and IKE (UDP 500, 4500) in the NIC's current zone, at
+    runtime.  Same checks as `add`, except physical NICs are allowed.
+    What XCESP added is recorded in `/run/xcesp-fw-zone/<dev>`;
+    `deny-tunnel` removes only that, and keeps rules another XCESP NIC in
+    the same zone still uses.  Rules the operator had already opened are
+    never removed.
+  - `add`, `remove` and `allow-tunnel` are idempotent and print one line
+    on stdout only when they changed something, so xcespproc can re-run
+    them periodically (re-bind after a firewalld restart).
 
 ## 0.5.97
 

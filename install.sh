@@ -217,9 +217,12 @@ if [ -f "$src" ]; then
     FW_ZONE_SUDOERS=/etc/sudoers.d/xcesp-firewalld
     cat > "$FW_ZONE_SUDOERS" <<SUDOERS
 # Allow xcespproc to bind the router default links it creates to the
-# firewalld zone xcesp (ikata-agents#44).
+# firewalld zone xcesp, and to open GRE/ESP/IKE on the router default NICs
+# (ikata-agents#44).  The helper validates the interface itself.
 $XCESP_USER ALL=(root) NOPASSWD: /usr/lib/xcesp/xcesp-fw-zone add *, \\
-                                  /usr/lib/xcesp/xcesp-fw-zone remove *
+                                  /usr/lib/xcesp/xcesp-fw-zone remove *, \\
+                                  /usr/lib/xcesp/xcesp-fw-zone allow-tunnel *, \\
+                                  /usr/lib/xcesp/xcesp-fw-zone deny-tunnel *
 SUDOERS
     chmod 0440 "$FW_ZONE_SUDOERS"
     info "  /usr/lib/xcesp/xcesp-fw-zone (and $MAINSW_DIR/scripts/), $FW_ZONE_SUDOERS"
