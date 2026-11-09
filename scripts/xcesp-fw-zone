@@ -1,0 +1,190 @@
+#!/bin/bash
+# xcesp-fw-zone — firewalld zone `xcesp` for XCESP host-namespace links (ikata-agents#44)
+#
+# The links XCESP creates for `router default` (rlink veth, gre, xfrm,
+# loopbacks, ...) live in the host namespace.  Unassigned, firewalld filters
+# them with the default zone (e.g. FedoraServer), which rejects GRE, ESP,
+# IKE and ICMP on them.  This helper keeps an XCESP-owned zone `xcesp`
+# (target ACCEPT) and binds those links to it at runtime.  Physical NICs
+# (`type device` of router default, e.g. a WAN NIC that carries the outer
+# tunnel packets) stay in their zone; only GRE, ESP and IKE are opened there.
+#
+#   xcesp-fw-zone setup              create / fix the permanent zone
+#                                    (xcesp-activate, every start; reloads
+#                                    firewalld only on change)
+#   xcesp-fw-zone add <dev>          runtime bind <dev> to zone xcesp
+#   xcesp-fw-zone remove <dev>       runtime unbind <dev> from zone xcesp
+#   xcesp-fw-zone allow-tunnel <dev> runtime add GRE (47), ESP (50), IKE
+#                                    (UDP 500, 4500) to the current zone of <dev>
+#   xcesp-fw-zone deny-tunnel <dev>  remove what allow-tunnel added for <dev>
+#
+# add / remove / allow-tunnel / deny-tunnel are run by xcespproc via sudo -n
+# (/etc/sudoers.d/xcesp-firewalld) when an interface is created / deleted, and
+# again periodically (a firewalld restart drops runtime state).  They are
+# idempotent and print one line on stdout only when they changed something.
+#
+# The helper itself refuses (exit 1, message on stderr) to:
+#   add           a physical NIC (/sys/class/net/<dev>/device exists), a
+#                 non-existent interface, or an interface bound to a zone other
+#                 than the default zone or xcesp (operator's choice);
+#   allow-tunnel  a non-existent interface, or one bound to a zone other than
+#                 the default zone or xcesp.  Physical NICs are allowed here,
+#                 since only the tunnel protocols are opened.
+# remove only takes an interface out of zone xcesp; deny-tunnel only removes
+# the rules allow-tunnel recorded as added by XCESP (/run/xcesp-fw-zone/).
+#
+# firewalld inactive or not installed: nothing is done, exit 0.
+# Callers treat a non-zero exit as WARNING (best effort, like cpu-layout).
+
+set -uo pipefail
+
+ZONE=xcesp
+FWCMD=firewall-cmd
+SYSNET=/sys/class/net
+STATE_DIR=/run/xcesp-fw-zone
+# Test overrides, ignored under sudo (xcespproc calls).
+if [ -z "${SUDO_USER:-}" ]; then
+    FWCMD=${XCESP_FWCMD:-$FWCMD}
+    SYSNET=${XCESP_SYSNET:-$SYSNET}
+    STATE_DIR=${XCESP_FW_STATE_DIR:-$STATE_DIR}
+fi
+# What allow-tunnel opens: --add-<kind>=<value>.
+TUNNEL_RULES="protocol:gre protocol:esp port:500/udp port:4500/udp"
+
+die() { echo "xcesp-fw-zone: $*" >&2; exit 1; }
+
+# Zone of <dev>: its explicit binding, else the default zone.
+zone_of() {
+    local z
+    z=$("$FWCMD" --get-zone-of-interface="$1" 2>/dev/null) || z=""
+    [ -n "$z" ] || z=$("$FWCMD" --get-default-zone 2>/dev/null) || z=""
+    echo "$z"
+}
+
+# Refuse a non-existent interface or one bound to an operator-chosen zone.
+check_dev() {
+    local dev=$1 z def
+    [ -e "$SYSNET/$dev" ] || die "$dev: no such interface"
+    z=$("$FWCMD" --get-zone-of-interface="$dev" 2>/dev/null) || z=""
+    def=$("$FWCMD" --get-default-zone 2>/dev/null) || def=""
+    if [ -n "$z" ] && [ "$z" != "$ZONE" ] && [ "$z" != "$def" ]; then
+        die "$dev is bound to zone $z (not the default zone $def or $ZONE); left alone"
+    fi
+}
+
+# owned_elsewhere <zone> <rule> <mark>: another XCESP NIC in <zone> owns <rule>.
+owned_elsewhere() {
+    local f
+    for f in "$STATE_DIR"/*; do
+        [ -f "$f" ] && [ "$f" != "$3" ] || continue
+        [ "$(head -n1 "$f")" = "$1" ] && tail -n +2 "$f" | grep -qx "$2" && return 0
+    done
+    return 1
+}
+
+# deny_tunnel <dev>: remove the rules XCESP recorded for <dev>, unless another
+# XCESP NIC in the same zone still owns them.  Prints what was removed.
+deny_tunnel() {
+    local mark="$STATE_DIR/$1" zone r kind val removed=""
+    [ -f "$mark" ] || return 0
+    zone=$(head -n1 "$mark")
+    for r in $(tail -n +2 "$mark"); do
+        kind=${r%%:*}; val=${r#*:}
+        owned_elsewhere "$zone" "$r" "$mark" && continue
+        "$FWCMD" --zone="$zone" --query-"$kind"="$val" >/dev/null 2>&1 || continue
+        "$FWCMD" --zone="$zone" --remove-"$kind"="$val" >/dev/null \
+            || die "cannot remove $kind $val from zone $zone"
+        removed="$removed $val"
+    done
+    rm -f "$mark"
+    [ -z "$removed" ] || echo "xcesp-fw-zone: tunnel protocols closed on $1 (zone $zone):$removed"
+}
+
+command -v "$FWCMD" >/dev/null 2>&1 || exit 0
+"$FWCMD" --state >/dev/null 2>&1 || exit 0
+
+cmd=${1:-}
+case "$cmd" in
+setup)
+    changed=false
+    if ! "$FWCMD" --permanent --get-zones | tr ' ' '\n' | grep -qx "$ZONE"; then
+        "$FWCMD" --permanent --new-zone="$ZONE" >/dev/null || die "cannot create zone $ZONE"
+        "$FWCMD" --permanent --zone="$ZONE" --set-short="XCESP" >/dev/null
+        "$FWCMD" --permanent --zone="$ZONE" \
+            --set-description="Links created by XCESP for router default (managed by xcespproc)" >/dev/null
+        changed=true
+    fi
+    if [ "$("$FWCMD" --permanent --zone="$ZONE" --get-target)" != ACCEPT ]; then
+        "$FWCMD" --permanent --zone="$ZONE" --set-target=ACCEPT >/dev/null \
+            || die "cannot set target ACCEPT on zone $ZONE"
+        changed=true
+    fi
+    if $changed; then
+        # A reload keeps the runtime interface bindings of all zones.
+        "$FWCMD" --reload >/dev/null || die "firewall-cmd --reload failed"
+        echo "xcesp-fw-zone: zone $ZONE created (target ACCEPT)" >&2
+    fi
+    ;;
+add|remove|allow-tunnel|deny-tunnel)
+    dev=${2:-}
+    # Exact kernel interface names only: no '+' wildcard, no options, no '/'.
+    [[ "$dev" =~ ^[A-Za-z0-9_.@-]{1,15}$ && "$dev" != -* && "$dev" != . && "$dev" != .. ]] \
+        || die "invalid device name '$dev'"
+    case "$cmd" in
+    add)
+        [ -e "$SYSNET/$dev/device" ] && die "$dev is a physical NIC; left in its zone"
+        check_dev "$dev"
+        [ "$("$FWCMD" --get-zone-of-interface="$dev" 2>/dev/null)" = "$ZONE" ] && exit 0
+        # --change-interface also moves it out of the default zone, if bound.
+        "$FWCMD" --zone="$ZONE" --change-interface="$dev" >/dev/null \
+            || die "cannot bind $dev to zone $ZONE"
+        echo "xcesp-fw-zone: $dev bound to zone $ZONE"
+        ;;
+    remove)
+        [ "$("$FWCMD" --get-zone-of-interface="$dev" 2>/dev/null)" = "$ZONE" ] || exit 0
+        "$FWCMD" --zone="$ZONE" --remove-interface="$dev" >/dev/null \
+            || die "cannot remove $dev from zone $ZONE"
+        echo "xcesp-fw-zone: $dev removed from zone $ZONE"
+        ;;
+    allow-tunnel)
+        check_dev "$dev"
+        zone=$(zone_of "$dev")
+        [ -n "$zone" ] || die "cannot read the zone of $dev"
+        [ "$zone" = "$ZONE" ] && exit 0      # target ACCEPT already
+        mkdir -p -m 0700 "$STATE_DIR" || die "cannot create $STATE_DIR"
+        mark="$STATE_DIR/$dev"
+        # Marker: line 1 = zone, then one rule per line that XCESP owns.
+        # Rules recorded for another zone (the NIC moved) are dropped first.
+        if [ -f "$mark" ] && [ "$(head -n1 "$mark")" != "$zone" ]; then
+            deny_tunnel "$dev"
+        fi
+        owned=""
+        [ -f "$mark" ] && owned=$(tail -n +2 "$mark")
+        added=""
+        for r in $TUNNEL_RULES; do
+            kind=${r%%:*}; val=${r#*:}
+            if "$FWCMD" --zone="$zone" --query-"$kind"="$val" >/dev/null 2>&1; then
+                # Already open: XCESP owns it only if it (or another XCESP NIC
+                # in the same zone) added it; the operator's rules are kept.
+                grep -qx "$r" <<<"$owned" && continue
+                owned_elsewhere "$zone" "$r" "$mark" || continue
+            else
+                "$FWCMD" --zone="$zone" --add-"$kind"="$val" >/dev/null \
+                    || die "cannot add $kind $val to zone $zone"
+                added="$added $val"
+            fi
+            grep -qx "$r" <<<"$owned" || owned=$(printf '%s\n%s' "$owned" "$r")
+        done
+        printf '%s\n%s\n' "$zone" "$(grep -v '^$' <<<"$owned")" > "$mark"
+        [ -n "$added" ] && echo "xcesp-fw-zone: tunnel protocols opened on $dev (zone $zone):$added"
+        ;;
+    deny-tunnel)
+        deny_tunnel "$dev"
+        ;;
+    esac
+    ;;
+*)
+    die "usage: xcesp-fw-zone setup | add <dev> | remove <dev> | allow-tunnel <dev> | deny-tunnel <dev>"
+    ;;
+esac
+exit 0

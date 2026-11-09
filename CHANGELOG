@@ -1,5 +1,38 @@
 # Changelog - xcesppkg
 
+## unreleased (fix/ikata-44-firewalld-zone)
+
+- **fix: firewalld no longer blocks GRE/ESP/IKE on router default links**
+  (ikata-agents#44).  New root helper `scripts/xcesp-fw-zone`, installed
+  to `/usr/lib/xcesp/` by `install.sh` and refreshed by `xcesp-activate`
+  like `xcesp-cpu-layout`.  On every start `xcesp-activate` runs
+  `xcesp-fw-zone setup`: when firewalld is active it creates the
+  permanent zone `xcesp` with target `ACCEPT` (firewalld is reloaded only
+  when the zone is created or its target fixed; runtime interface
+  bindings survive the reload).  xcespproc (xcesp-on-rtr, same issue)
+  binds each link it creates for `router default` (rlink, gre, xfrm,
+  loopback, vlan, ...) with `sudo -n xcesp-fw-zone add <dev>` and
+  unbinds it on delete; new sudoers rule `/etc/sudoers.d/xcesp-firewalld`
+  (written by `install.sh` and `xcesp-activate`).  Management NICs stay
+  in their zone.  firewalld inactive or absent: nothing changes.
+  Failures are WARNINGs, never a failed start.
+  Review changes (same branch):
+  - `add` is checked by the helper itself, not only by its caller: it
+    refuses physical NICs (`/sys/class/net/<dev>/device` exists),
+    non-existent interfaces and interfaces bound to a zone other than
+    the default zone or `xcesp` (exit 1, message on stderr).
+  - New `allow-tunnel <dev>` / `deny-tunnel <dev>` (also in the sudoers
+    rule): for `type device` NICs of router default, open only GRE (47),
+    ESP (50) and IKE (UDP 500, 4500) in the NIC's current zone, at
+    runtime.  Same checks as `add`, except physical NICs are allowed.
+    What XCESP added is recorded in `/run/xcesp-fw-zone/<dev>`;
+    `deny-tunnel` removes only that, and keeps rules another XCESP NIC in
+    the same zone still uses.  Rules the operator had already opened are
+    never removed.
+  - `add`, `remove` and `allow-tunnel` are idempotent and print one line
+    on stdout only when they changed something, so xcespproc can re-run
+    them periodically (re-bind after a firewalld restart).
+
 ## 0.5.97
 
 - Bundles the same binaries as 0.5.95 / 0.5.96 (xcespserver 0.4.29,
