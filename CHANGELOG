@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.103
+
+- Bundles xcespserver 0.4.29, xcespcli 0.3.64, xcespproc 0.2.175
+  (xcesp-on-rtr 0.2.28, xcesp-on-pw 0.3.51, xcesp-on-xc 0.2.106),
+  xcespwdog 0.2.4.
+- **fix: router default links no longer leak** (ikata-agents#45): links are
+  deleted before the firewalld unbind, router default GRE is deleted on
+  remove, and links marked `alias xcesp` are swept when xcespproc starts.
+
 ## 0.5.102
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.64, xcespproc 0.2.174
