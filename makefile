@@ -269,6 +269,14 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 		printf "%-22s %s\n" "xcesp-l2tpv3d"  "$(VER_L2TPV3D)"; \
 	} > $(PKG_NAME)/VERSION
 
+	# --- Third-party licence notices ---
+	# fec.c (Luigi Rizzo / Alain Knaff, BSD-style licence) is linked into
+	# xcespproc through xcesp-on-pw's libon-pw.a (tdm-pw FEC); its licence asks
+	# binary distributions to carry the copyright notice.
+	mkdir -p $(PKG_NAME)/licenses
+	cp ../xcesp-on-pw/ext/feclib/LICENSE.fec $(PKG_NAME)/licenses/fec.c-LICENSE
+	cp ../xcesp-on-pw/ext/feclib/README $(PKG_NAME)/licenses/fec.c-README
+
 	# --- Installer script ---
 	cp install.sh $(PKG_NAME)/install.sh
 	chmod +x $(PKG_NAME)/install.sh
