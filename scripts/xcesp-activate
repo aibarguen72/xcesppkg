@@ -998,8 +998,10 @@ fi
 # receive buffer and writes the CPU set of every xcespproc role to
 # /run/xcesp/cpu-layout.env; each xcespproc launch line below is then
 # prefixed with `taskset -c <set>` (threads inherit it, including the
-# SCHED_FIFO domain threads).  Best effort: problems are WARNINGs in the
-# journal and in /run/xcesp/cpu-layout.status, never a failed start.
+# SCHED_FIFO domain threads); a tdm-pw instance gets its own single CPU
+# (CPU_INST_<role>_<N>, ikata-agents#48) so its domain's RT thread never
+# migrates.  Best effort: problems are WARNINGs in the journal and in
+# /run/xcesp/cpu-layout.status, never a failed start.
 # The mainsw copy is preferred so a fresh software-install applies at once.
 CPU_LAYOUT_BIN=""
 for c in "$MAINSW/scripts/xcesp-cpu-layout" /usr/lib/xcesp/xcesp-cpu-layout; do
@@ -1014,9 +1016,9 @@ if [ -n "$CPU_LAYOUT_BIN" ]; then
     fi
 fi
 TASKSET_BIN=$(command -v taskset 2>/dev/null || true)
-cpu_prefix() {      # cpu_prefix <role> -> "taskset -c <set> " or ""
-    local v="CPU_ROLE_${1//-/_}" set
-    set=${!v:-$CPU_DEFAULT}
+cpu_prefix() {      # cpu_prefix <role> <instance> -> "taskset -c <set> " or ""
+    local v="CPU_ROLE_${1//-/_}" vi="CPU_INST_${1//-/_}_$2" set
+    set=${!vi:-${!v:-$CPU_DEFAULT}}
     [ -n "$set" ] || return 0
     if [ -z "$TASKSET_BIN" ]; then
         log "  WARNING: taskset not found — xcespproc $1 not pinned to CPUs $set"
@@ -1080,7 +1082,7 @@ cpu_prefix() {      # cpu_prefix <role> -> "taskset -c <set> " or ""
                     netns_tag=" netns=$rtr"
                 fi
             fi
-            cpu_pfx=$(cpu_prefix "$role")
+            cpu_pfx=$(cpu_prefix "$role" "$i")
             cpu_tag=""
             [ -n "$cpu_pfx" ] && cpu_tag=" cpus=${cpu_pfx##* -c }" && cpu_tag=${cpu_tag% }
             echo "# xcespproc role=$role affinity=$i${netns_tag}${cpu_tag}"
