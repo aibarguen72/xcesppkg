@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## unreleased (fix/ikata-48-per-instance-cpu)
+
+- **fix: `cpu-layout` pins each tdm-pw xcespproc to its own CPU**
+  (ikata-agents#48).  Every tdm-pw instance got the whole role set
+  (`process-cpus tdm-pw`, e.g. 1-3), so with two domains the
+  priority-80 domain threads migrated between CPUs all the time (FIFO
+  slips in ON-PW-TDMPW ch17).  `xcesp-cpu-layout` now gives instance N
+  of `processes tdm-pw / count M` the Nth CPU of the role set (default
+  set when the role has no `process-cpus`), writes it as
+  `CPU_INST_tdm_pw_<N>` to `cpu-layout.env` and reports it in
+  `cpu-layout.status` (`instance-cpus tdm-pw: 1->cpu1 2->cpu2`).
+  `xcesp-activate` launches that instance with `taskset -c <cpu>`.
+  More instances than CPUs: the list wraps around and the status says
+  `result: warning`.  Other roles keep the role set; no schema change;
+  no cpu-layout block: nothing changes.
+
 ## 0.5.101
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.64, xcespproc 0.2.174

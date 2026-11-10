@@ -17,6 +17,10 @@
 #   !
 #
 # Roles without `process-cpus` run on all online CPUs except housekeeping-cpus.
+# tdm-pw is placed per instance (ikata-agents#48): each tdm-pw xcespproc runs
+# its domain's SCHED_FIFO thread, which must not migrate between CPUs, so
+# instance N (`processes tdm-pw / count M`) gets only the Nth CPU of the role's
+# set.  More instances than CPUs: the list wraps around (WARNING, CPUs shared).
 # Without a cpu-layout block nothing is changed (and an earlier irqbalance ban
 # set by this script is removed).
 #
@@ -25,7 +29,8 @@
 # WARNING and written to the status file, never fatal for the service start.
 #
 # Outputs (in --out DIR, default /run/xcesp):
-#   cpu-layout.env     CPU_DEFAULT=<list>  CPU_ROLE_<role>=<list>   (read by xcesp-activate)
+#   cpu-layout.env     CPU_DEFAULT=<list>  CPU_ROLE_<role>=<list>
+#                      CPU_INST_<role>_<N>=<cpu>                   (read by xcesp-activate)
 #   cpu-layout.status  human-readable result (result: ok | warning | not-configured)
 #
 # Options (tests): --conf FILE  --sys PREFIX (prefix for /proc and /sys)  --out DIR
@@ -141,6 +146,7 @@ write_outputs() {
         echo "CPU_DEFAULT=${CPU_DEFAULT:-}"
         local r
         for r in "${!ROLE_SET[@]}"; do echo "CPU_ROLE_${r//-/_}=${ROLE_SET[$r]}"; done
+        for r in "${!INST_CPU[@]}"; do echo "CPU_INST_${r//-/_}=${INST_CPU[$r]}"; done
     } > "$OUT/cpu-layout.env"
     {
         echo "result: $RESULT"
@@ -165,8 +171,24 @@ drop_irqbalance_ban() {
     log "removed the irqbalance CPU ban set by an earlier cpu-layout"
 }
 
-declare -A ROLE_SET
+# instance count of a role, from `processes <role> / count N` of any server
+# block (xcesp-activate launches that many, clamped to 1..64)
+role_count() {
+    [ -f "$CONF" ] || return 0
+    awk -v want="$1" '
+        /^server[ \t]/                          { in_server = 1; in_proc = 0; next }
+        in_server && /^!/                       { in_server = 0; in_proc = 0; next }
+        !in_server                              { next }
+        /^[ \t]+processes[ \t]+/                { in_proc = ($2 == want); next }
+        in_proc && $1 == "count" && $2 ~ /^[0-9]+$/ { n = $2 }
+        in_proc && $1 == "!"                    { in_proc = 0 }
+        END { if (n != "") { if (n < 1) n = 1; if (n > 64) n = 64; print n } }
+    ' "$CONF"
+}
+
+declare -A ROLE_SET INST_CPU
 ROLE_SET[__seed__]=1; unset 'ROLE_SET[__seed__]'
+INST_CPU[__seed__]=1; unset 'INST_CPU[__seed__]'
 CPU_DEFAULT=""
 
 spec=$(parse_layout)
@@ -227,6 +249,26 @@ for r in "${!ROLE_CFG[@]}"; do
     if [ -z "$set_ok" ]; then warn "process-cpus $r: no usable CPU, role uses the default"; continue; fi
     ROLE_SET[$r]=$(compress_cpus "$set_ok")
     note "process-cpus $r: ${ROLE_SET[$r]}"
+done
+
+# --- per-instance CPU (ikata-agents#48) -------------------------------------------
+# One CPU per tdm-pw instance, taken in order from the role's set (or the
+# default set): a domain's real-time thread never migrates and never shares
+# its CPU with the real-time thread of another domain.
+for r in tdm-pw; do
+    n=$(role_count "$r")
+    [ -n "$n" ] || continue
+    pool=$rt_pool
+    [ -n "${ROLE_SET[$r]:-}" ] && pool=$(expand_cpus "${ROLE_SET[$r]}")
+    read -ra pcpus <<< "$pool"
+    [ ${#pcpus[@]} -gt 0 ] || continue
+    line=""
+    for ((i = 1; i <= n; i++)); do
+        INST_CPU[${r}_$i]=${pcpus[(i - 1) % ${#pcpus[@]}]}
+        line+=" $i->cpu${INST_CPU[${r}_$i]}"
+    done
+    note "instance-cpus $r:$line"
+    [ "$n" -gt ${#pcpus[@]} ] && warn "instance-cpus $r: $n instances on ${#pcpus[@]} CPU(s): real-time threads of different domains share a CPU"
 done
 
 # --- IRQ steering ---------------------------------------------------------------
