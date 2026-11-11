@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.106
+
+- Bundles xcespserver 0.4.29, xcespcli 0.3.66, xcespproc 0.2.178
+  (xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.28, xcesp-on-xc 0.2.106),
+  xcespwdog 0.2.4.
+- **fix: timer-paced domain tick with clock recovery loop and holdover**
+  (ikata-agents#49, step 2); `show clock domain` shows the timer pacing
+  and the clock loop.
+
 ## 0.5.105
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.65, xcespproc 0.2.177
