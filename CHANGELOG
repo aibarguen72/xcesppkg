@@ -1,5 +1,15 @@
 # Changelog - xcesppkg
 
+## 0.5.104
+
+- Bundles xcespserver 0.4.29, xcespcli 0.3.65, xcespproc 0.2.176
+  (xcesp-on-pw 0.3.52, xcesp-on-rtr 0.2.28, xcesp-on-xc 0.2.106),
+  xcespwdog 0.2.4.
+- **feat: recovered-clock diagnostics** (ikata-agents#49, option 2):
+  `show clock domain <D>` gets a recovery section with the tick rate vs the
+  host clock (last 1 s, min/max/mean over the last minute), longest tick gap,
+  longest registry-lock wait, longest tick, and FIFO fill min/max per PW.
+
 ## 0.5.103
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.64, xcespproc 0.2.175
