@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.108
+
+- Bundles xcespserver 0.4.30, xcespcli 0.3.67, xcespproc 0.2.180
+  (xcesp-on-xc 0.2.108, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.28),
+  xcespwdog 0.2.4.
+- **fix: TDMTEST sync_ok / xc-probe-tdmtest-sync drop when the test path is
+  lost** (ikata-agents#55): LOS / LLD / shutdown, or no RX samples for 1 s.
+- **fix: `xcespcli --merge-config` deletes nested nodes** with an in-block
+  `no <type> <inst>` (ikata-agents#54).
+- Includes the 0.5.107 fixes (#52 probe deadlock, #53 XC commit gates).
+
 ## 0.5.107
 
 - Bundles xcespserver 0.4.30, xcespcli 0.3.66, xcespproc 0.2.179
