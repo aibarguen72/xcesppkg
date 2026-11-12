@@ -1,5 +1,17 @@
 # Changelog - xcesppkg
 
+## 0.5.107
+
+- Bundles xcespserver 0.4.30, xcespcli 0.3.66, xcespproc 0.2.179
+  (xcesp-on-xc 0.2.107, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.28),
+  xcespwdog 0.2.4.
+- **fix: tdm-pw / tdmtest-sync condition probes no longer deadlock the domain
+  tick** (ikata-agents#52): an endpoint backup driven by an `xc-probe-tdm-pw`
+  hung the domain's xcespproc.
+- **fix: invalid XC configs refused at commit** (ikata-agents#53, incl. #51):
+  sub-block vs type, hex values, service vs chain level, backup completeness,
+  unknown PW in a tdm-pw probe, and more than one slave/omni in a COPY.
+
 ## 0.5.106
 
 - Bundles xcespserver 0.4.29, xcespcli 0.3.66, xcespproc 0.2.178
