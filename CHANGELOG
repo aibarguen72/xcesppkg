@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.5.109
+
+- Bundles xcespserver 0.4.31, xcespcli 0.3.68, xcespproc 0.2.181
+  (xcesp-on-xc 0.2.109, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.28),
+  xcespwdog 0.2.4; xcespschema 0.2.3, xcespconfig 0.2.2.
+- **fix: schema limits written on `attr` lines are enforced at commit**
+  (ikata-agents#60): `min=` / `max=` / `maxlen=` were dropped by the schema
+  parser.  Affects TDMTEST values, tdm-pw FIFO depths, clock-source
+  priority / wtr, NTP / VXLAN ports, server count / cpu-layout /
+  socket-rcvbuf, AAA timeouts and more: configs outside the ranges are
+  now refused.  New gate: TDMTEST endpoint timeslots must fit in the PW.
+- **fix: TDMTEST counts LOS / loss of sync as SES** (#58), so UAS and
+  `result fail` follow an outage.
+- **fix: TDMTEST voice delay baseline set at load / start** (#59).
+
 ## 0.5.108
 
 - Bundles xcespserver 0.4.30, xcespcli 0.3.67, xcespproc 0.2.180
