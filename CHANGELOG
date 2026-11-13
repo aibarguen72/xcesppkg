@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.113
+
+- Bundles xcespserver 0.4.32, xcespcli 0.3.68, xcespproc 0.2.185
+  (xcesp-on-xc 0.2.113, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.28),
+  xcespwdog 0.2.4.
+- **fix (security): pstn-rvp use-after-free on QUIT / rejected greeting**
+  (ikata-agents#73): any client reaching the RVP port could abort xcespproc;
+  the connection is now closed only after the reply is sent.
+
 ## 0.5.112
 
 - Bundles xcespserver 0.4.32, xcespcli 0.3.68, xcespproc 0.2.184
