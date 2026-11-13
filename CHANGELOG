@@ -1,5 +1,19 @@
 # Changelog - xcesppkg
 
+## 0.5.112
+
+- Bundles xcespserver 0.4.32, xcespcli 0.3.68, xcespproc 0.2.184
+  (xcesp-on-xc 0.2.112, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.28),
+  xcespwdog 0.2.4.
+- **fix (modem): xcespproc no longer aborts** when a modem with a pending
+  call is removed or re-created by a commit (ikata-agents#68).
+- **fix (modem): a failed ATD always gets a final result**: BUSY when the
+  callee is in a call, NO CARRIER otherwise (#69).
+- **fix (security): pstn-rvp sends psk= only on encrypted sessions** (#70).
+- **fix (modem): csd-timeout accurate to ~20 ms** (#71).
+- **fix (modem): dte-lines always-on / always-off / unwired applied** to
+  DCD / DSR / CTS; follow-* defaults unchanged (#72).
+
 ## 0.5.111
 
 - Bundles xcespserver 0.4.32, xcespcli 0.3.68, xcespproc 0.2.183
