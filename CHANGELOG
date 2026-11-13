@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## 0.5.111
+
+- Bundles xcespserver 0.4.32, xcespcli 0.3.68, xcespproc 0.2.183
+  (xcesp-on-xc 0.2.111, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.28),
+  xcespwdog 0.2.4.
+- **fix: DATA / CAS / VOICE role aggregation follows the role table**
+  (ikata-agents#64): a master hears slaves + omnis, an omni hears everyone
+  but itself (VOICE omni now hears slaves).
+- **fix: `data-mode cas-only` endpoints transmit idle FF** (#65) unless a
+  sibling service on the same timeslot writes the data byte.
+- **fix: UDP ip endpoint with a wildcard remote is first-received-wins**
+  (#66); `reset` or 30 s without rx releases the latch.
+- **fix: invalid DATA / VOICE / IP-endpoint configs refused at commit**
+  (#63): CAS features on a PW without signaling, ip endpoint outside a
+  data service, nx64 / IPv4 / transport / detector checks.
+
 ## 0.5.110
 
 - Bundles xcespserver 0.4.31, xcespcli 0.3.68, xcespproc 0.2.182
