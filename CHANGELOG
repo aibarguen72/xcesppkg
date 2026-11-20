@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.116
+
+- Bundles xcespserver 0.4.35, xcespcli 0.3.71, xcespproc 0.2.188
+  (xcesp-on-xc 0.2.116, xcesp-on-pw 0.3.55, xcesp-on-rtr 0.2.29),
+  xcespwdog 0.2.4.
+- **feat: virtual pw pair** (`tdm-pw ... virtual-peer <peer>`, license free):
+  joins voice / data / tdmtest services to vtrunk slave channels inside one
+  domain without a cable or loopback.
+
 ## 0.5.115
 
 - Bundles xcespserver 0.4.34, xcespcli 0.3.70, xcespproc 0.2.187
