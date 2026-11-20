@@ -946,6 +946,25 @@ echo "    dnf install net-snmp net-snmp-utils                 (Fedora/RHEL)"
 echo "  Then:  systemctl enable --now snmpd"
 echo "  Pollers can walk the XCESP MIB at OID 1.3.6.1.4.1.43978.1.1 ..."
 echo ""
+echo " VTRUNK voice trunk + tdmtest codec analysis (x86_64, 0.5.114+)"
+echo "  xc-service type vtrunk loads its DSP libraries at runtime:"
+echo "    libopus (codec opus), libspandsp (codec adpcm16/adpcm32),"
+echo "    libspeexdsp (echo-cancel)."
+echo "    apt install libopus0 libspandsp2 libspeexdsp1       (Debian/Ubuntu)"
+echo "    dnf install opus spandsp speexdsp                   (Fedora/RHEL)"
+echo "  Without them a vtrunk service using that codec / echo-cancel stays"
+echo "  LLD with a '<lib> not found' reason."
+_vt_missing=""
+for _vt_lib in libopus.so.0 libspeexdsp.so.1; do
+    ldconfig -p 2>/dev/null | grep -q "$_vt_lib" || _vt_missing="$_vt_missing $_vt_lib"
+done
+ldconfig -p 2>/dev/null | grep -qE 'libspandsp\.so\.(2|3)' || _vt_missing="$_vt_missing libspandsp.so.2/3"
+if [ -n "$_vt_missing" ]; then
+    echo "  NOTE: not installed on this host:$_vt_missing"
+else
+    echo "  All VTRUNK DSP libraries are present on this host."
+fi
+echo ""
 echo "To install a second version and swap:"
 echo "  1. Unpack a new package into $BACKUPSW_DIR/"
 echo "  2. sudo xcesp-swap.sh"

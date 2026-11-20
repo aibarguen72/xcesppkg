@@ -1,5 +1,24 @@
 # Changelog - xcesppkg
 
+## 0.5.114
+
+- Bundles xcespserver 0.4.33, xcespcli 0.3.69, xcespproc 0.2.186
+  (xcesp-on-xc 0.2.114, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.29),
+  xcespwdog 0.2.4.
+- **feat: VTRUNK voice trunk** (`xc-service type vtrunk`, x86_64): compresses
+  slave DS0 voice channels with Opus / ADPCM / G.711 over UDP (main / backup
+  paths) or a few timeslots of a TDM-PW, relays CAS, cancels echo (speexdsp)
+  and runs the DSP on worker threads with admission control.  Commit gates
+  in xcespserver, `show xc-service` rendering in xcespcli.
+- **feat: tdmtest-voice `analysis codec`** (tone-burst / harmonic-burst
+  patterns; SINAD, level, codec path delay).
+- **install.sh: VTRUNK runtime dependencies** — libopus, libspandsp and
+  libspeexdsp are loaded at runtime (`apt install libopus0 libspandsp2
+  libspeexdsp1` / `dnf install opus spandsp speexdsp`); the installer lists
+  any that are missing on the host.
+- **fix: DHCPv6 client on fast hosts** (ikata-agents#74): dhclient -6 waits for
+  a non-tentative link-local address.
+
 ## 0.5.113
 
 - Bundles xcespserver 0.4.32, xcespcli 0.3.68, xcespproc 0.2.185
