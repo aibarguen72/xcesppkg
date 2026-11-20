@@ -1,5 +1,20 @@
 # Changelog - xcesppkg
 
+## 0.5.115
+
+- Bundles xcespserver 0.4.34, xcespcli 0.3.70, xcespproc 0.2.187
+  (xcesp-on-xc 0.2.115, xcesp-on-pw 0.3.54, xcesp-on-rtr 0.2.29),
+  xcespwdog 0.2.4.
+- **VTRUNK DSP workers off the real-time CPU** (found on xcespfc with 0.5.114:
+  each tdm-pw xcespproc is pinned to its domain's single SCHED_FIFO CPU and
+  the workers starved there).  `xcesp-cpu-layout` writes `CPU_DSP`:
+  `server cpu-layout dsp-cpus` when configured, else the online CPUs without
+  a tdm-pw real-time thread (housekeeping CPUs only when nothing else is
+  left); `xcesp-activate` launches tdm-pw xcespproc with
+  `env XCESP_DSP_CPUS=<set>` (proc.ini comment shows `dsp-cpus=`).
+- **fix: removing a VTRUNK service no longer hangs xcespproc** behind a starved
+  DSP worker's backlog (watchdog restart seen on xcespfc).
+
 ## 0.5.114
 
 - Bundles xcespserver 0.4.33, xcespcli 0.3.69, xcespproc 0.2.186

@@ -1016,6 +1016,7 @@ if [ -n "$CPU_LAYOUT_BIN" ]; then
     fi
 fi
 TASKSET_BIN=$(command -v taskset 2>/dev/null || true)
+ENV_BIN=$(command -v env 2>/dev/null || true)
 cpu_prefix() {      # cpu_prefix <role> <instance> -> "taskset -c <set> " or ""
     local v="CPU_ROLE_${1//-/_}" vi="CPU_INST_${1//-/_}_$2" set
     set=${!vi:-${!v:-$CPU_DEFAULT}}
@@ -1085,9 +1086,18 @@ cpu_prefix() {      # cpu_prefix <role> <instance> -> "taskset -c <set> " or ""
             cpu_pfx=$(cpu_prefix "$role" "$i")
             cpu_tag=""
             [ -n "$cpu_pfx" ] && cpu_tag=" cpus=${cpu_pfx##* -c }" && cpu_tag=${cpu_tag% }
+            # VTRUNK DSP workers leave the domain's real-time CPU: the CPU
+            # set (cpu-layout dsp-cpus, or the CPUs without a tdm-pw RT
+            # thread) reaches xcespproc as XCESP_DSP_CPUS (env execs it, so
+            # the pid the watchdog supervises is xcespproc's).
+            dsp_pfx=""
+            if [ "$role" = "tdm-pw" ] && [ -n "${CPU_DSP:-}" ] && [ -n "$ENV_BIN" ]; then
+                dsp_pfx="$ENV_BIN XCESP_DSP_CPUS=$CPU_DSP "
+                cpu_tag+=" dsp-cpus=$CPU_DSP"
+            fi
             echo "# xcespproc role=$role affinity=$i${netns_tag}${cpu_tag}"
             echo "[process.$proc_idx]"
-            echo "WDOG_LAUNCH             = ${cpu_pfx}/usr/bin/xcespproc --config /var/xcesp/cfg/xcespproc.ini -i $i -r $role${netns_flag} -s 60 -p 1514"
+            echo "WDOG_LAUNCH             = ${dsp_pfx}${cpu_pfx}/usr/bin/xcespproc --config /var/xcesp/cfg/xcespproc.ini -i $i -r $role${netns_flag} -s 60 -p 1514"
             echo "WDOG_START_TIMER        = 90000"
             echo "WDOG_INTERVAL_TIMER     = 180000"
             echo "WDOG_RESPAWN            = true"
