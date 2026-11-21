@@ -87,12 +87,12 @@ else
 fi
 
 # dsk: file storage directories (writable by xcesp group)
-for d in "$DSK_DIR/img" "$DSK_DIR/bcfg" "$DSK_DIR/log" "$DSK_DIR/cap"; do
+for d in "$DSK_DIR/img" "$DSK_DIR/bcfg" "$DSK_DIR/log" "$DSK_DIR/cap" "$DSK_DIR/rec"; do
     mkdir -p "$d"
     chown root:"$XCESP_GROUP" "$d"
     chmod 775 "$d"
 done
-info "  Created $DSK_DIR/{img,bcfg,log,cap}"
+info "  Created $DSK_DIR/{img,bcfg,log,cap,rec}"
 
 # dsk/cert: X.509 certificate and private-key storage.  Subdirectory
 # layout — read by FileActionHandler (cert-* actions) and by charon when

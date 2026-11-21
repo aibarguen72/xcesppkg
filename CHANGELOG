@@ -1,5 +1,16 @@
 # Changelog - xcesppkg
 
+## 0.5.118
+
+- Bundles xcespserver 0.4.37, xcespcli 0.3.73, xcespproc 0.2.190 (xcesp-on-xc
+  0.2.118, xcesp-on-rtr 0.2.30, xcesp-on-pw 0.3.55), xcespwdog 0.2.4 with:
+  runtime **endpoint loopback** (`do-xc-service <svc> loopback <ep|all>
+  {local|remote|off} [timeout <min>]`, LOOPBACK_* alarms) and **service
+  recording** (`do-xc-service <svc> record start|stop`, `.xrec` files in
+  `dsk/rec`, new `record` file category, `[RECORD]` limits); DHCP client
+  verifies dhclient PIDs via /proc cmdline (ikata-agents#74).
+- `install.sh` creates `$DSK_DIR/rec` (root:xcesp 0775).
+
 ## 0.5.117
 
 - Bundles xcespserver 0.4.36, xcespcli 0.3.72, xcespproc 0.2.189
