@@ -115,7 +115,7 @@ info "  Created $DSK_DIR/cert/{ca,dev,key} (owner $XCESP_USER, mode 0750)"
 # Binaries → /var/xcesp/mainsw/bin/  AND  /usr/bin/
 # ---------------------------------------------------------------------------
 info "Installing binaries..."
-for bin in xcespserver xcespcli xcespproc xcespwdog; do
+for bin in xcespserver xcespcli xcespproc xcespwdog xcesp-recexport; do
     src="$INSTALL_DIR/bin/$bin"
     [ -f "$src" ] || error "Binary not found in package: $src"
     install -o root -g root -m 0755 "$src" "$MAINSW_DIR/bin/$bin"

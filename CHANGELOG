@@ -1,5 +1,18 @@
 # Changelog - xcesppkg
 
+## 0.5.119
+
+- Bundles xcespserver 0.4.38, xcespcli 0.3.74, xcespproc 0.2.191 (xcesp-on-xc
+  0.2.119), xcespwdog 0.2.4 and the new **xcesp-recexport** (xcesp-on-xc
+  0.2.119) with: `do-xc-record <rec> info` and `do-xc-record <rec> export
+  <file> ...` (multi-channel WAV of a recording, G.711 decoded, optional CAS
+  lanes, written to dsk/rec).
+- `xcesp-recexport` is packaged in `bin/`, installed to `mainsw/bin` and
+  `/usr/bin` by `install.sh`, and re-copied by `xcesp-activate` after a
+  `software-install`.
+- `cfg/xcespserver.ini`: documented `[RECORD]` section (MAX_DURATION_S,
+  MAX_TOTAL_MB, MIN_FREE_MB, MAX_ACTIVE, EXPORT_TOOL).
+
 ## 0.5.118
 
 - Bundles xcespserver 0.4.37, xcespcli 0.3.73, xcespproc 0.2.190 (xcesp-on-xc

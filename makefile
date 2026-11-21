@@ -34,6 +34,7 @@ XCESPSERVER := ../xcespserver/bin/xcespserver
 XCESPCLI    := ../xcespcli/bin/xcespcli
 XCESPPROC   := ../xcespproc/bin/xcespproc
 XCESPWDOG   := ../xcespwdog/bin/xcespwdog
+XCESPRECX   := ../xcesp-on-xc/bin/xcesp-recexport
 
 # Schema: direct files from xcesptest + each ON library's own schema directory.
 # (xcesptest/schema uses broken relative symlinks for on-rtr/on-pw/on-xc —
@@ -75,7 +76,7 @@ all: $(TARBALL)
 
 # Verify all binaries are built before packaging
 check-bins:
-	@for b in $(XCESPSERVER) $(XCESPCLI) $(XCESPPROC) $(XCESPWDOG); do \
+	@for b in $(XCESPSERVER) $(XCESPCLI) $(XCESPPROC) $(XCESPWDOG) $(XCESPRECX); do \
 		test -f "$$b" || { echo "ERROR: $$b not found — build the component first"; exit 1; }; \
 	done
 
@@ -103,6 +104,8 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp $(XCESPCLI)    $(PKG_NAME)/bin/xcespcli
 	cp $(XCESPPROC)   $(PKG_NAME)/bin/xcespproc
 	cp $(XCESPWDOG)   $(PKG_NAME)/bin/xcespwdog
+	# R2: xc-service recording exporter (built by xcesp-on-xc `make`)
+	cp $(XCESPRECX)   $(PKG_NAME)/bin/xcesp-recexport
 
 	# --- xcesp-ip wrapper (compiled here so the binary's arch matches the
 	# host packaging; ARM64 is built separately via xcesppkg/arm64/build.sh)

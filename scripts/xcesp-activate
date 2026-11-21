@@ -249,7 +249,7 @@ fi
 # Binaries
 # ---------------------------------------------------------------------------
 if [ -d "$MAINSW/bin" ]; then
-    for bin in xcespserver xcespcli xcespproc xcespwdog; do
+    for bin in xcespserver xcespcli xcespproc xcespwdog xcesp-recexport; do
         src="$MAINSW/bin/$bin"
         [ -f "$src" ] || continue
         install -o root -g root -m 0755 "$src" "$BINDIR/$bin"
