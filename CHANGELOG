@@ -1,5 +1,13 @@
 # Changelog - xcesppkg
 
+## 0.5.121
+
+- Bundles xcespserver 0.4.40, xcespcli 0.3.75, xcespproc 0.2.193 (xcesp-on-xc
+  0.2.121), xcespwdog 0.2.4 and xcesp-recexport (xcesp-on-xc 0.2.121) with:
+  recording and export messages that name files by category and name (no disk
+  paths) and no internal component names; text export decodes a character
+  that starts exactly at the beginning of a recording.
+
 ## 0.5.120
 
 - Bundles xcespserver 0.4.39, xcespcli 0.3.75, xcespproc 0.2.192 (xcesp-on-xc
