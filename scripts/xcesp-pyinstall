@@ -1,0 +1,62 @@
+#!/bin/bash
+# xcesp-pyinstall — install one XCESP Python package into the XCESP venv.
+#
+# Usage: xcesp-pyinstall [--local] <venv> <wheels-dir> <package>
+#
+# The package ships pre-built in <wheels-dir> (<name>-<ver>-py3-none-any.whl),
+# so nothing is ever built on the target (building needs setuptools from the
+# package index, which an offline host does not have).
+#
+#   --local   the package has no third-party dependencies: install from
+#             <wheels-dir> only, never touching the network.
+#   default   third-party dependencies come from the package index first
+#             (correct wheels for any Python / CPU).  If that fails (no
+#             network), fall back to the bundle shipped for this host:
+#             <wheels-dir>/bundle-cp<MAJ><MIN>-<machine>/.
+#
+# Prints one line saying which path installed the package; exit 1 when every
+# path failed (the caller decides whether that is fatal).
+set -u
+
+local_only=0
+if [ "${1:-}" = "--local" ]; then local_only=1; shift; fi
+venv="$1" wheels="$2" pkg="$3"
+pip="$venv/bin/pip"
+norm=$(printf '%s' "$pkg" | tr '-' '_')
+
+whl=$(ls -1 "$wheels"/"$norm"-*.whl 2>/dev/null | sort -V | tail -1)
+if [ -z "$whl" ]; then
+    echo "$pkg: no wheel in $wheels"
+    exit 1
+fi
+tag=$("$venv/bin/python" -c 'import sys; print("cp%d%d" % sys.version_info[:2])')-$(uname -m)
+bundle="$wheels/bundle-$tag"
+common=(--quiet --disable-pip-version-check)
+
+if [ "$local_only" = 1 ]; then
+    # Always reinstall: these packages are small, and a wheel whose version
+    # string did not change (xcesppy's pyproject) would otherwise be skipped
+    # as "already satisfied" and the update silently lost.
+    if "$pip" install "${common[@]}" --no-index --force-reinstall --no-deps "$whl"; then
+        echo "$pkg: installed from the package wheels"
+        exit 0
+    fi
+    echo "$pkg: install from the package wheels failed"
+    exit 1
+fi
+
+if "$pip" install "${common[@]}" --timeout 10 --retries 1 --find-links "$wheels" "$whl" 2>/dev/null; then
+    echo "$pkg: installed, dependencies from the package index"
+    exit 0
+fi
+if [ -d "$bundle" ]; then
+    if "$pip" install "${common[@]}" --no-index --find-links "$wheels" --find-links "$bundle" "$whl"; then
+        echo "$pkg: package index unreachable — installed from the bundled wheels ($tag)"
+        exit 0
+    fi
+    echo "$pkg: package index unreachable and the bundled wheels ($tag) did not install"
+    exit 1
+fi
+have=$(cd "$wheels" 2>/dev/null && ls -d bundle-* 2>/dev/null | sed 's/^bundle-//' | paste -sd' ')
+echo "$pkg: package index unreachable and no bundled wheels for $tag (bundled: ${have:-none})"
+exit 1

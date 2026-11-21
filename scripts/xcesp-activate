@@ -735,10 +735,31 @@ fi
 # xcesppy in venv (fast reinstall — pure Python, no external deps)
 # ---------------------------------------------------------------------------
 VENV=$XCESP_BASE/venv
-if [ -d "$MAINSW/python" ] && [ -d "$VENV" ]; then
+# 0.5.122+: pre-built wheels (no build on the target, works offline).
+PYINSTALL=$MAINSW/scripts/xcesp-pyinstall
+[ -x "$PYINSTALL" ] || PYINSTALL=/usr/lib/xcesp/xcesp-pyinstall
+if [ -d "$VENV" ] && [ -x "$PYINSTALL" ] && ls "$MAINSW"/wheels/xcesppy-*.whl > /dev/null 2>&1; then
+    log "  $("$PYINSTALL" --local "$VENV" "$MAINSW/wheels" xcesppy 2>&1 || true)"
+elif [ -d "$MAINSW/python" ] && [ -d "$VENV" ]; then
     "$VENV/bin/pip" install --quiet "$MAINSW/python" 2>/dev/null && \
         log "  xcesppy updated in venv" || \
         log "  WARNING: xcesppy venv update failed (non-fatal)"
+fi
+
+# ---------------------------------------------------------------------------
+# Web interface (xcespweb) in venv — install / update when the shipped wheel
+# differs from the installed version.  aiohttp comes from the package index,
+# else from the bundled wheels (xcesp-pyinstall).  Non-fatal: the web
+# interface is optional and stays off until [WEB] ENABLED = true.
+# ---------------------------------------------------------------------------
+web_whl=$(ls -1 "$MAINSW"/wheels/xcespweb-*.whl 2>/dev/null | sort -V | tail -1)
+if [ -d "$VENV" ] && [ -x "$PYINSTALL" ] && [ -n "$web_whl" ]; then
+    web_shipped=$(basename "$web_whl" | cut -d- -f2)
+    web_installed=$("$VENV/bin/python" -c 'import importlib.metadata as m; print(m.version("xcespweb"))' 2>/dev/null || true)
+    if [ "$web_shipped" != "$web_installed" ]; then
+        log "  web interface: ${web_installed:-not installed} -> $web_shipped"
+        log "  $("$PYINSTALL" "$VENV" "$MAINSW/wheels" xcespweb 2>&1 || true)"
+    fi
 fi
 
 # ---------------------------------------------------------------------------
@@ -1193,6 +1214,78 @@ elif [ "$doc_enabled" = "true" ]; then
     log "  doc-httpd skipped: DOC_DIR $doc_dir does not exist"
 else
     log "  doc-httpd disabled in xcespserver.ini"
+fi
+
+# ---------------------------------------------------------------------------
+# Web interface process slot (0.5.122+) — append to xcespwdog_proc.ini when
+# [WEB] ENABLED = true.  There is no login yet: the server always binds to the
+# loopback and is reached through an SSH tunnel
+# (`ssh -L 8081:127.0.0.1:8081 <user>@<device>`); a non-loopback BIND_ADDR is
+# refused here, not only warned about.
+# ---------------------------------------------------------------------------
+proc_idx=$(( $(grep -c '^\[process\.' "$WDOG_PROC_FILE") + 1 ))
+if [ -f "$SERVER_INI" ] && ! grep -q '^\[WEB\]' "$SERVER_INI"; then
+    cat >> "$SERVER_INI" <<'INI_EOF'
+
+[WEB]
+# Web interface (read-only status, alarms, TDM services, recordings),
+# supervised by xcespwdog.  No login yet: it listens on the loopback only;
+# reach it with `ssh -L 8081:127.0.0.1:8081 <user>@<device>` and open
+# http://127.0.0.1:8081/ on the workstation.
+ENABLED   = false
+BIND_ADDR = 127.0.0.1
+PORT      = 8081
+INI_EOF
+    log "  injected [WEB] defaults into $SERVER_INI"
+fi
+
+read_ini() {   # $1 section, $2 key, $3 default
+    local sect="$1" key="$2" def="$3"
+    [ -f "$SERVER_INI" ] || { printf '%s' "$def"; return; }
+    awk -v sect="[$sect]" -v key="$key" -v def="$def" '
+        BEGIN { in_sect = 0; found = 0 }
+        /^[[:space:]]*[;#]/ { next }
+        /^\[/ { s = $0; sub(/[[:space:]]+$/, "", s); in_sect = (s == sect); next }
+        in_sect {
+            eq = index($0, "="); if (eq == 0) next
+            k = substr($0, 1, eq - 1); v = substr($0, eq + 1)
+            sub(/^[[:space:]]+/, "", k); sub(/[[:space:]]+$/, "", k)
+            sub(/^[[:space:]]+/, "", v); sub(/[[:space:]]*[;#].*$/, "", v); sub(/[[:space:]]+$/, "", v)
+            if (k == key) { print v; found = 1; exit }
+        }
+        END { if (!found) print def }
+    ' "$SERVER_INI"
+}
+
+web_enabled=$(read_ini WEB ENABLED false)
+web_addr=$(read_ini WEB BIND_ADDR 127.0.0.1)
+web_port=$(read_ini WEB PORT 8081)
+web_sock=$(read_ini SERVER CONTROL_SOCKET /run/xcesp/ctrl.sock)
+case "$web_addr" in
+    127.*|::1|localhost) ;;
+    *) log "  WARNING: [WEB] BIND_ADDR $web_addr refused (no login yet) — using 127.0.0.1"
+       web_addr=127.0.0.1 ;;
+esac
+case "$web_port" in ''|*[!0-9]*) web_port=8081 ;; esac
+if [ "$web_enabled" = "true" ] && [ -x "$VENV/bin/python" ] && \
+   "$VENV/bin/python" -c 'import xcespweb' 2>/dev/null; then
+    web_doc=""
+    [ -d "$doc_dir" ] && web_doc="--doc $doc_dir"
+    {
+        echo ""
+        echo "# web interface (xcespweb), loopback only"
+        echo "[process.$proc_idx]"
+        echo "WDOG_LAUNCH             = $VENV/bin/python -m xcespweb --socket $web_sock --bind $web_addr --port $web_port --dist $MAINSW/web/dist $web_doc"
+        echo "WDOG_START_TIMER        = 0"
+        echo "WDOG_INTERVAL_TIMER     = 0"
+        echo "WDOG_RESPAWN            = true"
+        echo "WDOG_RESPAWN_MAXCOUNT   = 3"
+    } >> "$WDOG_PROC_FILE"
+    log "  web interface enabled: http://$web_addr:$web_port/ (SSH tunnel)"
+elif [ "$web_enabled" = "true" ]; then
+    log "  web interface enabled but not installed in $VENV (see the install log)"
+else
+    log "  web interface disabled ([WEB] ENABLED = false)"
 fi
 
 chown "$XCESP_USER:$XCESP_GROUP" "$WDOG_PROC_FILE"

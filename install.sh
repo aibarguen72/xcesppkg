@@ -577,6 +577,22 @@ cp -rT "$INSTALL_DIR/python" "$MAINSW_DIR/python"
 # Only present in packages built with the xcesp-l2tpv3d subproject
 # available.  install.sh's venv block below runs `pip install` against
 # this dir so the daemon entry point lands at $VENV_DIR/bin/xcesp-l2tpv3d.
+# Pre-built Python wheels + bundled third-party wheels, web interface pages,
+# and the wheel installer (0.5.122+).
+if [ -d "$INSTALL_DIR/wheels" ]; then
+    cp -rT "$INSTALL_DIR/wheels" "$MAINSW_DIR/wheels"
+    chmod -R a+rX "$MAINSW_DIR/wheels"
+fi
+if [ -d "$INSTALL_DIR/web" ]; then
+    cp -rT "$INSTALL_DIR/web" "$MAINSW_DIR/web"
+    chmod -R a+rX "$MAINSW_DIR/web"
+fi
+if [ -f "$INSTALL_DIR/scripts/xcesp-pyinstall" ]; then
+    install -d -o root -g root -m 0755 "$MAINSW_DIR/scripts" /usr/lib/xcesp
+    install -o root -g root -m 0755 "$INSTALL_DIR/scripts/xcesp-pyinstall" "$MAINSW_DIR/scripts/xcesp-pyinstall"
+    install -o root -g root -m 0755 "$INSTALL_DIR/scripts/xcesp-pyinstall" /usr/lib/xcesp/xcesp-pyinstall
+fi
+
 if [ -d "$INSTALL_DIR/python-l2tpv3d" ]; then
     info "Installing xcesp-l2tpv3d source to $MAINSW_DIR/python-l2tpv3d ..."
     cp -rT "$INSTALL_DIR/python-l2tpv3d" "$MAINSW_DIR/python-l2tpv3d"
@@ -675,9 +691,18 @@ fi
 
 if [ "$PYTHON_MODE" = "venv" ]; then
     python3 -m venv "$VENV_DIR"
-    "$VENV_DIR/bin/pip" install --quiet --upgrade pip
+    # Offline hosts: the upgrade needs the package index; keep the venv's pip.
+    "$VENV_DIR/bin/pip" install --quiet --timeout 10 --retries 1 --upgrade pip 2>/dev/null \
+        || warn "  pip not upgraded (package index unreachable?) — using the venv's own pip"
 
-    if [ -f "$MAINSW_DIR/python/pyproject.toml" ]; then
+    # 0.5.122+: packages ship as pre-built wheels (wheels/) so nothing is
+    # built here (building needs setuptools from the package index).
+    PYINSTALL="$MAINSW_DIR/scripts/xcesp-pyinstall"
+    WHEELS="$MAINSW_DIR/wheels"
+    if [ -x "$PYINSTALL" ] && [ -d "$WHEELS" ]; then
+        info "  Installing xcesppy into virtual environment..."
+        info "  $("$PYINSTALL" --local "$VENV_DIR" "$WHEELS" xcesppy)"
+    elif [ -f "$MAINSW_DIR/python/pyproject.toml" ]; then
         info "  Installing xcesppy into virtual environment..."
         "$VENV_DIR/bin/pip" install --quiet "$MAINSW_DIR/python"
     fi
@@ -689,9 +714,23 @@ if [ "$PYTHON_MODE" = "venv" ]; then
 
     # 0.5.0+: xcesp-l2tpv3d daemon.  Optional (only present when the
     # subproject was available at package build time).
-    if [ -f "$MAINSW_DIR/python-l2tpv3d/pyproject.toml" ]; then
+    if [ -x "$PYINSTALL" ] && ls "$WHEELS"/xcesp_l2tpv3d-*.whl > /dev/null 2>&1; then
+        info "  Installing xcesp-l2tpv3d into virtual environment..."
+        info "  $("$PYINSTALL" --local "$VENV_DIR" "$WHEELS" xcesp-l2tpv3d)"
+    elif [ -f "$MAINSW_DIR/python-l2tpv3d/pyproject.toml" ]; then
         info "  Installing xcesp-l2tpv3d into virtual environment..."
         "$VENV_DIR/bin/pip" install --quiet "$MAINSW_DIR/python-l2tpv3d"
+    fi
+
+    # Web interface (optional; off until [WEB] ENABLED = true).  Its aiohttp
+    # dependency comes from the package index, else from the bundled wheels.
+    if [ -x "$PYINSTALL" ] && ls "$WHEELS"/xcespweb-*.whl > /dev/null 2>&1; then
+        info "  Installing the web interface into virtual environment..."
+        if web_msg=$("$PYINSTALL" "$VENV_DIR" "$WHEELS" xcespweb); then
+            info "  $web_msg"
+        else
+            warn "  $web_msg — the web interface is not available on this host"
+        fi
     fi
 
     chown -R "$XCESP_USER:$XCESP_GROUP" "$VENV_DIR"

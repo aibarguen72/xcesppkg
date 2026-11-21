@@ -24,6 +24,21 @@ VER_SCHEMA  := $(call ver,xcespschema)
 VER_CONFIG  := $(call ver,xcespconfig)
 VER_PY      := $(call ver,xcesppy)
 VER_L2TPV3D := $(call ver,xcesp-l2tpv3d)
+VER_WEB     := $(call ver,xcespweb)
+
+# ---------------------------------------------------------------------------
+# Python wheels (0.5.122+): every XCESP Python package ships pre-built so the
+# target never builds anything (building needs setuptools from the package
+# index, unavailable offline).  WHEEL_PY is the build host's Python: the
+# bundled third-party wheels (aiohttp for xcespweb) match its version + CPU
+# (bundle-cp<MAJ><MIN>-<machine>); install falls back to them only when the
+# package index is unreachable (scripts/xcesp-pyinstall).
+# ---------------------------------------------------------------------------
+WHEEL_PY     ?= /usr/bin/python3.14
+WHEEL_VENV   := build/wheelvenv
+WEB_DEPS     := aiohttp>=3.9
+BUNDLE_TAG   := $(shell $(WHEEL_PY) -c 'import sys, platform; print("cp%d%d-%s" % (sys.version_info[0], sys.version_info[1], platform.machine()))' 2>/dev/null)
+BUNDLE_CACHE := build/bundle-$(BUNDLE_TAG)
 
 # ---------------------------------------------------------------------------
 # Source paths
@@ -63,6 +78,9 @@ RULES_ONXC      := ../xcesp-on-xc/rules
 # xcesppy source
 XCESPPY_SRC := ../xcesppy/xcesppy
 
+# xcespweb (web interface: aiohttp backend + Vue frontend built with npm)
+XCESPWEB_SRC := ../xcespweb
+
 # xcesp-l2tpv3d source (top-level Python daemon subproject)
 XCESPL2TP_SRC   := ../xcesp-l2tpv3d
 XCESPL2TP_UNIT  := ../xcesp-l2tpv3d/contrib/systemd/xcesp-l2tpv3d@.service
@@ -81,7 +99,7 @@ check-bins:
 	done
 
 $(TARBALL): check-bins install.sh services/xcesp.service \
-            scripts/xcesp-activate scripts/xcesp-swap.sh \
+            scripts/xcesp-activate scripts/xcesp-swap.sh scripts/xcesp-pyinstall \
             scripts/xcesp-dhclient-script scripts/chrony-install.sh \
             scripts/xcesp-login scripts/xcesp-ipsec-vip-installer \
             scripts/xcesp-cpu-layout scripts/xcesp-fw-zone \
@@ -207,6 +225,23 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp $(XCESPL2TP_LAUNCH) $(PKG_NAME)/scripts/xcesp-l2tpv3d-launch
 	chmod +x $(PKG_NAME)/scripts/xcesp-l2tpv3d-launch
 
+	# --- Python wheels + web interface (0.5.122+) ---
+	# The python/ and python-l2tpv3d/ source trees above stay for installs
+	# whose venv is created by an older install.sh; new installs use wheels/.
+	test -x $(WHEEL_VENV)/bin/pip || { $(WHEEL_PY) -m venv $(WHEEL_VENV) && \
+	    $(WHEEL_VENV)/bin/pip install --quiet --upgrade pip setuptools wheel; }
+	mkdir -p $(PKG_NAME)/wheels
+	$(WHEEL_VENV)/bin/pip wheel --quiet --no-deps --no-build-isolation \
+	    -w $(PKG_NAME)/wheels $(PKG_NAME)/python $(XCESPL2TP_SRC) $(XCESPWEB_SRC)
+	rm -rf build/bdist* $(XCESPWEB_SRC)/build $(XCESPL2TP_SRC)/build
+	test -n "$(BUNDLE_TAG)" || { echo "ERROR: cannot run $(WHEEL_PY) for the bundle tag"; exit 1; }
+	test -d $(BUNDLE_CACHE) || $(WHEEL_VENV)/bin/pip download --quiet --only-binary=:all: \
+	    -d $(BUNDLE_CACHE) '$(WEB_DEPS)'
+	cp -r $(BUNDLE_CACHE) $(PKG_NAME)/wheels/bundle-$(BUNDLE_TAG)
+	$(MAKE) -C $(XCESPWEB_SRC) frontend
+	mkdir -p $(PKG_NAME)/web
+	cp -r $(XCESPWEB_SRC)/frontend/dist $(PKG_NAME)/web/dist
+
 	# --- Documentation (mkdocs-built static site) ---
 	# DOC_PROFILE selects which documentation profile to bundle, because
 	# XCESP is sold in parts and a customer must not receive chapters for
@@ -238,6 +273,8 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	cp scripts/xcesp-ipsec-vip-installer $(PKG_NAME)/scripts/
 	cp scripts/xcesp-cpu-layout         $(PKG_NAME)/scripts/
 	cp scripts/xcesp-fw-zone            $(PKG_NAME)/scripts/
+	cp scripts/xcesp-pyinstall          $(PKG_NAME)/scripts/
+	chmod +x $(PKG_NAME)/scripts/xcesp-pyinstall
 	chmod +x $(PKG_NAME)/scripts/xcesp-activate \
 	         $(PKG_NAME)/scripts/xcesp-swap.sh  \
 	         $(PKG_NAME)/scripts/xcesp-dhclient-script \
@@ -270,6 +307,7 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 		printf "%-22s %s\n" "xcespconfig"    "$(VER_CONFIG)"; \
 		printf "%-22s %s\n" "xcesppy"        "$(VER_PY)"; \
 		printf "%-22s %s\n" "xcesp-l2tpv3d"  "$(VER_L2TPV3D)"; \
+		printf "%-22s %s\n" "xcespweb"       "$(VER_WEB)"; \
 	} > $(PKG_NAME)/VERSION
 
 	# --- Third-party licence notices ---

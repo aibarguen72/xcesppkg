@@ -5,3 +5,6 @@ xcespkg-*/
 # artifacts, distributed alongside GitHub releases if needed, never
 # committed to source control.
 docker/*.tar
+
+# wheel-build venv + cached third-party wheel bundles (makefile)
+/build/

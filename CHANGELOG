@@ -1,5 +1,26 @@
 # Changelog - xcesppkg
 
+## 0.5.122
+
+- **Web interface shipped** (xcespweb 0.2.0): installed into the XCESP venv,
+  run by xcespwdog when `[WEB] ENABLED = true` (default false; section added
+  to existing INIs by xcesp-activate).  No login yet, so it listens on the
+  loopback only — xcesp-activate refuses any other `BIND_ADDR` — and is
+  reached through an SSH tunnel (`ssh -L 8081:127.0.0.1:8081 ...`).  Pages in
+  `mainsw/web/dist`, manual from `[DOC_HTTPD] DOC_DIR`, control socket from
+  `[SERVER] CONTROL_SOCKET`.
+- **Pre-built Python wheels** (`wheels/`) for xcesppy, xcesp-l2tpv3d and
+  xcespweb: nothing is built on the target any more (building needed
+  setuptools from the package index, so offline installs failed).  New
+  `scripts/xcesp-pyinstall` (also `/usr/lib/xcesp/`): `--local` for packages
+  without third-party dependencies; for xcespweb, aiohttp comes from the
+  package index first and, if it is unreachable, from the bundled wheels
+  `wheels/bundle-cp<MAJ><MIN>-<machine>/`.  This release bundles
+  **cp314-x86_64** only (Fedora 44); other hosts need the package index.
+- install.sh: the venv `pip` upgrade no longer aborts an offline install.
+- Bundles xcespserver 0.4.40, xcespcli 0.3.75, xcespproc 0.2.193 (xcesp-on-xc
+  0.2.121), xcespwdog 0.2.4, xcesp-recexport 0.2.121, xcespweb 0.2.0.
+
 ## 0.5.121
 
 - Bundles xcespserver 0.4.40, xcespcli 0.3.75, xcespproc 0.2.193 (xcesp-on-xc
