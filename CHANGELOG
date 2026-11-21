@@ -1,5 +1,14 @@
 # Changelog - xcesppkg
 
+## 0.5.120
+
+- Bundles xcespserver 0.4.39, xcespcli 0.3.75, xcespproc 0.2.192 (xcesp-on-xc
+  0.2.120), xcespwdog 0.2.4 and xcesp-recexport (xcesp-on-xc 0.2.120) with:
+  recordings now include the service's xc-ip-endpoints (both directions), and
+  `do-xc-record <rec> export <file> [format wav|txt] ... [rate <baud>[,8,N,1] |
+  rate sync]` writes an XDBG-like, time-merged hex/ASCII dump of data
+  services (async serial decoded from the TDM slots; default for `type data`).
+
 ## 0.5.119
 
 - Bundles xcespserver 0.4.38, xcespcli 0.3.74, xcespproc 0.2.191 (xcesp-on-xc
