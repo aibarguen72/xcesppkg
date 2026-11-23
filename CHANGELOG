@@ -2,6 +2,10 @@
 
 ## unreleased (1.0.1)
 
+- XCESP-MIB 1.0.1: xcespSoftwareVersion / xcespActiveAlarms /
+  xcespLicensedFeatures; xcespIfTable rows for TDM-PW / VTRUNK documented
+  (ifIndex ranges); duplicate `xcespObjects { xcespMib 1 }` removed;
+  MODULE-IDENTITY first and ASCII-only text (smilint clean).
 - install.sh installs the VTRUNK DSP libraries (opus, spandsp, speexdsp)
   from the distribution repositories on x86_64 when missing (dnf / apt-get,
   best effort, offline-tolerant; `XCESP_NO_PKG_INSTALL=1` skips it).

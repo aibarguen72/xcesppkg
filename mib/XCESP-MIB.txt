@@ -1,10 +1,10 @@
 XCESP-MIB DEFINITIONS ::= BEGIN
 
 --
--- XCESP router product MIB — sub-tree under IKATA-SNMP-MIB
+-- XCESP router product MIB - sub-tree under IKATA-SNMP-MIB
 -- (ikataSnmp = enterprises.43978).
 --
--- 0.2.19 — minimum vertical slice: one scalar (xcespServerName) and
+-- 0.2.19 - minimum vertical slice: one scalar (xcespServerName) and
 -- one notification (xcespColdStart).  Subsequent releases grow this
 -- file (or replace it with auto-generator output from gen-xcesp-mib.py
 -- in 0.2.21+).
@@ -14,16 +14,15 @@ IMPORTS
     MODULE-IDENTITY, OBJECT-TYPE, NOTIFICATION-TYPE,
     enterprises
         FROM SNMPv2-SMI
+    Gauge32
+        FROM SNMPv2-SMI
     DisplayString
         FROM SNMPv2-TC
     ifIndex
         FROM IF-MIB;
 
-ikataSnmp           OBJECT IDENTIFIER ::= { enterprises 43978 }
-ikataSnmpObjects    OBJECT IDENTIFIER ::= { ikataSnmp 1 }
-
 xcespMib MODULE-IDENTITY
-    LAST-UPDATED "202606060000Z"
+    LAST-UPDATED "202611230000Z"
     ORGANIZATION "www.ikatanetworks.com"
     CONTACT-INFO "email: contact@ikatanetworks.com"
     DESCRIPTION
@@ -31,18 +30,28 @@ xcespMib MODULE-IDENTITY
          the AgentX subagent embedded in xcespserver.  Polled values are
          backed by ServerStatus paths; notifications fire on state
          transitions captured by the EventDispatcher."
+    REVISION     "202611230000Z"
+    DESCRIPTION
+        "1.0.1 - xcespSoftwareVersion, xcespActiveAlarms,
+         xcespLicensedFeatures scalars; xcespIfTable and IF-MIB rows for
+         TDM pseudowires (ifIndex 100000-199999, ifType pw 246) and VTRUNK
+         voice trunks (ifIndex 200000-299999, ifType voiceEncap 103), with
+         IF-MIB linkUp / linkDown for both.  Removed the unused
+         xcespObjects identifier (it duplicated xcespServerName's OID)."
     REVISION     "202606060000Z"
     DESCRIPTION
-        "0.2.19 — initial release: xcespServerName scalar + xcespColdStart
+        "0.2.19 - initial release: xcespServerName scalar + xcespColdStart
          notification.  Subsequent releases will add IF-MIB ifTable bridge
          (0.2.20) and broader schema-derived objects (0.2.21+)."
     ::= { ikataSnmpObjects 1 }
+
+ikataSnmp           OBJECT IDENTIFIER ::= { enterprises 43978 }
+ikataSnmpObjects    OBJECT IDENTIFIER ::= { ikataSnmp 1 }
 
 --
 -- Scalar objects
 --
 
-xcespObjects        OBJECT IDENTIFIER ::= { xcespMib 1 }
 xcespNotifications  OBJECT IDENTIFIER ::= { xcespMib 0 }
 
 xcespServerName OBJECT-TYPE
@@ -54,8 +63,35 @@ xcespServerName OBJECT-TYPE
          When unset by the operator, defaults to the server's hostname."
     ::= { xcespMib 1 }
 
+xcespSoftwareVersion OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "Installed XCESP software release (the XCESPKG version of the
+         running main software)."
+    ::= { xcespMib 3 }
+
+xcespActiveAlarms OBJECT-TYPE
+    SYNTAX       Gauge32
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "Number of active (raised, not yet cleared) alarms, as listed by
+         `show alarms`.  Updated every status poll (5 s by default)."
+    ::= { xcespMib 4 }
+
+xcespLicensedFeatures OBJECT-TYPE
+    SYNTAX       DisplayString
+    MAX-ACCESS   read-only
+    STATUS       current
+    DESCRIPTION
+        "Licensed features of this system, comma separated (for example
+         'dynamic-routing,tdm-pw')."
+    ::= { xcespMib 5 }
+
 --
--- xcespIfTable — per-interface mapping back to (router, vrf, name).
+-- xcespIfTable - per-interface mapping back to (router, vrf, name).
 -- Indexed by IF-MIB::ifIndex so it joins naturally with ifTable rows.
 -- Lets NMS pollers slice XCESP's flat ifTable by router and/or VRF.
 --
@@ -70,7 +106,13 @@ xcespIfTable OBJECT-TYPE
          row per interface; one ifIndex per row.  Pollers walk the
          standard IF-MIB::ifTable for traffic and admin/oper data,
          then snmpget rows from xcespIfTable to learn which router and
-         VRF each interface belongs to."
+         VRF each interface belongs to.
+
+         ifIndex ranges: router interfaces 1-99999; TDM pseudowires
+         100000-199999 (xcespIfRouter '@tdm-pw', xcespIfVrf = domain,
+         xcespIfXcespName = pseudowire); VTRUNK voice trunks
+         200000-299999 (xcespIfRouter '@vtrunk', xcespIfVrf = domain,
+         xcespIfXcespName = xc-service).  An ifIndex is never reused."
     ::= { xcespMib 2 }
 
 xcespIfEntry OBJECT-TYPE
@@ -92,14 +134,16 @@ xcespIfRouter OBJECT-TYPE
     SYNTAX       DisplayString
     MAX-ACCESS   read-only
     STATUS       current
-    DESCRIPTION  "Name of the XCESP router that owns this interface."
+    DESCRIPTION  "Name of the XCESP router that owns this interface;
+                  '@tdm-pw' or '@vtrunk' for pseudowire / voice trunk rows."
     ::= { xcespIfEntry 1 }
 
 xcespIfVrf OBJECT-TYPE
     SYNTAX       DisplayString
     MAX-ACCESS   read-only
     STATUS       current
-    DESCRIPTION  "Name of the VRF inside the router that owns this interface."
+    DESCRIPTION  "Name of the VRF inside the router that owns this interface;
+                  the domain for pseudowire / voice trunk rows."
     ::= { xcespIfEntry 2 }
 
 xcespIfXcespName OBJECT-TYPE
@@ -118,11 +162,10 @@ xcespIfType OBJECT-TYPE
     STATUS       current
     DESCRIPTION
         "XCESP's own interface-type tag (device, loopback, rlink, gre,
-         vlan, bridge, l2tp, vxlan, xfrm).  More descriptive than
-         IF-MIB::ifType for XCESP-specific tunnel/virtual types.  In
-         xcespserver 0.2.11 this field is a placeholder ('unknown')
-         pending xcesp-on-rtr emitting the IFACE_TYPE into ServerStatus
-         in 0.2.23."
+         vlan, bridge, l2tp, vxlan, xfrm; pw for a TDM pseudowire, vtrunk
+         for a VTRUNK voice trunk).  More descriptive than IF-MIB::ifType
+         for XCESP-specific tunnel/virtual types; 'unknown' when not
+         reported."
     ::= { xcespIfEntry 4 }
 
 --
