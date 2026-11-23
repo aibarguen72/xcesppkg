@@ -1236,10 +1236,10 @@ fi
 
 # ---------------------------------------------------------------------------
 # Web interface process slot (0.5.122+) — append to xcespwdog_proc.ini when
-# [WEB] ENABLED = true.  There is no login yet: the server always binds to the
-# loopback and is reached through an SSH tunnel
-# (`ssh -L 8081:127.0.0.1:8081 <user>@<device>`); a non-loopback BIND_ADDR is
-# refused here, not only warned about.
+# the web interface is enabled.  1.0.1: from `management web` when that block
+# is committed (any bind address; no login, so the address decides who
+# reaches it); otherwise from [WEB] in xcespserver.ini, where a non-loopback
+# BIND_ADDR is still refused (reach it with `ssh -L 8081:127.0.0.1:8081`).
 # ---------------------------------------------------------------------------
 proc_idx=$(( $(grep -c '^\[process\.' "$WDOG_PROC_FILE") + 1 ))
 if [ -f "$SERVER_INI" ] && ! grep -q '^\[WEB\]' "$SERVER_INI"; then
@@ -1275,35 +1275,71 @@ read_ini() {   # $1 section, $2 key, $3 default
     ' "$SERVER_INI"
 }
 
-web_enabled=$(read_ini WEB ENABLED false)
-web_addr=$(read_ini WEB BIND_ADDR 127.0.0.1)
-web_port=$(read_ini WEB PORT 8081)
 web_sock=$(read_ini SERVER CONTROL_SOCKET /run/xcesp/ctrl.sock)
-case "$web_addr" in
-    127.*|::1|localhost) ;;
-    *) log "  WARNING: [WEB] BIND_ADDR $web_addr refused (no login yet) — using 127.0.0.1"
-       web_addr=127.0.0.1 ;;
-esac
+
+# 1.0.1: `management web` (committed config, written by xcespserver into
+# aaa-config.state [web]) decides when present: any bind address (no login
+# in 1.0.1 — the address decides who reaches the UI), port, records.
+# Without it the root-edited [WEB] section applies, loopback only, as before.
+WEB_AAA_FILE="$(dirname "${MANAGED_USERS_FILE:-/var/lib/xcesp/managed-users.state}")/aaa-config.state"
+web_cfg_get() {   # $1 key, $2 default — [web] section of aaa-config.state
+    local v
+    v=$(awk -v key="$1" '
+        $0 == "[web]" { inS = 1; next }
+        /^\[/        { inS = 0 }
+        inS && index($0, key " = ") == 1 { sub(/^[^=]+= */, ""); print; exit }
+    ' "$WEB_AAA_FILE" 2>/dev/null)
+    if [ -z "$v" ]; then printf '%s' "$2"; else printf '%s' "$v"; fi
+}
+web_records=true
+if [ "$(web_cfg_get present false)" = "true" ]; then
+    web_src="management web"
+    web_enabled=$(web_cfg_get enabled false)
+    web_addr=$(web_cfg_get bind-address 127.0.0.1)
+    web_port=$(web_cfg_get port 8081)
+    web_records=$(web_cfg_get records true)
+    # The address lands on the process command line: IP literals only.
+    case "$web_addr" in
+        ''|*[!0-9a-fA-F.:]*)
+            log "  WARNING: management web bind-address '$web_addr' is not an IP address — using 127.0.0.1"
+            web_addr=127.0.0.1 ;;
+    esac
+else
+    web_src="[WEB] in $SERVER_INI"
+    web_enabled=$(read_ini WEB ENABLED false)
+    web_addr=$(read_ini WEB BIND_ADDR 127.0.0.1)
+    web_port=$(read_ini WEB PORT 8081)
+    case "$web_addr" in
+        127.*|::1|localhost) ;;
+        *) log "  WARNING: [WEB] BIND_ADDR $web_addr refused (use management web) — using 127.0.0.1"
+           web_addr=127.0.0.1 ;;
+    esac
+fi
 case "$web_port" in ''|*[!0-9]*) web_port=8081 ;; esac
+web_opts=""
+[ "$web_records" = "false" ] && web_opts="--no-records"
 if [ "$web_enabled" = "true" ] && [ -x "$VENV/bin/python" ] && \
    "$VENV/bin/python" -c 'import xcespweb' 2>/dev/null; then
     web_doc=""
     [ -d "$doc_dir" ] && web_doc="--doc $doc_dir"
     {
         echo ""
-        echo "# web interface (xcespweb), loopback only"
+        echo "# web interface (xcespweb), from $web_src"
         echo "[process.$proc_idx]"
-        echo "WDOG_LAUNCH             = $VENV/bin/python -m xcespweb --socket $web_sock --bind $web_addr --port $web_port --dist $MAINSW/web/dist $web_doc"
+        echo "WDOG_LAUNCH             = $VENV/bin/python -m xcespweb --socket $web_sock --bind $web_addr --port $web_port --dist $MAINSW/web/dist $web_doc $web_opts"
         echo "WDOG_START_TIMER        = 0"
         echo "WDOG_INTERVAL_TIMER     = 0"
         echo "WDOG_RESPAWN            = true"
         echo "WDOG_RESPAWN_MAXCOUNT   = 3"
     } >> "$WDOG_PROC_FILE"
-    log "  web interface enabled: http://$web_addr:$web_port/ (SSH tunnel)"
+    case "$web_addr" in
+        127.*|::1) log "  web interface enabled ($web_src): http://$web_addr:$web_port/ (SSH tunnel)" ;;
+        *)         log "  web interface enabled ($web_src): http://$web_addr:$web_port/ — NO LOGIN, reachable from the network" ;;
+    esac
 elif [ "$web_enabled" = "true" ]; then
     log "  web interface enabled but not installed in $VENV (see the install log)"
 else
-    log "  web interface disabled ([WEB] ENABLED = false)"
+    log "  web interface disabled ($web_src)"
 fi
 
 chown "$XCESP_USER:$XCESP_GROUP" "$WDOG_PROC_FILE"

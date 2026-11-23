@@ -2,6 +2,12 @@
 
 ## unreleased (1.0.1)
 
+- xcesp-activate (P6): the xcespweb process comes from `management web`
+  (aaa-config.state [web]) when that block is committed: any bind address
+  (IP literals only, else 127.0.0.1), port, `--no-records` for records
+  false; logs "NO LOGIN, reachable from the network" for a non-loopback
+  address.  Without the block the [WEB] ini section applies, loopback only,
+  as before.
 - XCESP-MIB 1.0.1: xcespSoftwareVersion / xcespActiveAlarms /
   xcespLicensedFeatures; xcespIfTable rows for TDM-PW / VTRUNK documented
   (ifIndex ranges); duplicate `xcespObjects { xcespMib 1 }` removed;
