@@ -1,5 +1,21 @@
 # Changelog - xcesppkg
 
+## unreleased (1.0.1)
+
+- install.sh installs the VTRUNK DSP libraries (opus, spandsp, speexdsp)
+  from the distribution repositories on x86_64 when missing (dnf / apt-get,
+  best effort, offline-tolerant; `XCESP_NO_PKG_INSTALL=1` skips it).
+- xcesp-activate `--config`: applies only the configuration-derived host
+  settings (users, AAA, SNMP, ...) to a running XCESP — software sync,
+  binaries, schema, rules, Python packages and the process list are skipped.
+  Used by `system activate`; allowed for the xcesp user in
+  /etc/sudoers.d/xcesp-reboot (exact `--config` argument only).
+- The xcesppy wheel version follows xcesppy/PROJECT (makefile stamps
+  python/pyproject.toml; was stuck at 0.0.2).
+- xcesp-pyinstall: `--no-cache-dir` (no "cache dir not writable" warning).
+- cfg/xcespserver.ini: `[RECORD] MAX_DURATION_S = 1800` (existing INIs keep
+  their value).
+
 ## 0.5.122
 
 - **Web interface shipped** (xcespweb 0.2.0): installed into the XCESP venv,

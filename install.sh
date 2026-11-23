@@ -482,6 +482,55 @@ if [ -n "$MODULES_MISSING" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# DSP libraries (x86_64): libopus, libspandsp, libspeexdsp are dlopen()ed by
+# xcespproc for VTRUNK codecs / echo-cancel and tdmtest voice analysis.
+# Installed from the distribution repositories when missing; best effort —
+# an offline host keeps going and the summary below lists what is missing.
+# XCESP_NO_PKG_INSTALL=1 skips the package manager.
+# ---------------------------------------------------------------------------
+_dsp_missing() {
+    _m=""
+    ldconfig -p 2>/dev/null | grep -q 'libopus\.so\.0'      || _m="$_m opus"
+    ldconfig -p 2>/dev/null | grep -q 'libspeexdsp\.so\.1'  || _m="$_m speexdsp"
+    ldconfig -p 2>/dev/null | grep -qE 'libspandsp\.so\.(2|3)' || _m="$_m spandsp"
+    echo "$_m"
+}
+if [ "$(uname -m)" = "x86_64" ] && [ "${XCESP_NO_PKG_INSTALL:-0}" != "1" ]; then
+    _dsp_need="$(_dsp_missing)"
+    if [ -n "$_dsp_need" ]; then
+        info "Installing DSP libraries:$_dsp_need"
+        if command -v dnf >/dev/null 2>&1; then
+            _pk=""
+            for _l in $_dsp_need; do _pk="$_pk $_l"; done
+            # shellcheck disable=SC2086
+            timeout 300 dnf -y -q install $_pk >/dev/null 2>&1 \
+                || warn "dnf could not install:$_pk (offline?)"
+        elif command -v apt-get >/dev/null 2>&1; then
+            _pk=""
+            for _l in $_dsp_need; do
+                case "$_l" in
+                    opus)     _cands="libopus0" ;;
+                    speexdsp) _cands="libspeexdsp1" ;;
+                    spandsp)  _cands="libspandsp2t64 libspandsp2 libspandsp3" ;;
+                esac
+                for _c in $_cands; do
+                    if apt-cache show "$_c" >/dev/null 2>&1; then _pk="$_pk $_c"; break; fi
+                done
+            done
+            if [ -n "$_pk" ]; then
+                # shellcheck disable=SC2086
+                DEBIAN_FRONTEND=noninteractive timeout 300 apt-get install -y -q $_pk >/dev/null 2>&1 \
+                    || warn "apt-get could not install:$_pk (offline? run apt-get update)"
+            else
+                warn "DSP library packages not found in the apt cache (run apt-get update)"
+            fi
+        else
+            warn "no dnf / apt-get: install opus, spandsp, speexdsp by hand"
+        fi
+    fi
+fi
+
+# ---------------------------------------------------------------------------
 # Configuration templates (non-destructive: existing files are never overwritten)
 # ---------------------------------------------------------------------------
 info "Installing configuration templates to $CFG_DIR ..."
@@ -986,7 +1035,8 @@ echo "  Then:  systemctl enable --now snmpd"
 echo "  Pollers can walk the XCESP MIB at OID 1.3.6.1.4.1.43978.1.1 ..."
 echo ""
 echo " VTRUNK voice trunk + tdmtest codec analysis (x86_64, 0.5.114+)"
-echo "  xc-service type vtrunk loads its DSP libraries at runtime:"
+echo "  xc-service type vtrunk loads its DSP libraries at runtime (this"
+echo "  installer installs them from the distribution repositories):"
 echo "    libopus (codec opus), libspandsp (codec adpcm16/adpcm32),"
 echo "    libspeexdsp (echo-cancel)."
 echo "    apt install libopus0 libspandsp2 libspeexdsp1       (Debian/Ubuntu)"

@@ -31,7 +31,7 @@ if [ -z "$whl" ]; then
 fi
 tag=$("$venv/bin/python" -c 'import sys; print("cp%d%d" % sys.version_info[:2])')-$(uname -m)
 bundle="$wheels/bundle-$tag"
-common=(--quiet --disable-pip-version-check)
+common=(--quiet --disable-pip-version-check --no-cache-dir)
 
 if [ "$local_only" = 1 ]; then
     # Always reinstall: these packages are small, and a wheel whose version

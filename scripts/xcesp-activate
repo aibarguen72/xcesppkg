@@ -7,6 +7,8 @@
 # and xcesppy in the venv is updated.  Configuration files are never touched.
 #
 # Also callable manually:  sudo xcesp-activate
+#   --config  configuration-derived settings only, safe while XCESP runs
+#             (`system activate` from xcespcli, through sudo).
 
 set -euo pipefail
 
@@ -17,6 +19,13 @@ XCESP_USER=xcesp
 XCESP_GROUP=xcesp
 
 log() { echo "xcesp-activate: $*" >&2; }
+
+CONFIG_ONLY=0
+case "${1:-}" in
+    --config) CONFIG_ONLY=1 ;;
+    "")       ;;
+    *) echo "usage: xcesp-activate [--config]" >&2; exit 2 ;;
+esac
 
 # Nothing to do if mainsw does not exist
 if [ ! -d "$MAINSW" ]; then
@@ -44,6 +53,13 @@ for d in "$XCESP_BASE" "$MAINSW" "$XCESP_BASE/backupsw"; do
     chown "root:$XCESP_GROUP" "$d"
     chmod 2775 "$d"
 done
+
+# --config (system activate): apply only the configuration-derived host
+# settings (users, AAA, SNMP, ...) to a RUNNING XCESP.  Software sync,
+# binaries, schema, rules, Python packages and the process list are skipped:
+# they need a service restart and must not be swapped under running
+# processes.
+if [ "$CONFIG_ONLY" = 0 ]; then
 
 # ---------------------------------------------------------------------------
 # Self-update of /usr/bin/xcesp-activate and /usr/bin/xcesp-swap.sh
@@ -830,13 +846,15 @@ REBOOT_SUDOERS=/etc/sudoers.d/xcesp-reboot
 SYSTEMCTL_BIN="$(command -v systemctl 2>/dev/null || echo /usr/bin/systemctl)"
 if [ -x "$SYSTEMCTL_BIN" ]; then
     cat > "$REBOOT_SUDOERS" <<SUDOERS
-# Allow xcespserver to restart the xcesp stack and to reboot the host.
-# Both flows ride through FileActionHandler::doReboot().
+# Allow xcespserver to restart the xcesp stack, to reboot the host
+# (FileActionHandler::doReboot) and to apply configuration-derived host
+# settings (system activate -> xcesp-activate --config).
 $XCESP_USER ALL=(root) NOPASSWD: $SYSTEMCTL_BIN restart xcesp, \\
                                   $SYSTEMCTL_BIN restart xcesp.service, \\
                                   $SYSTEMCTL_BIN restart xcespwdog, \\
                                   $SYSTEMCTL_BIN restart xcespwdog.service, \\
-                                  $SYSTEMCTL_BIN reboot
+                                  $SYSTEMCTL_BIN reboot, \\
+                                  $BINDIR/xcesp-activate --config
 SUDOERS
     chmod 0440 "$REBOOT_SUDOERS"
     log "  $REBOOT_SUDOERS refreshed"
@@ -1347,6 +1365,8 @@ if [ -f "$WDOG_INI" ]; then
         log "  removed static xcespproc entries from $WDOG_INI (now managed by PROC_CONFIG_FILE)"
     fi
 fi
+
+fi  # CONFIG_ONLY = 0 (software sync + process list)
 
 # ---------------------------------------------------------------------------
 # AAA — sync local POSIX users from /var/lib/xcesp/managed-users.state

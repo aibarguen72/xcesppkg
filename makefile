@@ -206,7 +206,10 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 
 	# --- xcesppy Python library ---
 	mkdir -p $(PKG_NAME)/python/xcesppy
-	cp python/pyproject.toml $(PKG_NAME)/python/
+	# The wheel version follows xcesppy/PROJECT (the template's version line
+	# is a placeholder; it stayed 0.0.2 for every release up to 0.5.122).
+	sed 's/^version = ".*"/version = "$(VER_PY)"/' python/pyproject.toml \
+	    > $(PKG_NAME)/python/pyproject.toml
 	cp -r $(XCESPPY_SRC)/. $(PKG_NAME)/python/xcesppy/
 	find $(PKG_NAME)/python -name '__pycache__' -exec rm -rf {} + 2>/dev/null || true
 
