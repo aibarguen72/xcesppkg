@@ -16,6 +16,25 @@
 - cfg/xcespserver.ini: `[RECORD] MAX_DURATION_S = 1800` (existing INIs keep
   their value).
 
+## 0.5.124
+
+- Bundles xcespserver 0.4.40, xcespcli 0.3.75, xcespproc 0.2.195,
+  xcespwdog 0.2.4 with xcesp-on-xc 0.2.123: MODEM SMS fixes from the field
+  log of 0.5.123 — AT+CMGL marks listed messages read (a polled message no
+  longer stays "new" for ever), separate "SM" / "ME" storages ("MT" = both),
+  new `modem` attribute `sms-centre` (service-centre address carried by
+  PDU-mode messages, default +440000000000), `+CMS ERROR` codes for SMS
+  commands, AT^CURC accepted.
+
+## 0.5.123
+
+- Bundles xcespserver 0.4.40, xcespcli 0.3.75, xcespproc 0.2.194,
+  xcespwdog 0.2.4 with xcesp-on-xc 0.2.122: MODEM patch for field SMS
+  applications — AT+CPMS / +CBC / +CIMI / +CPBS and the V.250 identity
+  forms, SMS PDU mode (AT+CMGF=0), service-centre timestamps, a bounded SMS
+  store (`modem` attribute `sms-store-size`, default 30) and AT+CMGD delete
+  flags.
+
 ## 0.5.122
 
 - **Web interface shipped** (xcespweb 0.2.0): installed into the XCESP venv,
