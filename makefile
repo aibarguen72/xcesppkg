@@ -88,7 +88,7 @@ XCESPL2TP_LAUNCH := ../xcesp-l2tpv3d/contrib/scripts/xcesp-l2tpv3d-launch
 
 # ---------------------------------------------------------------------------
 
-.PHONY: all clean check-bins
+.PHONY: all clean check-bins manifest
 
 all: $(TARBALL)
 
@@ -334,11 +334,21 @@ $(TARBALL): check-bins install.sh services/xcesp.service \
 	# Sidecar manifest that `copy sw latest backup-sw` reads from
 	# GitHub's /latest/download/MANIFEST.json redirect.  Maps arch
 	# tokens (x86_64 / arm64) to asset names + sha256 hashes so
-	# xcespserver can verify the download before installing.  The
-	# ARM64 entry is intentionally absent during 0.2.x (per the
-	# arm64-defer memory); it gets added when ARM64 builds resume.
+	# xcespserver can verify the download before installing.
+	@$(MAKE) --no-print-directory manifest
+
+# The arm64 entry is added when the ARM64 package of the same version
+# (arm64/package.sh -> xcespkg-arm64-$(PRJVERSION).tgz) is present; rerun
+# `make manifest` after building it.
+ARM64_TARBALL := xcespkg-arm64-$(PRJVERSION).tgz
+manifest:
 	@x86_sha=$$(sha256sum $(TARBALL) | awk '{print $$1}'); \
-	printf '{\n  "version": "$(PRJVERSION)",\n  "x86_64": "$(TARBALL)",\n  "sha256": {\n    "x86_64": "%s"\n  }\n}\n' "$$x86_sha" > MANIFEST.json
+	if [ -f $(ARM64_TARBALL) ]; then \
+	    arm_sha=$$(sha256sum $(ARM64_TARBALL) | awk '{print $$1}'); \
+	    printf '{\n  "version": "$(PRJVERSION)",\n  "x86_64": "$(TARBALL)",\n  "arm64": "$(ARM64_TARBALL)",\n  "sha256": {\n    "x86_64": "%s",\n    "arm64": "%s"\n  }\n}\n' "$$x86_sha" "$$arm_sha" > MANIFEST.json; \
+	else \
+	    printf '{\n  "version": "$(PRJVERSION)",\n  "x86_64": "$(TARBALL)",\n  "sha256": {\n    "x86_64": "%s"\n  }\n}\n' "$$x86_sha" > MANIFEST.json; \
+	fi
 	@echo "Manifest ready:  MANIFEST.json"
 
 clean:

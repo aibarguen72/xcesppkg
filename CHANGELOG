@@ -1,7 +1,25 @@
 # Changelog - xcesppkg
 
-## unreleased (1.0.1)
+## 1.0.1
 
+- xcesp-activate: creates the dsk storage directories install.sh creates
+  (img, bcfg, log, cap, rec) when missing, at every service start.  A system
+  upgraded only through the CLI had no dsk/rec, so the first `record start`
+  failed ("cannot access the record directory"; QA ON-XC-LOOPREC ch2/ch3 on
+  xcespfc).
+- xcesp-activate: at every service start (x86_64) checks the DSP libraries
+  that xcespproc dlopen()s for VTRUNK and tdmtest voice (libopus,
+  libspeexdsp, libspandsp) and logs a WARNING with the dnf / apt command
+  when any is missing.  install.sh installs them, but a system upgraded
+  only through the CLI (copy sw / software-install / reboot) never runs
+  install.sh, so VTRUNK trunks silently stayed down (QA fclab2, 1.0.1).
+  No package install at service start.
+- ARM64 is back in the release: xcespkg-arm64-1.0.1.tgz (full docs) is
+  attached, and MANIFEST.json carries its `arm64` entry and sha256, so
+  `copy sw latest` works on aarch64 again.  New `make manifest` target adds
+  the arm64 entry whenever xcespkg-arm64-<version>.tgz is present.  The
+  XCESP-MODEM arm64 container (modem docs) ships as
+  xcesp-modem-1.0.1-arm64.tar.
 - P7 installer ISO (iso/): build-iso.sh remasters the official Debian 13
   netinst (xorriso in debian:trixie, boot setup replayed: hybrid USB / DVD,
   BIOS + UEFI) with a first, default, never-auto-started entry "Install

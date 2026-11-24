@@ -53,6 +53,18 @@ for d in "$XCESP_BASE" "$MAINSW" "$XCESP_BASE/backupsw"; do
     chown "root:$XCESP_GROUP" "$d"
     chmod 2775 "$d"
 done
+# dsk storage directories: the same list install.sh creates.  A directory
+# added by a newer release (dsk/rec, recordings) must also appear on a system
+# upgraded only through the CLI — xcespproc's `record start` needs dsk/rec to
+# exist (QA ON-XC-LOOPREC ch2/ch3 on xcespfc, 1.0.1).  Existing directories
+# keep their owner and mode.
+if [ -d "$XCESP_BASE/dsk" ]; then
+    for d in img bcfg log cap rec; do
+        [ -d "$XCESP_BASE/dsk/$d" ] && continue
+        install -d -o root -g "$XCESP_GROUP" -m 0775 "$XCESP_BASE/dsk/$d" \
+            && log "  created $XCESP_BASE/dsk/$d"
+    done
+fi
 
 # --config (system activate): apply only the configuration-derived host
 # settings (users, AAA, SNMP, ...) to a RUNNING XCESP.  Software sync,
@@ -775,6 +787,28 @@ if [ -d "$VENV" ] && [ -x "$PYINSTALL" ] && [ -n "$web_whl" ]; then
     if [ "$web_shipped" != "$web_installed" ]; then
         log "  web interface: ${web_installed:-not installed} -> $web_shipped"
         log "  $("$PYINSTALL" "$VENV" "$MAINSW/wheels" xcespweb 2>&1 || true)"
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# DSP libraries (VTRUNK codecs / echo-cancel, tdmtest voice analysis) —
+# dlopen()ed by xcespproc.  install.sh installs them; a system upgraded only
+# through the CLI (copy sw / software-install / reboot) never runs install.sh,
+# so check them here and say what is missing.  No package install at service
+# start (no network wait in the boot path).
+# ---------------------------------------------------------------------------
+if [ "$(uname -m)" = "x86_64" ]; then
+    _dsp_m=""
+    ldconfig -p 2>/dev/null | grep -q 'libopus\.so\.0'          || _dsp_m="$_dsp_m opus"
+    ldconfig -p 2>/dev/null | grep -q 'libspeexdsp\.so\.1'      || _dsp_m="$_dsp_m speexdsp"
+    ldconfig -p 2>/dev/null | grep -qE 'libspandsp\.so\.(2|3)'  || _dsp_m="$_dsp_m spandsp"
+    if [ -n "$_dsp_m" ]; then
+        log "  WARNING: DSP libraries missing:$_dsp_m — VTRUNK trunks will not start"
+        if command -v dnf >/dev/null 2>&1; then
+            log "           install with: dnf install$_dsp_m"
+        else
+            log "           install with: apt-get install libopus0 libspeexdsp1 libspandsp2t64 (or libspandsp2)"
+        fi
     fi
 fi
 

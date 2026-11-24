@@ -1,7 +1,9 @@
 {
-  "version": "0.5.124",
-  "x86_64": "xcespkg-0.5.124.tar.gz",
+  "version": "1.0.1",
+  "x86_64": "xcespkg-1.0.1.tar.gz",
+  "arm64": "xcespkg-arm64-1.0.1.tgz",
   "sha256": {
-    "x86_64": "2875affe063c76a570bd4234088d9f0658a3ec2b48b078e44c7bacec7e4e6777"
+    "x86_64": "c1e4a778f612efe8d49e96252684c64cb161e3da5e823b43a1bb936d1973eef8",
+    "arm64": "cf69467232a3aa2006d387b87c2193137ef1fae4e19a1920485e96369cb1b677"
   }
 }
