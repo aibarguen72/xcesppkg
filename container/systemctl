@@ -1,0 +1,69 @@
+#!/bin/bash
+# systemctl — stand-in for systemd inside the generic XCESP container.
+#
+# The container has no systemd.  XCESP (install.sh, xcesp-activate,
+# xcespserver's `reboot light` / `system activate`, FRR / snmpd handling)
+# calls a few systemctl verbs; this script maps them onto the container:
+#
+#   restart|reboot  xcesp / xcespwdog / (bare reboot)
+#                   -> restart the XCESP stack: xcesp-entrypoint reruns
+#                      xcesp-activate and xcespwdog (the container keeps
+#                      running; a real host reboot is the host's business)
+#   start|restart|reload|enable --now  snmpd   -> (re)start the snmpd daemon
+#   stop|disable --now  snmpd                  -> stop it
+#   is-active <unit>   -> 0 for xcesp while the stack runs, 3 otherwise
+#   anything else      -> logged and ignored (exit 0)
+#
+# Every call is logged to /var/xcesp/log/systemctl-container.log.
+
+LOG=/var/xcesp/log/systemctl-container.log
+RUN=/run/xcesp-ctr
+mkdir -p "$RUN" 2>/dev/null
+echo "$(date '+%F %T') systemctl $*" >> "$LOG" 2>/dev/null
+
+args=()
+for a in "$@"; do
+    case "$a" in --now|--quiet|-q|--no-block|--no-pager) ;; *) args+=("$a") ;; esac
+done
+verb="${args[0]:-}"
+unit="${args[1]:-}"
+unit="${unit%.service}"
+
+restart_stack() {
+    touch "$RUN/restart"
+    if [ -f "$RUN/wdog.pid" ]; then
+        kill -TERM "$(cat "$RUN/wdog.pid")" 2>/dev/null
+    fi
+}
+
+snmpd_stop() {
+    [ -f "$RUN/snmpd.pid" ] && kill "$(cat "$RUN/snmpd.pid")" 2>/dev/null
+    rm -f "$RUN/snmpd.pid"
+}
+
+snmpd_start() {
+    command -v snmpd >/dev/null 2>&1 || return 0
+    snmpd_stop
+    sleep 0.5
+    snmpd -LS0-5d -p "$RUN/snmpd.pid" -c /etc/snmp/snmpd.conf 2>/dev/null
+}
+
+case "$verb:$unit" in
+    reboot:*|restart:xcesp|restart:xcespwdog|start:xcesp|start:xcespwdog)
+        restart_stack ;;
+    start:snmpd|restart:snmpd|reload:snmpd|enable:snmpd|try-restart:snmpd|reload-or-restart:snmpd)
+        snmpd_start ;;
+    stop:snmpd|disable:snmpd)
+        snmpd_stop ;;
+    is-active:xcesp|is-active:xcespwdog)
+        [ -f "$RUN/wdog.pid" ] && kill -0 "$(cat "$RUN/wdog.pid")" 2>/dev/null && exit 0
+        exit 3 ;;
+    is-active:snmpd)
+        [ -f "$RUN/snmpd.pid" ] && kill -0 "$(cat "$RUN/snmpd.pid")" 2>/dev/null && exit 0
+        exit 3 ;;
+    is-active:*|is-enabled:*)
+        exit 3 ;;
+    *)
+        ;;
+esac
+exit 0

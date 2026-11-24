@@ -2,6 +2,28 @@
 
 ## unreleased (1.0.1)
 
+- P7 Debian build: debian/Dockerfile (debian:trixie builder: libsodium,
+  net-snmp, static libcrypt) + debian/build-debian.sh: rebuilds the binaries
+  in debian:trixie (arm64/build.sh) and swaps them into the x86 tarball ->
+  xcespkg-debian-<ver>.tar.gz (no NETCONF: sysrepo not packaged on Debian
+  13; needs GLIBC 2.38).
+- P7 generic container (container/): Debian 13 image installed with the
+  package's own install.sh; entrypoint = xcesp.service without systemd
+  (xcesp-activate, xcespwdog as xcesp, stop-all like a cgroup kill, restart
+  loop for reboot light / system activate); /usr/bin/systemctl stand-in
+  (stack restart, snmpd); per-instance machine-id in the state dir (licence
+  system-mac + secret key per instance); launcher xcesp-ctr.sh (load /
+  start --state-dir --network --ip --web-port --cli-port / stop / restart /
+  remove / cli / shell / log / status / version; stable MAC 02:58:43:...,
+  network xcesp-lab, privileged, /lib/modules ro, stop timeout 45 s);
+  build.sh [--save] -> xcesp:<ver> / xcesp-<ver>-x86_64.tar; README.
+  Rootful smoke test 14/14 (licensed router + RIP in its netns, reboot light
+  inside the container, web interface, identity stable across restart and
+  image change).
+- xcesp-activate: with no `router` block and no `processes` block the
+  routing process count became "0\n0" (grep -c exits 1 on no match, so
+  `|| echo 0` appended a second 0): a junk role line, `seq: invalid ''`, and
+  1 routing process instead of the default 2.  Fixed.
 - xcesp-activate (P6): the xcespweb process comes from `management web`
   (aaa-config.state [web]) when that block is committed: any bind address
   (IP literals only, else 127.0.0.1), port, `--no-records` for records
