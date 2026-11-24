@@ -1,0 +1,104 @@
+#!/bin/bash
+# xcesp-setup — first setup of an XCESP system installed from the XCESP
+# installer: management interface and address, then the information needed
+# to license the system.  Run as root (sudo xcesp-setup); can be rerun.
+set -u
+PENDING=/var/lib/xcesp/firstboot-pending
+IFACES=/etc/network/interfaces
+[ "$(id -u)" = 0 ] || { echo "run as root: sudo xcesp-setup"; exit 1; }
+
+ask() {   # $1 prompt, $2 default -> REPLY
+    local p="$1" d="${2:-}"
+    if [ -n "$d" ]; then printf "%s [%s]: " "$p" "$d"; else printf "%s: " "$p"; fi
+    read -r REPLY
+    [ -z "$REPLY" ] && REPLY="$d"
+}
+
+echo ""
+echo "=== XCESP first setup ==="
+echo ""
+echo "Network interfaces:"
+ip -br link | awk '$1 != "lo" { printf "  %-16s %s\n", $1, $2 }'
+cur=$(ip route show default 2>/dev/null | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i+1); exit } }')
+echo ""
+ask "Management interface" "$cur"
+mif="$REPLY"
+if ! ip link show "$mif" >/dev/null 2>&1; then
+    echo "no interface '$mif' — network left unchanged"
+else
+    ask "Address: 'dhcp' or <address>/<prefix> (e.g. 192.0.2.20/24)" "dhcp"
+    addr="$REPLY"
+    {
+        echo "# Written by xcesp-setup $(date '+%F %T')"
+        echo "source /etc/network/interfaces.d/*"
+        echo ""
+        echo "auto lo"
+        echo "iface lo inet loopback"
+        echo ""
+        echo "# management interface"
+        echo "auto $mif"
+    } > "$IFACES.new"
+    if [ "$addr" = dhcp ]; then
+        echo "iface $mif inet dhcp" >> "$IFACES.new"
+    else
+        case "$addr" in
+            */*) ;;
+            *) echo "address without /prefix — using /24"; addr="$addr/24" ;;
+        esac
+        ask "Default gateway (empty = none)" ""
+        gw="$REPLY"
+        ask "DNS server (empty = none)" "$gw"
+        dns="$REPLY"
+        {
+            echo "iface $mif inet static"
+            echo "    address $addr"
+            [ -n "$gw" ] && echo "    gateway $gw"
+        } >> "$IFACES.new"
+        [ -n "$dns" ] && printf 'nameserver %s\n' "$dns" > /etc/resolv.conf
+    fi
+    mv "$IFACES.new" "$IFACES"
+    echo "Applying the management address ..."
+    ifdown --force "$mif" >/dev/null 2>&1
+    ifup "$mif" 2>&1 | tail -2
+    ip -br addr show "$mif"
+fi
+
+echo ""
+echo "=== XCESP ==="
+# First boot: XCESP's first start (xcesp-activate: Python packages, ...) can
+# still be running at the first login — wait for it, the system-mac comes
+# from the running server.
+waited=0
+while [ "$(systemctl is-active xcesp 2>/dev/null)" = activating ] && [ "$waited" -lt 300 ]; do
+    [ "$waited" = 0 ] && printf "XCESP is starting (first start takes a few minutes) "
+    printf "."
+    sleep 5
+    waited=$((waited + 5))
+done
+[ "$waited" -gt 0 ] && echo ""
+if systemctl is-active --quiet xcesp; then
+    # The server needs a few seconds after the service is active.
+    for _ in 1 2 3 4 5 6; do
+        echo "show server" | xcespcli >/dev/null 2>&1 && break
+        sleep 5
+    done
+    echo "XCESP is running ($(head -1 /var/xcesp/mainsw/VERSION 2>/dev/null))."
+else
+    echo "XCESP is not running yet: systemctl status xcesp"
+fi
+mac=$(echo "show server" | xcespcli 2>/dev/null | grep -i -m1 "system-mac\|system mac" | grep -o -i -E '[0-9a-f]{12}|([0-9a-f]{2}:){5}[0-9a-f]{2}' | head -1)
+echo ""
+echo "Licences are bound to this system's system-mac: ${mac:-see 'show server' in xcespcli}"
+echo "Send it to your XCESP supplier, then enter the codes in xcespcli:"
+echo "    config"
+echo "    server 1"
+echo "      license-auth system-mac"
+echo "      license-code <code>"
+echo "    !"
+echo "    commit"
+echo "    save"
+echo ""
+echo "The manual: http://<management address>:8080/.  The web interface (port 8081)"
+echo "is off until enabled with 'management web' (see the manual)."
+rm -f "$PENDING"
+echo "First setup done.  Run 'sudo xcesp-setup' to change the management address again."

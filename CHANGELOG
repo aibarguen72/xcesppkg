@@ -2,6 +2,18 @@
 
 ## unreleased (1.0.1)
 
+- P7 installer ISO (iso/): build-iso.sh remasters the official Debian 13
+  netinst (xorriso in debian:trixie, boot setup replayed: hybrid USB / DVD,
+  BIOS + UEFI) with a first, default, never-auto-started entry "Install
+  XCESP (ERASES THE FIRST DISK)"; preseed.cfg (whole first disk, DHCP,
+  mirror, no root login, xcespadmin / xcesp with forced change, XCESP runtime
+  packages, SSH); late.sh installs XCESP with the package's install.sh in the
+  target; first login offers xcesp-setup (management interface DHCP /
+  static, waits for XCESP's first start, prints the system-mac and how to
+  enter licence codes).  Debian's 30 s speech-synthesis autostart is removed
+  from the BIOS menu.  --serial-test variant for QEMU.  QEMU test: unattended
+  install OK (2 h 20 under TCG), first login + setup OK, xcesp.service
+  active after 20 s on the next boot, system-mac reported.
 - P7 Debian build: debian/Dockerfile (debian:trixie builder: libsodium,
   net-snmp, static libcrypt) + debian/build-debian.sh: rebuilds the binaries
   in debian:trixie (arm64/build.sh) and swaps them into the x86 tarball ->
