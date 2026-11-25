@@ -17,6 +17,33 @@ ask() {   # $1 prompt, $2 default -> REPLY
 echo ""
 echo "=== XCESP first setup ==="
 echo ""
+
+# Keyboard layout of the console.  The installer sets US; with another
+# physical keyboard, symbols typed at the console (passwords!) are stored
+# as different characters than the same keys send over SSH.
+KBD=/etc/default/keyboard
+cur_kbd=$(sed -n 's/^XKBLAYOUT="\{0,1\}\([^",]*\).*/\1/p' "$KBD" 2>/dev/null)
+cur_kbd=${cur_kbd:-us}
+echo "Console keyboard layout: $cur_kbd  (Enter keeps it; e.g. es, de, fr, it, pt, gb, latam)"
+while :; do
+    ask "Keyboard layout" "$cur_kbd"
+    kbd="$REPLY"
+    [ "$kbd" = "$cur_kbd" ] && break
+    if [ -f "/usr/share/X11/xkb/symbols/$kbd" ]; then
+        if grep -q '^XKBLAYOUT=' "$KBD" 2>/dev/null; then
+            sed -i "s/^XKBLAYOUT=.*/XKBLAYOUT=\"$kbd\"/; s/^XKBVARIANT=.*/XKBVARIANT=\"\"/" "$KBD"
+        else
+            printf 'XKBMODEL="pc105"\nXKBLAYOUT="%s"\nXKBVARIANT=""\nXKBOPTIONS=""\n' "$kbd" > "$KBD"
+        fi
+        setupcon --force >/dev/null 2>&1 || setupcon >/dev/null 2>&1
+        echo "Keyboard layout set to '$kbd'."
+        echo "If a password was set at this console with the '$cur_kbd' layout and contains"
+        echo "symbols, set it again now (passwd) so it matches what an SSH client sends."
+        break
+    fi
+    echo "unknown layout '$kbd' (see /usr/share/X11/xkb/symbols/)"
+done
+echo ""
 echo "Network interfaces:"
 ip -br link | awk '$1 != "lo" { printf "  %-16s %s\n", $1, $2 }'
 cur=$(ip route show default 2>/dev/null | awk '{ for (i = 1; i < NF; i++) if ($i == "dev") { print $(i+1); exit } }')
@@ -86,6 +113,124 @@ if systemctl is-active --quiet xcesp; then
 else
     echo "XCESP is not running yet: systemctl status xcesp"
 fi
+
+# Access options: SSH into the CLI, web interface, user manual.
+# Each question defaults to the current state (first setup: all off), so a
+# rerun of xcesp-setup does not undo what was enabled later in the CLI.
+#   SSH:    management aaa sshd-integration + CLI user `admin` (role 1).
+#           XCESP creates the groups xcespg1..xcespg4; the OS administrator
+#           xcespadmin keeps its shell.
+#   web:    management web enabled, bind-address 0.0.0.0 (port 8081).
+#   manual: [DOC_HTTPD] ENABLED in xcespserver.ini (port 8080).
+# The web and manual servers are XCESP processes, built at service start:
+# the step ends with one XCESP restart, which also applies users and SSH.
+AAA_STATE=/var/lib/xcesp/aaa-config.state
+SERVER_INI=/var/xcesp/cfg/xcespserver.ini
+state_get() {   # $1 section, $2 key -> value or empty
+    awk -v sec="$1" -v key="$2" '
+        /^\[/ { cur = substr($0, 2, length($0) - 2); next }
+        cur == sec && index($0, key " = ") == 1 { sub(/^[^=]+= */, ""); print; exit }
+    ' "$AAA_STATE" 2>/dev/null
+}
+doc_get() {
+    awk '/^\[DOC_HTTPD\]/ { s = 1; next } /^\[/ { s = 0 }
+         s && /^ENABLED[[:space:]]*=/ { sub(/^[^=]*=[[:space:]]*/, ""); sub(/[[:space:]]*[;#].*$/, ""); print; exit }' \
+        "$SERVER_INI" 2>/dev/null
+}
+yn() { case "$1" in y|Y|yes|YES|Yes|true) echo yes ;; *) echo no ;; esac; }
+first=0; [ -f "$PENDING" ] && first=1
+cur_ssh=$(yn "$(state_get global sshd-integration)")
+cur_web=$(yn "$(state_get web enabled)")
+cur_doc=no; [ "$first" = 0 ] && cur_doc=$(yn "$(doc_get)")
+
+if systemctl is-active --quiet xcesp; then
+    echo ""
+    echo "=== Access to XCESP ==="
+    echo "SSH integration: XCESP users log in over SSH directly into the CLI."
+    ask "Enable SSH integration (and create the CLI user 'admin', all permissions)? (yes/no)" "$cur_ssh"
+    want_ssh=$(yn "$REPLY")
+    pw=""
+    if [ "$want_ssh" = yes ] && [ "$cur_ssh" = no ]; then
+        while :; do
+            printf "Password for 'admin' [admin]: "
+            read -rs pw; echo ""
+            [ -z "$pw" ] && pw=admin
+            case "$pw" in
+                *[[:space:]]*) echo "the password must not contain spaces" ;;
+                *) break ;;
+            esac
+        done
+    fi
+    echo ""
+    echo "Web interface (port 8081): status, configuration view, recordings."
+    ask "Enable the web interface? (yes/no)" "$cur_web"
+    want_web=$(yn "$REPLY")
+    [ "$want_web" = yes ] && {
+        echo "WARNING: the web interface has no login in this release.  It listens on"
+        echo "         all addresses: anyone who reaches port 8081 can use it."
+    }
+    echo ""
+    echo "User manual (port 8080): the XCESP documentation in a browser."
+    ask "Enable the user manual? (yes/no)" "$cur_doc"
+    want_doc=$(yn "$REPLY")
+
+    if [ "$want_ssh" != "$cur_ssh" ] || [ "$want_web" != "$cur_web" ] || [ -n "$pw" ] \
+       || [ "$want_doc" != "$cur_doc" ] || [ "$first" = 1 ]; then
+        log=/var/log/xcesp-setup-access.log
+        : > "$log"; chmod 600 "$log"
+        delta=$(mktemp /tmp/xcesp-setup-access.XXXXXX)
+        chmod 600 "$delta"
+        {
+            echo "management"
+            echo "  aaa"
+            echo "    sshd-integration $([ "$want_ssh" = yes ] && echo true || echo false)"
+            if [ -n "$pw" ]; then
+                echo "    user admin"
+                echo "      role 1"
+                echo "      password $pw"
+                echo "      full-name XCESP administrator"
+                echo "    !"
+            fi
+            echo "  !"
+            echo "  web"
+            if [ "$want_web" = yes ]; then
+                echo "    enabled true"
+                echo "    bind-address 0.0.0.0"
+            else
+                echo "    enabled false"
+            fi
+            echo "  !"
+            echo "!"
+        } > "$delta"
+        ok=1
+        xcespcli --role 1 --merge-config "$delta" >> "$log" 2>&1 \
+            && printf 'config\nsave\nend\n' | xcespcli --role 1 >> "$log" 2>&1 || ok=0
+        rm -f "$delta"
+        # The manual is an INI setting (no CLI node yet).
+        if [ -f "$SERVER_INI" ] && grep -q '^\[DOC_HTTPD\]' "$SERVER_INI"; then
+            v=$([ "$want_doc" = yes ] && echo true || echo false)
+            awk -v v="$v" '/^\[DOC_HTTPD\]/ { s = 1; print; next } /^\[/ { s = 0 }
+                 s && /^ENABLED[[:space:]]*=/ { print "ENABLED   = " v; next } { print }' \
+                "$SERVER_INI" > "$SERVER_INI.new" && cat "$SERVER_INI.new" > "$SERVER_INI" && rm -f "$SERVER_INI.new"
+        fi
+        if [ "$ok" = 1 ]; then
+            printf "Applying (XCESP restarts) "
+            systemctl restart xcesp >> "$log" 2>&1
+            for _ in $(seq 1 60); do
+                [ "$(systemctl is-active xcesp 2>/dev/null)" = active ] && \
+                    echo "show server" | xcespcli >/dev/null 2>&1 && break
+                printf "."; sleep 5
+            done
+            echo ""
+        else
+            echo "Could not apply the access settings (see $log); configure them later in the CLI."
+        fi
+    fi
+    [ "$want_ssh" = yes ] && echo "SSH: ssh admin@<management address> lands in the CLI."
+    [ -n "$pw" ] && [ "$pw" = admin ] && \
+        echo "NOTE: 'admin' / 'admin' is the default — change it in the CLI (management / aaa / user admin / password <new>)."
+    unset pw
+fi
 mac=$(echo "show server" | xcespcli 2>/dev/null | grep -i -m1 "system-mac\|system mac" | grep -o -i -E '[0-9a-f]{12}|([0-9a-f]{2}:){5}[0-9a-f]{2}' | head -1)
 echo ""
 echo "Licences are bound to this system's system-mac: ${mac:-see 'show server' in xcespcli}"
@@ -98,7 +243,9 @@ echo "    !"
 echo "    commit"
 echo "    save"
 echo ""
-echo "The manual: http://<management address>:8080/.  The web interface (port 8081)"
-echo "is off until enabled with 'management web' (see the manual)."
+if [ "${want_doc:-no}" = yes ]; then echo "The manual:        http://<management address>:8080/"
+else echo "The manual is off (enable it with 'sudo xcesp-setup')."; fi
+if [ "${want_web:-no}" = yes ]; then echo "The web interface: http://<management address>:8081/  (no login in this release)"
+else echo "The web interface is off (enable it with 'sudo xcesp-setup' or 'management web')."; fi
 rm -f "$PENDING"
 echo "First setup done.  Run 'sudo xcesp-setup' to change the management address again."

@@ -1,5 +1,29 @@
 # Changelog - xcesppkg
 
+## unreleased (master)
+
+- ISO `xcesp-setup`: first step "Console keyboard layout" — shows the
+  current layout (the installer sets `us`), Enter keeps it, a layout code
+  (es, de, fr, latam, ...) switches /etc/default/keyboard and applies it at
+  once (setupcon).  A password typed at a US-layout console with a
+  different physical keyboard stored other characters for the symbols, so
+  the same password failed over SSH (owner, ISO test on HULK, 2026-11-25).
+  The preseed installs `console-setup` explicitly.
+- ISO `xcesp-setup`: new step "Access to XCESP" with three questions, each
+  defaulting to the current state (first setup: all off), so a rerun never
+  undoes what was enabled later in the CLI:
+  - SSH integration (`management aaa sshd-integration`); when first
+    enabled, also the CLI user `admin`, role 1 (all permissions), password
+    asked with default `admin` (no spaces).  XCESP creates the groups
+    xcespg1..4; the OS administrator `xcespadmin` keeps its shell.
+  - Web interface (`management web enabled`, `bind-address 0.0.0.0`, port
+    8081), with a warning that it has no login in this release.
+  - User manual (`[DOC_HTTPD] ENABLED` in xcespserver.ini, port 8080) —
+    now OFF unless chosen (installs before this setup served it by default).
+  Applied with `xcespcli --merge-config` + `save`, then one XCESP restart
+  (the web / manual servers are XCESP processes built at service start).
+  Log: /var/log/xcesp-setup-access.log (0600).
+
 ## 1.0.1
 
 - xcesp-activate: creates the dsk storage directories install.sh creates
