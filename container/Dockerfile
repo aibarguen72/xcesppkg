@@ -27,7 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         isc-dhcp-client dnsmasq-base chrony hostapd wpasupplicant \
         libopus0 libspandsp2t64 libspeexdsp1 \
         tcpdump curl ca-certificates iputils-ping ethtool bridge-utils \
-    && rm -rf /var/lib/apt/lists/*
+        openssh-server \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /etc/ssh/ssh_host_*
 
 # systemctl stand-in first: install.sh and xcesp-activate call it.
 COPY systemctl /usr/bin/systemctl
@@ -51,7 +53,7 @@ COPY entrypoint.sh /usr/local/bin/xcesp-entrypoint
 RUN chmod 0755 /usr/local/bin/xcesp-entrypoint
 
 # xcespcli control port, web interface, documentation.
-EXPOSE 9900 8081 8089
+EXPOSE 22 9900 8081 8089
 LABEL org.opencontainers.image.title="xcesp"
 LABEL org.opencontainers.image.description="XCESP (x86_64, Debian 13), one instance per container"
 

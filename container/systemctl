@@ -11,6 +11,8 @@
 #                      running; a real host reboot is the host's business)
 #   start|restart|reload|enable --now  snmpd   -> (re)start the snmpd daemon
 #   stop|disable --now  snmpd                  -> stop it
+#   reload|restart|start  ssh / sshd           -> reload sshd (SIGHUP), or
+#                                                 start it when not running
 #   is-active <unit>   -> 0 for xcesp while the stack runs, 3 otherwise
 #   anything else      -> logged and ignored (exit 0)
 #
@@ -48,7 +50,21 @@ snmpd_start() {
     snmpd -LS0-5d -p "$RUN/snmpd.pid" -c /etc/snmp/snmpd.conf 2>/dev/null
 }
 
+sshd_reload() {
+    if [ -f /run/sshd.pid ] && kill -0 "$(cat /run/sshd.pid)" 2>/dev/null; then
+        kill -HUP "$(cat /run/sshd.pid)"
+    else
+        mkdir -p /run/sshd && chmod 0755 /run/sshd
+        /usr/sbin/sshd
+    fi
+}
+
 case "$verb:$unit" in
+    start:ssh|start:sshd|restart:ssh|restart:sshd|reload:ssh|reload:sshd|try-restart:ssh|try-restart:sshd|reload-or-restart:ssh|reload-or-restart:sshd|enable:ssh|enable:sshd)
+        sshd_reload ;;
+    is-active:ssh|is-active:sshd)
+        [ -f /run/sshd.pid ] && kill -0 "$(cat /run/sshd.pid)" 2>/dev/null && exit 0
+        exit 3 ;;
     reboot:*|restart:xcesp|restart:xcespwdog|start:xcesp|start:xcespwdog)
         restart_stack ;;
     start:snmpd|restart:snmpd|reload:snmpd|enable:snmpd|try-restart:snmpd|reload-or-restart:snmpd)

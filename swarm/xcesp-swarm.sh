@@ -18,7 +18,9 @@
 #       --mgmt-subnet <cidr>     default: 10.<200+id>.0.0/16
 #       --nets "<n1> <n2>.."     traffic networks (default "net1 net2", "" = none)
 #       --cpus <n> --memory <m>  per-device limits (podman --cpus / --memory)
-#       --seed-dir <dir>         first-start config per device (see README)
+#       --seed <name>            first-start config: $XCESP_SWARM_ETC/seeds/<name>/ (see README)
+#       --seed-dir <dir>         same, from any directory
+#       --license-enforce true|false  default false (xNMS test system)
 #       --force                  overwrite an existing definition
 #   up <swarm> [--nodes N]       create networks, create/start devices 1..N
 #   down <swarm>                 stop every device (containers + state kept)
@@ -78,6 +80,7 @@ load_conf() {
     [ -f "$f" ] || die "swarm '$SWARM' not defined ($f; use: xcesp-swarm init $SWARM --id <n>)"
     SWARM_ID=""; NODES=1; IMAGE=""; MGMT_SUBNET=""; MGMT_GATEWAY=""; HOST_OFFSET=10
     TRAFFIC_NETS="net1 net2"; CPUS=""; MEMORY=""; PARALLEL=8; SEED_DIR=""; STATE_DIR=""
+    SEED=""; LICENSE_ENFORCE=false
     # shellcheck disable=SC1090
     . "$f"
     [[ "$SWARM_ID" =~ ^[0-9]+$ ]] && [ "$SWARM_ID" -ge 1 ] && [ "$SWARM_ID" -le 60 ] \
@@ -86,6 +89,14 @@ load_conf() {
     [ "$NODES" -le 999 ] || die "$f: NODES must be <= 999"
     MGMT_SUBNET="${MGMT_SUBNET:-10.$((200 + SWARM_ID)).0.0/16}"
     STATE_DIR="${STATE_DIR:-$SHOME/$SWARM}"
+    # A named seed lives in $ETC/seeds/<name>/ (contract §3.1); SEED_DIR is
+    # the older form (any path).  SEED wins when both are set.
+    if [ -n "$SEED" ]; then
+        [[ "$SEED" =~ ^[a-z0-9][a-z0-9._-]*$ ]] || die "$f: bad SEED name '$SEED'"
+        SEED_DIR="$ETC/seeds/$SEED"
+        [ -d "$SEED_DIR" ] || die "$f: seed '$SEED' not found ($SEED_DIR)"
+    fi
+    case "$LICENSE_ENFORCE" in true|false) ;; *) die "$f: LICENSE_ENFORCE must be true or false" ;; esac
     [ -n "$IMAGE" ] || die "$f: IMAGE is empty"
     local base="${MGMT_SUBNET%/*}" len="${MGMT_SUBNET#*/}"
     [[ "$len" =~ ^[0-9]+$ ]] && [ "$len" -ge 8 ] && [ "$len" -le 30 ] || die "$f: bad MGMT_SUBNET $MGMT_SUBNET"
@@ -192,14 +203,17 @@ remove_networks() {
 # @NODE@ @HOST@ @INDEX@ @MGMT_IP@ @MGMT_PREFIX@ @MGMT_GW@ @SWARM@ replaced.
 # (The entrypoint seeds the image defaults only into an EMPTY cfg dir.)
 seed_cfg() {
-    local i="$1" cfg="$2" src f rel
-    [ -n "$SEED_DIR" ] || return 0
+    local i="$1" cfg="$2" src="" f rel
     [ -z "$(ls -A "$cfg" 2>/dev/null)" ] || return 0
-    if [ -d "$SEED_DIR/$(hname "$i")" ]; then src="$SEED_DIR/$(hname "$i")"
-    elif [ -d "$SEED_DIR/default" ]; then src="$SEED_DIR/default"
-    else return 0; fi
+    # Image defaults first (the entrypoint would do it only for an EMPTY cfg,
+    # and LICENSE_ENFORCE must be set before the first start).
     "$ENGINE" run --rm --network none --entrypoint tar "$IMAGE" -C /usr/share/xcesp-ctr/cfg -cf - . \
         | tar -xf - -C "$cfg"
+    if [ -n "$SEED_DIR" ]; then
+        if [ -d "$SEED_DIR/$(hname "$i")" ]; then src="$SEED_DIR/$(hname "$i")"
+        elif [ -d "$SEED_DIR/default" ]; then src="$SEED_DIR/default"; fi
+    fi
+    [ -n "$src" ] || return 0
     (cd "$src" && find . -type f) | while read -r rel; do
         f="$cfg/${rel#./}"
         mkdir -p "$(dirname "$f")"
@@ -208,6 +222,19 @@ seed_cfg() {
             -e "s|@MGMT_GW@|$MGMT_GATEWAY|g" -e "s|@SWARM@|$SWARM|g" "$src/$rel" > "$f"
     done
     echo "seeded cfg from $src"
+}
+
+# [SERVER] LICENSE_ENFORCE in the device's xcespserver.ini (contract §6.3).
+set_license_enforce() {
+    local ini="$1/xcespserver.ini"
+    [ -f "$ini" ] || return 0
+    awk -v v="$LICENSE_ENFORCE" '
+        /^\[/ { if (insec && !done) { print "LICENSE_ENFORCE      = " v; done = 1 }
+                insec = ($0 == "[SERVER]") }
+        insec && /^[ \t#]*LICENSE_ENFORCE[ \t]*=/ { if (!done) print "LICENSE_ENFORCE      = " v; done = 1; next }
+        { print }
+        END { if (insec && !done) print "LICENSE_ENFORCE      = " v }' "$ini" > "$ini.tmp" \
+        && cat "$ini.tmp" > "$ini" && rm -f "$ini.tmp"
 }
 
 start_node() {
@@ -220,6 +247,7 @@ start_node() {
     st="$STATE_DIR/$(hname "$i")"
     mkdir -p "$st/cfg" "$st/lib" "$st/dsk" "$st/log"
     seed_cfg "$i" "$st/cfg"
+    set_license_enforce "$st/cfg"
     local args=(run -d --name "$c" --hostname "$(hname "$i")"
         --privileged --restart on-failure --stop-timeout 45
         --label "xcesp.swarm=$SWARM" --label "xcesp.node=$i"
@@ -248,28 +276,76 @@ write_inventory() {
     inventory hosts > "$STATE_DIR/hosts"
 }
 
+# Image -> XCESP version, read once per image from the image's files.
+declare -A IMG_VER
+image_version() {
+    local img="$1"
+    if [ -z "${IMG_VER[$img]+set}" ]; then
+        IMG_VER[$img]=$("$ENGINE" run --rm --network none --entrypoint head "$img" -1 \
+            /var/xcesp/mainsw/VERSION 2>/dev/null | awk '{print $2}')
+    fi
+    echo "${IMG_VER[$img]}"
+}
+# Image a device actually runs (the swarm's IMAGE when not created yet).
+node_image() {
+    local img
+    img=$("$ENGINE" container inspect -f '{{.ImageName}}' "$(cname "$1")" 2>/dev/null) || img=""
+    echo "${img:-$IMAGE}" | sed 's|^localhost/||'
+}
+# SSH host key fingerprints from the device's state dir: "ed25519 SHA256:.." lines.
+node_hostkeys() {
+    local d="$STATE_DIR/$(hname "$1")/lib/ssh" f t
+    for f in "$d"/ssh_host_*_key.pub; do
+        [ -r "$f" ] || continue
+        t=${f##*/ssh_host_}; t=${t%_key.pub}
+        echo "$t $(awk '{print $2}' "$f" | base64 -d 2>/dev/null | openssl dgst -sha256 -binary | base64 | tr -d '=\n' | sed 's/^/SHA256:/')"
+    done
+}
+
 inventory() {
-    local fmt="${1:-csv}" i sep=""
+    local fmt="${1:-csv}" i sep="" img
     case "$fmt" in
         csv)
-            echo "device,container,mgmt_ip,mgmt_mac,cli_port,swarm"
+            echo "device,container,mgmt_ip,mgmt_mac,cli_port,swarm,ssh_port,image"
             for ((i = 1; i <= NODES; i++)); do
-                echo "$(hname "$i"),$(cname "$i"),$(node_ip "$i"),$(node_mac "$i" 0),$CLI_PORT,$SWARM"
+                echo "$(hname "$i"),$(cname "$i"),$(node_ip "$i"),$(node_mac "$i" 0),$CLI_PORT,$SWARM,22,$(node_image "$i")"
             done ;;
-        json)
-            printf '{"swarm":"%s","id":%s,"image":"%s","mgmt_subnet":"%s","mgmt_gateway":"%s","traffic_networks":[' \
-                "$SWARM" "$SWARM_ID" "$IMAGE" "$MGMT_SUBNET" "$MGMT_GATEWAY"
+        json)   # contract XNMS-INTERFACE.md §5, schema_version 1
+            local simg; simg=$(echo "$IMAGE" | sed 's|^localhost/||')
+            printf '{\n"schema_version": 1,\n"generated": "%s",\n' "$(date -u +%FT%TZ)"
+            printf '"swarm": "%s", "id": %s,\n"image": "%s", "xcesp_version": "%s",\n' \
+                "$SWARM" "$SWARM_ID" "$simg" "$(image_version "$IMAGE")"
+            printf '"license_enforce": %s,\n' "$LICENSE_ENFORCE"
+            printf '"mgmt": { "subnet": "%s", "gateway": "%s", "bridge": "xs%sm" },\n"networks": [' \
+                "$MGMT_SUBNET" "$MGMT_GATEWAY" "$SWARM_ID"
             local k=1 t
             for t in "${TNETS[@]}"; do
-                printf '%s{"name":"%s","interface":"eth%s"}' "$sep" "$t" "$k"; sep=","; k=$((k + 1))
+                printf '%s\n  { "name": "%s", "kind": "shared", "bridge": "xs%sn%s" }' "$sep" "$t" "$SWARM_ID" "$k"
+                sep=","; k=$((k + 1))
             done
-            printf '],"devices":['; sep=""
+            printf '\n],\n"devices": ['; sep=""
             for ((i = 1; i <= NODES; i++)); do
-                printf '%s\n{"device":"%s","index":%s,"container":"%s","mgmt_ip":"%s","mgmt_mac":"%s","cli_port":%s}' \
-                    "$sep" "$(hname "$i")" "$i" "$(cname "$i")" "$(node_ip "$i")" "$(node_mac "$i" 0)" "$CLI_PORT"
+                img=$(node_image "$i")
+                printf '%s\n  { "device": "%s", "index": %s, "container": "%s",\n' "$sep" "$(hname "$i")" "$i" "$(cname "$i")"
+                printf '    "image": "%s", "xcesp_version": "%s",\n' "$img" "$(image_version "$img")"
+                printf '    "mgmt_ip": "%s", "mgmt_mac": "%s", "ssh_port": 22, "cli_port": %s,\n' \
+                    "$(node_ip "$i")" "$(node_mac "$i" 0)" "$CLI_PORT"
+                printf '    "ssh_host_keys": {'
+                local hs="" ht hf
+                while read -r ht hf; do
+                    [ -n "$ht" ] || continue
+                    printf '%s "%s": "%s"' "$hs" "$ht" "$hf"; hs=","
+                done < <(node_hostkeys "$i")
+                printf ' },\n    "interfaces": [\n      { "name": "eth0", "network": "mgmt", "mac": "%s" }' "$(node_mac "$i" 0)"
+                k=1
+                for t in "${TNETS[@]}"; do
+                    printf ',\n      { "name": "eth%s", "network": "%s", "mac": "%s" }' "$k" "$t" "$(node_mac "$i" "$k")"
+                    k=$((k + 1))
+                done
+                printf ' ] }'
                 sep=","
             done
-            printf '\n]}\n' ;;
+            printf '\n]\n}\n' ;;
         hosts)
             echo "# xcesp-swarm $SWARM ($MGMT_SUBNET)"
             for ((i = 1; i <= NODES; i++)); do echo "$(node_ip "$i") $(hname "$i")"; done ;;
@@ -278,36 +354,50 @@ inventory() {
 }
 
 # ------------------------------------------------------------------- status
-# Fills ST_STATE[i], ST_UP[i] (uptime text), ST_CLI[i] (up/down/-),
+# Fills ST_STATE[i], ST_UP[i] (uptime text), ST_CLI[i] / ST_SSH[i] (up/down/-),
 # ST_CPU[i], ST_MEM[i] for devices 1..max(NODES, existing).
-declare -A ST_STATE ST_UP ST_CLI ST_CPU ST_MEM
+declare -A ST_STATE ST_UP ST_CLI ST_SSH ST_CPU ST_MEM ST_IMG IMG_SSHD
 ST_MAX=0
-probe_cli() {   # $1 = device -> exit 0 when the CLI control port accepts
+probe_port() {   # $1 = device, $2 = port -> exit 0 when it accepts
     if [ "$ROOT" = 1 ]; then
-        timeout 2 bash -c "exec 3<>/dev/tcp/$(node_ip "$1")/$CLI_PORT" 2>/dev/null
+        timeout 2 bash -c "exec 3<>/dev/tcp/$(node_ip "$1")/$2" 2>/dev/null
     else   # rootless: the host cannot reach the bridge; probe from inside
-        timeout 4 "$ENGINE" exec "$(cname "$1")" bash -c "exec 3<>/dev/tcp/127.0.0.1/$CLI_PORT" 2>/dev/null
+        timeout 4 "$ENGINE" exec "$(cname "$1")" bash -c "exec 3<>/dev/tcp/127.0.0.1/$2" 2>/dev/null
     fi
+}
+# Does the image run sshd (xcesp 1.1.1-dev1 and later: EXPOSE 22)?  Cached.
+image_has_sshd() {
+    local img="$1"
+    if [ -z "${IMG_SSHD[$img]+set}" ]; then
+        if "$ENGINE" image inspect -f '{{range $p, $_ := .Config.ExposedPorts}}{{$p}} {{end}}' "$img" 2>/dev/null \
+                | grep -qw '22/tcp'; then IMG_SSHD[$img]=1; else IMG_SSHD[$img]=0; fi
+    fi
+    [ "${IMG_SSHD[$img]}" = 1 ]
 }
 collect_status() {
     local name state status i running=() tmp n cpu mem
-    ST_STATE=(); ST_UP=(); ST_CLI=(); ST_CPU=(); ST_MEM=()
+    ST_STATE=(); ST_UP=(); ST_CLI=(); ST_SSH=(); ST_CPU=(); ST_MEM=(); ST_IMG=()
     ST_MAX=$NODES
-    while IFS='|' read -r name state status; do
+    local img
+    while IFS='|' read -r name state status img; do
         i="${name##*-}"; i=$((10#$i))
-        ST_STATE[$i]="$state"; ST_UP[$i]="$status"
+        ST_STATE[$i]="$state"; ST_UP[$i]="$status"; ST_IMG[$i]="$img"
         [ "$i" -gt "$ST_MAX" ] && ST_MAX=$i
         [ "$state" = running ] && running+=("$i")
-    done < <("$ENGINE" ps -a --filter "label=xcesp.swarm=$SWARM" --format '{{.Names}}|{{.State}}|{{.Status}}' 2>/dev/null)
+    done < <("$ENGINE" ps -a --filter "label=xcesp.swarm=$SWARM" --format '{{.Names}}|{{.State}}|{{.Status}}|{{.Image}}' 2>/dev/null)
     [ "${#running[@]}" -gt 0 ] || return 0
     tmp=$(mktemp -d)
+    for i in "${running[@]}"; do image_has_sshd "${ST_IMG[$i]}" || true; done   # fill the cache here
     for i in "${running[@]}"; do
-        ( probe_cli "$i" && touch "$tmp/$i" ) &
+        ( probe_port "$i" "$CLI_PORT" && touch "$tmp/$i.cli" ) &
+        if [ "${IMG_SSHD[${ST_IMG[$i]}]}" = 1 ]; then ( probe_port "$i" 22 && touch "$tmp/$i.ssh" ) & fi
         while [ "$(jobs -rp | wc -l)" -ge 32 ]; do wait -n 2>/dev/null || true; done
     done
     wait
     for i in "${running[@]}"; do
-        if [ -e "$tmp/$i" ]; then ST_CLI[$i]=up; else ST_CLI[$i]=down; fi
+        if [ -e "$tmp/$i.cli" ]; then ST_CLI[$i]=up; else ST_CLI[$i]=down; fi
+        if [ "${IMG_SSHD[${ST_IMG[$i]}]}" != 1 ]; then ST_SSH[$i]=-
+        elif [ -e "$tmp/$i.ssh" ]; then ST_SSH[$i]=up; else ST_SSH[$i]=down; fi
     done
     rm -rf "$tmp"
     local names=()
@@ -323,7 +413,9 @@ node_health() {
     local i="$1" s="${ST_STATE[$1]:-missing}"
     if [ "$i" -gt "$NODES" ]; then echo extra; return; fi
     case "$s" in
-        running) if [ "${ST_CLI[$i]:-down}" = up ]; then echo up; else echo starting; fi ;;
+        # up = CLI and SSH answer (CLI only for images without sshd)
+        running) if [ "${ST_CLI[$i]:-down}" = up ] && [ "${ST_SSH[$i]:-down}" != down ]; then echo up
+                 else echo starting; fi ;;
         missing) echo missing ;;
         exited|stopped|created|configured) echo stopped ;;
         *) echo "$s" ;;
@@ -332,26 +424,26 @@ node_health() {
 
 print_status() {   # $1 = 1: only devices that are not up
     local only_bad="${1:-0}" i h n_up=0 n_run=0 rows=0
-    printf '%-12s %-9s %-15s %-5s %-8s %-10s %s\n' DEVICE HEALTH MGMT-IP CLI CPU MEM STATUS
+    printf '%-12s %-9s %-15s %-5s %-5s %-8s %-10s %s\n' DEVICE HEALTH MGMT-IP CLI SSH CPU MEM STATUS
     for ((i = 1; i <= ST_MAX; i++)); do
         h=$(node_health "$i")
         [ "$h" = up ] && n_up=$((n_up + 1))
         [ "${ST_STATE[$i]:-}" = running ] && n_run=$((n_run + 1))
         [ "$h" = missing ] && [ "$i" -gt "$NODES" ] && continue
         [ "$only_bad" = 1 ] && [ "$h" = up ] && continue
-        printf '%-12s %-9s %-15s %-5s %-8s %-10s %s\n' "$(hname "$i")" "$h" "$(node_ip "$i")" \
-            "${ST_CLI[$i]:--}" "${ST_CPU[$i]:--}" "${ST_MEM[$i]:--}" "${ST_UP[$i]:-}"
+        printf '%-12s %-9s %-15s %-5s %-5s %-8s %-10s %s\n' "$(hname "$i")" "$h" "$(node_ip "$i")" \
+            "${ST_CLI[$i]:--}" "${ST_SSH[$i]:--}" "${ST_CPU[$i]:--}" "${ST_MEM[$i]:--}" "${ST_UP[$i]:-}"
         rows=$((rows + 1))
     done
     [ "$only_bad" = 1 ] && [ "$rows" = 0 ] && echo "(no problems)"
-    echo "swarm $SWARM: $NODES defined, $n_run running, $n_up up (CLI answering)"
+    echo "swarm $SWARM: $NODES defined, $n_run running, $n_up up (CLI + SSH answering)"
     [ "$n_up" = "$NODES" ]
 }
 
 # ------------------------------------------------------------------ commands
 cmd_init() {
     local name="${1:-}"; check_name "$name"; shift
-    local id="" nodes=1 image="" subnet="" nets="net1 net2" cpus="" mem="" seed="" force=0
+    local id="" nodes=1 image="" subnet="" nets="net1 net2" cpus="" mem="" seed="" seedname="" lic=false force=0
     while [ $# -gt 0 ]; do
         case "$1" in
             --id) id="$2"; shift 2 ;;
@@ -362,6 +454,8 @@ cmd_init() {
             --cpus) cpus="$2"; shift 2 ;;
             --memory) mem="$2"; shift 2 ;;
             --seed-dir) seed="$(readlink -f "$2")"; shift 2 ;;
+            --seed) seedname="$2"; shift 2 ;;
+            --license-enforce) lic="$2"; shift 2 ;;
             --force) force=1; shift ;;
             *) die "init: unknown option $1" ;;
         esac
@@ -390,7 +484,9 @@ TRAFFIC_NETS="$nets"        # internal L2 networks -> eth1, eth2.. (order matter
 CPUS=$cpus                       # per-device --cpus (empty = no limit)
 MEMORY=$mem                     # per-device --memory, e.g. 1g (empty = no limit)
 PARALLEL=8                  # devices created/started at the same time
+SEED="$seedname"                      # optional: named seed $ETC/seeds/<name>/ (wins over SEED_DIR)
 SEED_DIR="$seed"                  # optional: <dir>/<device>/ or <dir>/default/ -> first-start cfg
+LICENSE_ENFORCE=$lic              # [SERVER] LICENSE_ENFORCE written into each device at creation
 #STATE_DIR=$SHOME/$name    # per-device state directories
 EOF
     echo "defined swarm $name: $f"
@@ -550,6 +646,7 @@ cmd_preflight() {
     chk net.ipv6.neigh.default.gc_thresh3 8192
     chk kernel.pid_max 4194304
     chk fs.file-max 1000000
+    chk net.netfilter.nf_conntrack_max 262144
     v=$(sysctl -n net.bridge.bridge-nf-call-iptables 2>/dev/null || echo 0)
     [ "$v" = 1 ] && { warn "net.bridge.bridge-nf-call-iptables=1: traffic on net1/net2 goes through host iptables (set it to 0)"; ok=0; }
     if [ -n "${1:-}" ]; then

@@ -60,8 +60,8 @@ Health per device:
 
 | Health | Meaning |
 |---|---|
-| `up` | running, and the CLI port 9900 accepts on the mgmt IP |
-| `starting` | running, CLI not answering yet (normal for about 1 minute after start) |
+| `up` | running, and CLI port 9900 and SSH port 22 accept on the mgmt IP (CLI only for images without sshd, before 1.1.1-dev1) |
+| `starting` | running, CLI or SSH not answering yet (normal for a few seconds after start) |
 | `stopped` | the container exists but is not running |
 | `missing` | the container has not been created |
 | `extra` | a device above `NODES` |
@@ -73,10 +73,30 @@ Health per device:
 `up` and `scale` write `/var/lib/xcesp-swarm/<swarm>/inventory.csv`,
 `inventory.json` and `hosts` (append the last one to `/etc/hosts` for names).
 `xcesp-swarm inventory <swarm> --format json` prints the same data.
+`inventory.json` follows `XNMS-INTERFACE.md` §5 (`schema_version` 1):
+per device the image and XCESP version it runs, mgmt IP and MAC, SSH and
+CLI ports, SSH host key fingerprints (from `<state>/<device>/lib/ssh`, once
+the device has started) and its interfaces.
 
-## Initial configuration per device (`--seed-dir`)
+## SSH and licences
 
-On a device's first start, if `<seed>/<swarm>-NNN/` exists (or else
+Images from 1.1.1-dev1 run sshd on all addresses. Each device makes its
+host keys on the first start in `<state>/<device>/lib/ssh/` and keeps them
+(they change only with `destroy --purge`). Accounts are not swarm magic:
+they come from the device configuration (`management aaa` users,
+`public-key`, `sshd-integration true`), usually from the seed.
+
+`LICENSE_ENFORCE` (definition, default `false`) is written into
+`[SERVER] LICENSE_ENFORCE` of each device's `xcespserver.ini` when the
+device is created. With `false` a device accepts any configuration
+regardless of licences (xNMS test system).
+
+## Initial configuration per device (`--seed`, `--seed-dir`)
+
+A seed is a directory. `SEED=<name>` (`init --seed <name>`) uses
+`/etc/xcesp-swarm/seeds/<name>/` (root-owned, set up once per host);
+`SEED_DIR=<dir>` (`--seed-dir`) any directory. On a device's first start,
+if `<seed>/<swarm>-NNN/` exists (or else
 `<seed>/default/`), its files are copied into the device's cfg directory on
 top of the image defaults, with these placeholders replaced:
 
@@ -91,6 +111,26 @@ top of the image defaults, with these placeholders replaced:
 For the replica swarm this is how the field configurations, such as an
 `xcespserver.conf` per device, are loaded. A device whose cfg directory is
 not empty is not seeded again.
+
+**Twin seed for xNMS** (`/etc/xcesp-swarm/seeds/twin/default/xcespserver.conf`):
+the xNMS user with its public key, so every twin is reachable by xNMS from
+its first start and after each `reset`:
+
+```
+management
+  aaa
+    sshd-integration
+    user xnms
+      role 1
+      public-key xnms1
+        key ssh-ed25519 AAAAC3Nza... xnms@xnms1
+      !
+    !
+  !
+!
+```
+
+When the xNMS key changes, update the seed and reset the twins.
 
 ## State
 

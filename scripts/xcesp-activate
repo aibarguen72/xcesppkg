@@ -1482,6 +1482,12 @@ fi  # CONFIG_ONLY = 0 (software sync + process list)
 # will re-materialise on the next enable.
 
 MANAGED_USERS_FILE=${MANAGED_USERS_FILE:-/var/lib/xcesp/managed-users.state}
+# 1.1.1: SSH public keys of the local users, written by xcespserver next to
+# managed-users.state ("<user> <type> <base64> [comment]" lines), installed
+# root-owned as $XCESP_AUTHKEYS_DIR/<user>: the only AuthorizedKeysFile sshd
+# reads for xcespg1..4 members (a user's own ~/.ssh is ignored).
+MANAGED_KEYS_FILE=${MANAGED_KEYS_FILE:-$(dirname "$MANAGED_USERS_FILE")/managed-keys.state}
+XCESP_AUTHKEYS_DIR=/etc/ssh/xcesp-authorized-keys
 XCESP_LOGIN_BIN=/usr/lib/xcesp/xcesp-login
 SSHD_DROPIN=/etc/ssh/sshd_config.d/50-xcesp.conf
 XCESP_ROLE_GROUPS="xcespg1 xcespg2 xcespg3 xcespg4"
@@ -1602,6 +1608,7 @@ if [ "$sshd_integration" = "true" ]; then
 
 Match Group xcespg1,xcespg2,xcespg3,xcespg4
     ForceCommand /usr/lib/xcesp/xcesp-login
+    AuthorizedKeysFile /etc/ssh/xcesp-authorized-keys/%u
     PermitTTY yes
     X11Forwarding no
     AllowTcpForwarding no
@@ -1685,6 +1692,38 @@ SSHEOF
         fi
     done
 
+    # 3b. SSH public keys (1.1.1): one root-owned file per state user that
+    #     has keys; files of other users are removed.  Rewritten only when
+    #     the content changes (sshd reads them per login, no reload needed).
+    declare -A state_user_keys=()
+    if [ -f "$MANAGED_KEYS_FILE" ] && [ "$(head -1 "$MANAGED_KEYS_FILE")" = "# xcesp managed-keys v1" ]; then
+        while read -r k_user k_rest; do
+            case "$k_user" in ''|'#'*) continue ;; esac
+            [ -n "${state_user_role[$k_user]+set}" ] || continue
+            state_user_keys["$k_user"]+="$k_rest"$'\n'
+        done < "$MANAGED_KEYS_FILE"
+    elif [ -f "$MANAGED_KEYS_FILE" ]; then
+        log "AAA: ignoring $MANAGED_KEYS_FILE — bad magic header"
+    fi
+    install -d -m 0755 -o root -g root "$XCESP_AUTHKEYS_DIR"
+    for u_name in "${!state_user_keys[@]}"; do
+        xcesp_aaa_reserved "$u_name" && continue
+        f="$XCESP_AUTHKEYS_DIR/$u_name"
+        want="${state_user_keys[$u_name]}"
+        if [ ! -f "$f" ] || [ "$(cat "$f"; echo x)" != "${want}x" ]; then
+            printf '%s' "$want" > "$f.tmp" && chmod 0644 "$f.tmp" && mv -f "$f.tmp" "$f"
+            log "  $u_name: $(printf '%s' "$want" | grep -c .) SSH public key(s) installed"
+        fi
+    done
+    for f in "$XCESP_AUTHKEYS_DIR"/*; do
+        [ -f "$f" ] || continue
+        u="${f##*/}"
+        if [ -z "${state_user_keys[$u]+set}" ]; then
+            rm -f "$f"
+            log "  $u: SSH public keys removed"
+        fi
+    done
+
     # 4. Linux → State: remove any Linux account whose primary group is
     #    xcespg1..4 (or that is a supplementary member) and whose name or
     #    role does NOT match the state file.
@@ -1722,6 +1761,12 @@ if [ "$sshd_integration" = "false" ]; then
         rm -f "$SSHD_DROPIN"
         log "  removed $SSHD_DROPIN (sshd-integration=false)"
         systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
+    fi
+
+    # 1b. Remove the managed SSH public keys (1.1.1).
+    if [ -d "$XCESP_AUTHKEYS_DIR" ]; then
+        rm -rf "$XCESP_AUTHKEYS_DIR"
+        log "  removed $XCESP_AUTHKEYS_DIR"
     fi
 
     # 2. Remove every account whose primary group is xcespg1..4 (or that

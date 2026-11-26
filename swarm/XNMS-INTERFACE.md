@@ -64,6 +64,11 @@ Container plan (*planned*):
   a key, a password or both. xNMS logs in with keys only, so it does **not**
   need a password-login stopgap: steps 2 and 3 ship together, before the
   demo.
+  *Delivered in 1.1.1-dev1:* `public-key <label>` / `key <line>` under
+  `management aaa user`. Committed keys are installed at the next XCESP
+  start or with `system activate` (show mode), like every AAA change. Key
+  rotation: commit the new label and `no public-key <old>`, then
+  `system activate`.
 * **Health.** `status`/`health` get an `SSH` column (TCP 22 on the mgmt IP)
   next to `CLI` (TCP 9900). A device counts as `up` when **both** answer.
 

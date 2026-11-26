@@ -1,5 +1,36 @@
 # Changelog - xcesppkg
 
+## 1.1.1-dev1
+
+- First release of the NEXT line (1.1.x).
+- Bundles xcespserver 1.1.1-dev1, xcespcli 1.0.1, xcespproc 1.0.1,
+  xcespwdog 1.0.1, xcespweb 1.0.1 (xcespserver: SSH public keys for local
+  users); also carries the commercial ISO `xcesp-setup` changes listed
+  under "unreleased (master)" below (to ship there as 1.0.2).
+- New `swarm/`: `xcesp-swarm` launches, monitors and stops swarms of XCESP
+  containers for the xNMS lab (mgmt bridge with fixed addresses and NAT,
+  internal L2 traffic networks, fixed MACs, per-device state), and
+  `XNMS-INTERFACE.md`, the interface contract with xNMS (version 2.2).
+- xcesp-activate: SSH public keys of local users (xcespserver 1.1.1-dev1
+  `public-key`): installed from managed-keys.state as root-owned
+  `/etc/ssh/xcesp-authorized-keys/<user>`, removed with the user or when
+  sshd-integration is off; the managed sshd drop-in sets
+  `AuthorizedKeysFile /etc/ssh/xcesp-authorized-keys/%u` in the xcespg
+  Match block (a user's own ~/.ssh is ignored).
+- Container image: `openssh-server`, sshd on all addresses (port 22);
+  per-instance host keys created on the first start in
+  `/var/lib/xcesp/ssh` and kept; a stack restart (`reboot light`, `system
+  activate`) leaves sshd and its sessions running; the `systemctl`
+  stand-in handles `reload/restart/is-active ssh|sshd`.
+- xcesp-swarm synced with the contract: `SSH` column and health `up` = CLI
+  + SSH (CLI only for images without sshd); `LICENSE_ENFORCE` option
+  written into each device's xcespserver.ini at creation (default false);
+  named seeds `$XCESP_SWARM_ETC/seeds/<name>` (`init --seed`), the cfg is
+  filled from the image defaults first; `inventory.json` schema_version 1
+  (per-device image + xcesp_version, ssh_port, SSH host key fingerprints,
+  interfaces, network bridges); preflight checks
+  `net.netfilter.nf_conntrack_max`.
+
 ## unreleased (master)
 
 - ISO `xcesp-setup`: first step "Console keyboard layout" — shows the
