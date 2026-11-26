@@ -39,8 +39,13 @@
   interfaces, network bridges); preflight checks
   `net.netfilter.nf_conntrack_max`.
 
-## unreleased (master)
+## 1.0.2
 
+- Bundles xcespserver 1.0.1, xcespcli 1.0.1, xcespproc 1.0.2, xcespwdog 1.0.1,
+  xcespweb 1.0.1 with xcesp-on-xc 1.0.2: MODEM SMS `+CMGL` / `+CMGR` / `+CMT`
+  no longer print an empty line between the header and the `<pdu>` / text
+  (TS 27.005 framing).  Field log 2026-11-26: "PC SMS Gateway Server" 4.2
+  read every message as empty (no sender, 00:00:00, "@@") or dropped it.
 - ISO `xcesp-setup`: first step "Console keyboard layout" — shows the
   current layout (the installer sets `us`), Enter keeps it, a layout code
   (es, de, fr, latam, ...) switches /etc/default/keyboard and applies it at
