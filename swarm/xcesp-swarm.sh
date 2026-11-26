@@ -15,7 +15,7 @@
 #   init <swarm> --id <1-60> [options]   create the swarm definition
 #       --nodes <N>              number of devices (default 1)
 #       --image <image>          default: newest loaded xcesp:<version> (pinned)
-#       --mgmt-subnet <cidr>     default: 10.<200+id>.0.0/16
+#       --mgmt-subnet <cidr>     default: 10.<200+id>.0.0/16 (id 1..55; required for 56..60)
 #       --nets "<n1> <n2>.."     traffic networks (default "net1 net2", "" = none)
 #       --cpus <n> --memory <m>  per-device limits (podman --cpus / --memory)
 #       --seed <name>            first-start config: $XCESP_SWARM_ETC/seeds/<name>/ (see README)
@@ -87,7 +87,10 @@ load_conf() {
         || die "$f: SWARM_ID must be 1..60"
     [[ "$NODES" =~ ^[0-9]+$ ]] || die "$f: NODES must be a number"
     [ "$NODES" -le 999 ] || die "$f: NODES must be <= 999"
-    MGMT_SUBNET="${MGMT_SUBNET:-10.$((200 + SWARM_ID)).0.0/16}"
+    if [ -z "$MGMT_SUBNET" ]; then
+        [ "$SWARM_ID" -le 55 ] || die "$f: SWARM_ID $SWARM_ID > 55 needs MGMT_SUBNET (the default 10.<200+id>.0.0/16 stops at 10.255)"
+        MGMT_SUBNET="10.$((200 + SWARM_ID)).0.0/16"
+    fi
     STATE_DIR="${STATE_DIR:-$SHOME/$SWARM}"
     # A named seed lives in $ETC/seeds/<name>/ (contract §3.1); SEED_DIR is
     # the older form (any path).  SEED wins when both are set.
@@ -461,6 +464,8 @@ cmd_init() {
         esac
     done
     [[ "$id" =~ ^[0-9]+$ ]] && [ "$id" -ge 1 ] && [ "$id" -le 60 ] || die "init: --id 1..60 required (unique per host)"
+    [ -n "$subnet" ] || [ "$id" -le 55 ] \
+        || die "init: --id $id needs --mgmt-subnet (the default 10.<200+id>.0.0/16 exists for ids 1..55 only)"
     local f="$ETC/$name.conf" o
     [ -f "$f" ] && [ "$force" = 0 ] && die "$f exists (--force to overwrite)"
     for o in "$ETC"/*.conf; do

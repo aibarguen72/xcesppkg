@@ -142,7 +142,8 @@ layout as `xcesp-ctr.sh`, see `../container/README.md`.
 * Run as root. Rootless podman works, but the host cannot reach the mgmt
   bridge, so xNMS could not manage the devices.
 * At most 999 devices per swarm and swarm IDs 1–60. A `/16` mgmt subnet
-  holds them all.
+  holds them all. The default mgmt subnet `10.<200+id>.0.0/16` exists for
+  IDs 1–55; IDs 56–60 need `--mgmt-subnet`.
 * Linux bridges do not forward link-local multicast (STP, LACP, LLDP) on
   net1/net2 by default. If a test needs them, set
   `/sys/class/net/xs<id>n<k>/bridge/group_fwd_mask`.

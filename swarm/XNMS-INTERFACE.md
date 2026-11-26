@@ -1,4 +1,4 @@
-# XCESP ↔ xNMS interface agreement (version 2.2, 2026-11-25; accepted by xNMS)
+# XCESP ↔ xNMS interface agreement (version 2.3, 2026-11-26; 2.2 accepted by xNMS)
 
 Answers to the xNMS requests of 2026-11-25, and the contract both projects
 build against. XCESP owns this file (`xcesppkg/swarm/` on branch `next`).
@@ -22,6 +22,10 @@ version 3 items for the five open points (§9).
 table; `show status server <key>` with value-only output and a stability
 rule for the status keys xNMS reads (§2.2); the xNMS public key in the twin
 seed (§3.1).
+
+**Changes in version 2.3** (xNMS request of 2026-11-26, owner-approved):
+stable key `server/sw/main/release`, the bare platform version, so xNMS
+can refuse nodes below 1.1.1 without parsing human output (§2.2).
 
 ## 0. Baseline
 
@@ -169,6 +173,12 @@ reads are stable:
 | `server/config/saved` | `true` \| `false`: running equals the startup file |
 | `server/commit-timer/remaining-s` | seconds left, empty when no timer is pending (*exists*) |
 | `server/detected/arch` | `x86_64` \| `arm64` |
+| `server/sw/main/release` | the running platform version, bare: `1.1.1-dev1`, `1.1.1` (the version token of `/var/xcesp/mainsw/VERSION`). Empty when XCESP does not run from an installed package (development tree). *Key exists from xcespserver 1.1.1-dev2*; read it with the one-key form once step 5 ships. |
+
+`server/sw/main/version` (the full line, e.g. `XCESPKG 1.1.1-dev1
+(debian 13 x86_64)`) is not stable: use `server/sw/main/release`. The
+`xcespcli vX.Y.Z` banner is the CLI's own build version, not the
+platform's.
 
 **Stability rule** (as in §2.1): these key names and their value formats
 change only with a new version of this contract. More keys can be added.
