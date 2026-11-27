@@ -102,7 +102,7 @@ including exit status 4 and the status keys of §2.2. Operator manual:
   | 3 | No connection to xcespserver |
   | 4 | `confirm` with no timer-commit pending (*planned*, version 3, §9 point 2) |
 
-* **Config over SSH.** `ssh node --merge-config -` (the file on stdin) and
+* **Config over SSH.** `ssh node -- --merge-config -` (the file on stdin) and
   later `--replace-config -` follow the same pattern.
 
 ### 2.1 Changing config over SSH (the xNMS change sequence)
@@ -119,7 +119,14 @@ stderr.
 
 **Planned (product, ISO too, delivery step 5):**
 
-| Need | Command (over SSH: `ssh xnms@node <args>`) |
+*Note (found testing 1.1.1-dev2 over sshd):* the OpenSSH command-line
+client parses options after the destination, so a remote command that
+starts with `-` needs `--` in front of it (`ssh xnms@node -- -c confirm`,
+`ssh xnms@node -- --merge-config - --check`). Libraries that send the exec
+request as one string are not affected. Commands without a leading `-`
+(`ssh xnms@node show running`, `confirm`, `save`) work either way.
+
+| Need | Command (over SSH: `ssh xnms@node -- <args>`) |
 |---|---|
 | Dry run: merge and check, do not commit | `--merge-config - --check` |
 | Merge and commit with automatic rollback | `--merge-config - --timer-commit <10-3600>` |
