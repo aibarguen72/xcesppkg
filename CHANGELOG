@@ -2,6 +2,12 @@
 
 ## unreleased (next)
 
+- xcesp-login: a remote SSH command (`$SSH_ORIGINAL_COMMAND`, or `-c` when
+  started as the login shell) runs through `xcespcli -c "<command>"`, or as
+  `--merge-config - [--check | --timer-commit <s>]` (stdin only); any other
+  option is refused with exit 2.  The text is never passed to a shell.
+  Without a command the interactive session is unchanged (XNMS-INTERFACE
+  step 5).
 - XNMS-INTERFACE 2.3: stable status key `server/sw/main/release` (bare
   platform version, xcespserver 1.1.1-dev2) in §2.2.
 - xcesp-swarm: swarm ids are 1..55 (were 1..60), so the default mgmt

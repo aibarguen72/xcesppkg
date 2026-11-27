@@ -78,7 +78,11 @@ Container plan (*planned*):
 
 ## 2. One command over SSH, no banner (request 4)
 
-*Planned, product feature (ISO and container).*
+*Built on `next` for 1.1.1-dev2 (xcespcli 1.1.1-dev1, xcespserver and
+xcesppkg 1.1.1-dev2), product feature (ISO and container); exists once
+1.1.1-dev2 is released. Everything in §2, §2.1 and §2.2 is in that build,
+including exit status 4 and the status keys of §2.2. Operator manual:
+`doc/docs/cli/scripting.md`.*
 
 * **`xcespcli -c "<command>"`** runs one command in show mode and exits. It
   prints no logo, server or user banner and no prompt, and writes only the
@@ -148,7 +152,9 @@ ERROR: <message>                           licence gate or apply failure
 `<source>` is `-` for stdin. Line numbers refer to the file as sent.
 Today a top-level `no …` line is removed before parsing, which shifts later
 line numbers. This is fixed in the same step. `<config-path>` is the
-node path, for example `router r1/interface ge1/address`. A parse error
+node path, node types and instance names joined with `/`, for example
+`router/r1/interface/ge1/address`. Errors of a node's validation hook use
+`<type>[<instance>]` instead, for example `router[r1]`. A parse error
 stops before the server is asked. A validation error comes from the
 server's checks of the whole merged config, so it can point at a node that
 the file did not touch but that the change made invalid.
@@ -161,7 +167,7 @@ shape, or the meaning of an exit code, needs a new version of this contract
 agreed by both projects. The `<message>` text itself is **not** stable:
 xNMS shows it and does not parse it.
 
-### 2.2 Reading server status keys (*planned*, version 3, delivery step 5)
+### 2.2 Reading server status keys (*built for 1.1.1-dev2*, delivery step 5)
 
 `-c "show status server <key>"` prints **only the value** of one key,
 followed by a newline. An empty value prints an empty line. An unknown key
@@ -479,7 +485,7 @@ have for the demo (phase 1 backups work with the banner workaround). Steps
 4. **Inventory `schema_version` 1** (§5, with per-device `image`).
 5. **`xcespcli -c`, `xcesp-login` `SSH_ORIGINAL_COMMAND`, the change
    sequence** (§2.1: `--merge-config -`, `--check`, `--timer-commit`, error
-   lines) (product, ISO too).
+   lines) (product, ISO too). *Built 2026-11-27 on `next`, ships in 1.1.1-dev2.*
 6. **`xcesp-swarm reset`**, timed, plus the `xnms` delegate (§3.1).
 7. **`--replace-config`** and `reset --soft` (needed to seed twins from
    backups, §6.2).

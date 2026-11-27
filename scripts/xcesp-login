@@ -14,6 +14,8 @@
 #   1. Read the user's primary group (xcespg1..xcespg4)
 #   2. Map it to a CliRole 1..4
 #   3. Exec xcespcli with --role and the system control socket
+#   4. With a remote command (ssh user@node <cmd>): run only that command
+#      through `xcespcli -c` or `--merge-config -` (XNMS-INTERFACE §2)
 #
 # Anything weird (no matching group, missing xcespcli binary) → exit 1.
 # We never fall back to a shell, even on error — that would defeat the AAA.
@@ -77,4 +79,67 @@ fi
 # (local users authenticated by sshd directly).
 audit_user="${XCESP_AUDIT_USER:-$(id -un)}"
 
-exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role" --audit-user "$audit_user"
+# One command over SSH (XNMS-INTERFACE §2): `ssh user@node <command>`.
+# sshd hands the command line to the ForceCommand in $SSH_ORIGINAL_COMMAND;
+# without ForceCommand (sshd-integration off) the login shell is started as
+# `xcesp-login -c '<command>'`.  The text is never given to a shell: it is
+# either the argument of xcespcli -c (one show-mode command, quotes
+# stripped) or one of the fixed --merge-config forms below.  No other
+# xcespcli option can be passed from the remote side.
+remote_cmd="${SSH_ORIGINAL_COMMAND:-}"
+if [ -z "$remote_cmd" ] && [ "${1:-}" = "-c" ] && [ -n "${2:-}" ]; then
+    remote_cmd="$2"
+fi
+
+if [ -z "$remote_cmd" ]; then
+    exec "$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role" --audit-user "$audit_user"
+fi
+
+base=("$XCESPCLI" --socket "$XCESP_SOCKET" --role "$role" --audit-user "$audit_user")
+
+# Collapse runs of blanks; split into words without globbing.
+read -r -a words <<< "$remote_cmd"
+case "${words[0]:-}" in
+    --merge-config|-M)
+        # --merge-config - [--check | --timer-commit <10-3600>]  (file on stdin)
+        if [ "${words[1]:-}" != "-" ]; then
+            echo "ERROR: over SSH --merge-config reads stdin: use --merge-config -" >&2
+            exit 2
+        fi
+        case "${#words[@]}:${words[2]:-}" in
+            2:)              exec "${base[@]}" --merge-config - ;;
+            3:--check)       exec "${base[@]}" --merge-config - --check ;;
+            4:--timer-commit)
+                if [[ "${words[3]}" =~ ^[0-9]{1,4}$ ]]; then
+                    exec "${base[@]}" --merge-config - --timer-commit "${words[3]}"
+                fi ;;
+        esac
+        echo "ERROR: usage: --merge-config - [--check | --timer-commit <10-3600>]" >&2
+        exit 2
+        ;;
+    -c)
+        cmd="${remote_cmd#*-c}"
+        ;;
+    -*)
+        echo "ERROR: unsupported option '${words[0]}' (use -c '<command>' or --merge-config -)" >&2
+        exit 2
+        ;;
+    *)
+        cmd="$remote_cmd"
+        ;;
+esac
+
+# Trim blanks and one pair of surrounding quotes (ssh node -c "show running"
+# arrives as -c "show running" when the caller quoted twice).
+cmd="${cmd#"${cmd%%[![:space:]]*}"}"
+cmd="${cmd%"${cmd##*[![:space:]]}"}"
+if [ ${#cmd} -ge 2 ]; then
+    case "$cmd" in
+        \"*\"|\'*\') cmd="${cmd:1:${#cmd}-2}" ;;
+    esac
+fi
+if [ -z "$cmd" ]; then
+    echo "ERROR: -c needs a command" >&2
+    exit 2
+fi
+exec "${base[@]}" -c "$cmd"
