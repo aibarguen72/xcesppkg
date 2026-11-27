@@ -1,7 +1,15 @@
 # Changelog - xcesppkg
 
-## unreleased (next)
+## 1.1.1-dev2
 
+- Bundles xcespserver 1.1.1-dev2, xcespcli 1.1.1-dev1, xcespproc 1.1.1-dev1,
+  xcespwdog 1.0.1, xcespweb 1.0.1: XNMS-INTERFACE step 5 (`xcespcli -c`,
+  exit codes 0-4, `--merge-config -` with `--check` / `--timer-commit`,
+  one `ERROR:` line per error, one-key `show status server <key>`, status
+  keys `server/config/saved`, `server/detected/arch`,
+  `server/sw/main/release`); xcespproc relinked with xcesp-on-xc
+  1.1.1-dev1 (at-inject ATE0/ATE1/AT&W fix from the commercial line).
+- Docs: new CLI page "Scripting and automation".
 - xcesp-login: a remote SSH command (`$SSH_ORIGINAL_COMMAND`, or `-c` when
   started as the login shell) runs through `xcespcli -c "<command>"`, or as
   `--merge-config - [--check | --timer-commit <s>]` (stdin only); any other
